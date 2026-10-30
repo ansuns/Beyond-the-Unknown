@@ -30,7 +30,7 @@ async def get_levels(
     player_id=Depends(get_current_player_id),
     session: AsyncSession = Depends(get_session),
 ) -> dict:
-    data = await list_levels(session)
+    data = await list_levels(session, player_id)
     return success_envelope({"levels": data}, request.state.request_id)
 
 
