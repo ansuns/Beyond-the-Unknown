@@ -367,6 +367,15 @@ def test_room_five_supports_all_three_preset_combos() -> None:
             assert gaze_bridge.status_code == 200, gaze_bridge.text
             assert gaze_bridge.json()["data"]["combo"]["combo_id"] == "COMBO-001"
 
+            # Gaze is a sustained effect; release its current target before
+            # moving to the next mechanism in the same personal run.
+            stopped_gaze = client.post(
+                "/api/v1/level/rule/stop",
+                headers=player["headers"],
+                json={"run_id": run_id},
+            )
+            assert stopped_gaze.status_code == 200, stopped_gaze.text
+
             time.sleep(0.01)
             echo_energy = cast(
                 "RULE_ECHO", "M05-ENERGY-01", "room5-echo-energy-0001",
@@ -379,7 +388,9 @@ def test_room_five_supports_all_three_preset_combos() -> None:
             assert reverse_energy.status_code == 200, reverse_energy.text
             assert reverse_energy.json()["data"]["combo"]["combo_id"] == "COMBO-002"
 
-            time.sleep(0.01)
+            # Reverse is time-limited (1s in this test fixture). Let the
+            # authoritative effect expire before targeting another mechanism.
+            time.sleep(1.1)
             gaze_platform = cast(
                 "RULE_GAZE", "M05-REVERSE-01", "room5-gaze-platform-0001"
             )

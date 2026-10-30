@@ -8,6 +8,8 @@ from uuid import UUID
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.modules.progress.repository import record_discovery
+
 
 class RuleRunNotFound(Exception):
     pass
@@ -356,6 +358,12 @@ async def cast_rule(
     if rule_state["cooldown_until"] and rule_state["cooldown_until"] > now:
         remaining = int((rule_state["cooldown_until"] - now).total_seconds() * 1000)
         raise RuleCoolingDown(max(remaining, 1))
+    if (
+        rule_id in {"RULE_GAZE", "RULE_REVERSE"}
+        and rule_state["active_target_id"] is not None
+        and rule_state["active_target_id"] != target_id
+    ):
+        raise RuleStateConflict
 
     allowed_types = set(rule["allowed_target_types"])
     if rule_id == "RULE_ECHO":
@@ -451,6 +459,7 @@ async def cast_rule(
         effects.append(
             {
                 "mechanism_id": mechanism["mechanism_config_id"],
+                "target_type": mechanism["target_type"],
                 "state": state,
             }
         )
@@ -503,12 +512,74 @@ async def cast_rule(
         },
     )
 
+    discoveries = []
+    if effects:
+        law_discovery_id = {
+            "RULE_ECHO": "DISC-RULE-ECHO",
+            "RULE_GAZE": "DISC-RULE-GAZE",
+            "RULE_REVERSE": "DISC-RULE-REVERSE",
+        }[rule_id]
+        discoveries.append(
+            await record_discovery(
+                session,
+                player_id,
+                law_discovery_id,
+                run_id,
+                run["level_id"],
+                {
+                    "level_id": run["level_id"],
+                    "run_id": str(run_id),
+                    "mechanism_ids": [item["mechanism_id"] for item in effects],
+                },
+                related_rule=rule_id,
+            )
+        )
+    if rule_id == "RULE_ECHO" and any(
+        item["target_type"] == "HIDDEN_OBJECT" for item in effects
+    ):
+        discoveries.append(
+            await record_discovery(
+                session,
+                player_id,
+                "DISC-HIDDEN-OBJ-ROOM01",
+                run_id,
+                run["level_id"],
+                {
+                    "level_id": run["level_id"],
+                    "run_id": str(run_id),
+                    "mechanism_ids": [
+                        item["mechanism_id"]
+                        for item in effects
+                        if item["target_type"] == "HIDDEN_OBJECT"
+                    ],
+                },
+                related_rule=rule_id,
+            )
+        )
+    if combo_result and not combo_result.get("already_applied"):
+        combo_discovery_id = f"DISC-{combo_result['combo_id']}"
+        discoveries.append(
+            await record_discovery(
+                session,
+                player_id,
+                combo_discovery_id,
+                run_id,
+                run["level_id"],
+                {
+                    "level_id": run["level_id"],
+                    "run_id": str(run_id),
+                    "mechanism_id": combo_result["mechanism_id"],
+                },
+            )
+        )
+
     result = {
         "run_id": str(run_id),
         "rule_id": rule_id,
         "target_id": target_id,
         "effects": effects,
         "combo": combo_result,
+        "discoveries": discoveries,
         "cooldown_until": cooldown_until.isoformat(),
         "idempotent_replay": False,
     }
@@ -649,9 +720,42 @@ async def _match_combo(
         await _save_mechanism_state(
             session, run_id, player_id, target_id, state
         )
+        linked_mechanism_id = mechanism["config"].get("linked_mechanism_id")
+        if linked_mechanism_id:
+            linked_mechanism = (
+                await session.execute(
+                    text("""
+                        SELECT mechanism_config_id, mechanism_type, initial_state,
+                               target_state, trigger_rule, config
+                        FROM level_mechanism_catalog
+                        WHERE level_id = :level_id
+                          AND mechanism_config_id = :mechanism_id
+                          AND is_enabled = true
+                    """),
+                    {"level_id": level_id, "mechanism_id": linked_mechanism_id},
+                )
+            ).mappings().one_or_none()
+            if linked_mechanism is not None and "COMBO_EFFECT" in linked_mechanism["trigger_rule"]:
+                linked_state = await _load_mechanism_state(
+                    session, run_id, player_id, linked_mechanism
+                )
+                if linked_state.get("status") not in {"TRIGGERED", "LOCKED"}:
+                    linked_transitions = list(linked_state.get("transitions", []))
+                    if linked_state.get("status") == "INACTIVE":
+                        linked_transitions.append({"from": "INACTIVE", "to": "ACTIVE"})
+                    linked_transitions.append(
+                        {"from": "ACTIVE", "to": linked_mechanism["target_state"]}
+                    )
+                    linked_state["status"] = linked_mechanism["target_state"]
+                    linked_state["transitions"] = linked_transitions
+                    linked_state["combo_applied"] = combo["combo_id"]
+                    await _save_mechanism_state(
+                        session, run_id, player_id, linked_mechanism_id, linked_state
+                    )
         return {
             "combo_id": combo["combo_id"],
             "mechanism_id": target_id,
+            "linked_mechanism_id": linked_mechanism_id,
             "status": state["status"],
         }
     return None

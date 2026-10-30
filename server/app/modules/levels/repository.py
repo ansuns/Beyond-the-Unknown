@@ -56,27 +56,42 @@ def _level_payload(row: Any) -> dict[str, Any]:
         "necessary_objectives": row["necessary_objectives"],
         "config": row["config"],
         "is_hidden": row["is_hidden"],
+        "is_unlocked": row.get("is_unlocked", not row["is_hidden"]),
     }
 
 
-async def list_levels(session: AsyncSession) -> list[dict[str, Any]]:
+async def list_levels(
+    session: AsyncSession, player_id: UUID
+) -> list[dict[str, Any]]:
     rows = (
         await session.execute(
             text("""
-                SELECT level_id, level_name, entrance_id, room_index,
-                       target_duration_min, target_duration_max, hard_time_limit,
-                       time_limit_seconds, repeatable, repeat_reward_mode,
-                       required_laws, necessary_objectives, config, is_hidden
-                FROM levels
-                WHERE is_enabled = true
-                ORDER BY is_hidden ASC, room_index ASC NULLS LAST
-            """)
+                SELECT l.level_id, l.level_name, l.entrance_id, l.room_index,
+                       l.target_duration_min, l.target_duration_max, l.hard_time_limit,
+                       l.time_limit_seconds, l.repeatable, l.repeat_reward_mode,
+                       l.required_laws, l.necessary_objectives, l.config, l.is_hidden,
+                       (
+                           NOT l.is_hidden OR EXISTS (
+                               SELECT 1
+                               FROM hidden_routes AS h
+                               JOIN player_unlocked_hidden_routes AS u
+                                 ON u.hidden_route_id = h.hidden_route_id
+                               WHERE u.player_id = :player_id
+                                 AND h.result_level_id = l.level_id
+                                 AND h.is_enabled = true
+                                 AND h.config_status = 'READY'
+                           )
+                       ) AS is_unlocked
+                FROM levels AS l
+                WHERE l.is_enabled = true
+                ORDER BY l.is_hidden ASC, l.room_index ASC NULLS LAST
+            """),
+            {"player_id": player_id},
         )
     ).mappings().all()
     result = []
     for row in rows:
         item = _level_payload(row)
-        item["is_unlocked"] = not item["is_hidden"]
         result.append(item)
     return result
 
@@ -141,8 +156,24 @@ async def enter_level(
     if level is None:
         raise LevelNotFound
     if level["is_hidden"]:
-        # Hidden-route unlock is driven by authoritative discovery state in VS-5.
-        raise LevelLocked
+        unlocked = (
+            await session.execute(
+                text("""
+                    SELECT 1
+                    FROM hidden_routes AS h
+                    JOIN player_unlocked_hidden_routes AS u
+                      ON u.hidden_route_id = h.hidden_route_id
+                    WHERE u.player_id = :player_id
+                      AND h.result_level_id = :level_id
+                      AND h.is_enabled = true
+                      AND h.config_status = 'READY'
+                    LIMIT 1
+                """),
+                {"player_id": player_id, "level_id": level_id},
+            )
+        ).first()
+        if unlocked is None:
+            raise LevelLocked
 
     active_run = (
         await session.execute(

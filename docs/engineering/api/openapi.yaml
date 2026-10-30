@@ -100,6 +100,86 @@ paths:
           content:
             application/json:
               schema: { $ref: '#/components/schemas/EnvelopeObject' }
+  /level/settle:
+    post:
+      tags: [Level]
+      operationId: settleLevel
+      parameters: [{ $ref: '#/components/parameters/RequestId' }, { $ref: '#/components/parameters/IdempotencyKey' }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [run_id]
+              properties:
+                run_id: { type: string, format: uuid }
+      responses:
+        '200': { description: Server-validated result, completion time, discoveries and score outcome }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409': { $ref: '#/components/responses/Conflict' }
+        '503': { description: Required objective configuration is incomplete }
+  /player/progress:
+    get:
+      tags: [Player]
+      operationId: getPermanentProgress
+      responses:
+        '200': { description: Latest versioned permanent progress snapshot }
+  /player/discoveries:
+    get:
+      tags: [Player]
+      operationId: listPlayerDiscoveries
+      responses:
+        '200': { description: Personal discovery history }
+  /player/collections:
+    get:
+      tags: [Player]
+      operationId: listPlayerCollections
+      responses:
+        '200': { description: Owned codex collections }
+  /world/archive:
+    get:
+      tags: [Discovery]
+      operationId: listWorldArchive
+      parameters:
+        - name: limit
+          in: query
+          schema: { type: integer, minimum: 1, maximum: 100, default: 50 }
+      responses:
+        '200': { description: Server-owned first-discovery archive }
+  /reward:
+    get:
+      tags: [Reward]
+      operationId: listPlayerRewards
+      responses:
+        '200': { description: Pending claim and owned rewards }
+  /reward/claim:
+    post:
+      tags: [Reward]
+      operationId: claimReward
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [player_reward_id]
+              properties: { player_reward_id: { type: string, format: uuid } }
+      responses:
+        '200': { description: Idempotent reward claim result }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409': { $ref: '#/components/responses/Conflict' }
+  /leaderboard:
+    get:
+      tags: [Leaderboard]
+      operationId: getLeaderboard
+      parameters:
+        - { name: board_type, in: query, schema: { type: string, enum: [EXPLORE, CLEAR, COLLECT], default: EXPLORE } }
+        - { name: period_type, in: query, schema: { type: string, enum: [WEEKLY, MONTHLY], default: WEEKLY } }
+        - { name: scope, in: query, schema: { type: string, enum: [TOP, AROUND, SELF], default: TOP } }
+        - { name: limit, in: query, schema: { type: integer, minimum: 1, maximum: 50, default: 20 } }
+      responses:
+        '200': { description: Period-scoped immutable score snapshot view }
   /level/enter:
     post:
       tags: [Level]
