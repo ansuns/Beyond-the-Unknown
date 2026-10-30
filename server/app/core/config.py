@@ -12,6 +12,8 @@ class Settings(BaseSettings):
     log_level: str = "INFO"
     database_url: str = "postgresql+asyncpg://beyond:beyond_dev_only@localhost:5432/beyond"
     rabbitmq_url: str = "amqp://beyond:beyond_dev_only@localhost:5672/"
+    redis_url: str = "redis://localhost:6379/0"
+    map_presence_ttl_seconds: int = 90
     rabbitmq_task_queue: str = "game.tasks.v1"
     rabbitmq_retry_delay_ms: int = 5_000
     rabbitmq_max_retries: int = 3
