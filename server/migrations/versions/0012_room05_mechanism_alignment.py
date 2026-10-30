@@ -198,3 +198,64 @@ def downgrade() -> None:
           )
         """
     )
+
+    op.execute(
+        """
+        UPDATE mechanism_states AS state
+        SET mechanism_config_id = CASE state.mechanism_config_id
+            WHEN 'M05-BRIDGE-01' THEN 'M02-BRIDGE-01'
+            WHEN 'M05-ENERGY-01' THEN 'M03-ENERGY-01'
+            WHEN 'M05-REVERSE-01' THEN 'M04-PLATFORM-01'
+        END
+        FROM level_runs AS runs
+        WHERE runs.run_id = state.run_id
+          AND runs.level_id = 'LV-ROOM-05'
+          AND state.mechanism_config_id IN (
+              'M05-BRIDGE-01', 'M05-ENERGY-01', 'M05-REVERSE-01'
+          )
+        """
+    )
+    op.execute(
+        """
+        UPDATE rule_cast_events AS events
+        SET target_id = CASE events.target_id
+            WHEN 'M05-BRIDGE-01' THEN 'M02-BRIDGE-01'
+            WHEN 'M05-ENERGY-01' THEN 'M03-ENERGY-01'
+            WHEN 'M05-REVERSE-01' THEN 'M04-PLATFORM-01'
+            ELSE events.target_id
+        END,
+        result = CASE
+            WHEN events.result #>> '{combo,mechanism_id}' IS NULL THEN events.result
+            ELSE jsonb_set(
+                events.result,
+                '{combo,mechanism_id}',
+                to_jsonb(CASE events.result #>> '{combo,mechanism_id}'
+                    WHEN 'M05-BRIDGE-01' THEN 'M02-BRIDGE-01'
+                    WHEN 'M05-ENERGY-01' THEN 'M03-ENERGY-01'
+                    WHEN 'M05-REVERSE-01' THEN 'M04-PLATFORM-01'
+                    ELSE events.result #>> '{combo,mechanism_id}'
+                END),
+                true
+            )
+        END
+        FROM level_runs AS runs
+        WHERE runs.run_id = events.run_id
+          AND runs.level_id = 'LV-ROOM-05'
+        """
+    )
+    op.execute(
+        """
+        UPDATE player_rule_states AS state
+        SET active_target_id = CASE state.active_target_id
+            WHEN 'M05-BRIDGE-01' THEN 'M02-BRIDGE-01'
+            WHEN 'M05-ENERGY-01' THEN 'M03-ENERGY-01'
+            WHEN 'M05-REVERSE-01' THEN 'M04-PLATFORM-01'
+        END
+        FROM level_runs AS runs
+        WHERE runs.run_id = state.run_id
+          AND runs.level_id = 'LV-ROOM-05'
+          AND state.active_target_id IN (
+              'M05-BRIDGE-01', 'M05-ENERGY-01', 'M05-REVERSE-01'
+          )
+        """
+    )
