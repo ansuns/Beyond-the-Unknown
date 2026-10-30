@@ -84,6 +84,9 @@ export class BeyondTheUnknownGameEntry extends Component {
     config: Record<string, unknown>;
   }>();
   private prototypeComboDefinitions: PrototypeComboDefinition[] = [];
+  private prototypeGazeTargetId: string | undefined;
+  private prototypeGazeMaintainAt = 0;
+  private prototypeGazeMaintainInFlight = false;
   private readonly prototypeRuleCooldownUntil = new Map<string, number>();
   private prototypeActionInFlight = false;
   private levelRoomScale = 40;
@@ -102,6 +105,7 @@ export class BeyondTheUnknownGameEntry extends Component {
 
   update(deltaTime: number): void {
     if (this.currentMode === "PERSONAL_LEVEL") {
+      this.updatePrototypeGazeMaintain();
       this.updatePersonalLevelMovement(deltaTime);
       return;
     }
@@ -519,11 +523,10 @@ export class BeyondTheUnknownGameEntry extends Component {
   }
 
   private async castPrototypeCombo(
-    comboId: string,
-    targetId: string,
-    ruleIds: LawRuleId[]
+    definition: PrototypeComboDefinition
   ): Promise<void> {
     if (!this.levelSession || this.prototypeActionInFlight) return;
+    const { comboId, targetId, ruleIds } = definition;
     this.prototypeActionInFlight = true;
     try {
       await this.flushLevelPosition();
@@ -550,7 +553,14 @@ export class BeyondTheUnknownGameEntry extends Component {
         if (result.combo?.combo_id === comboId) matched = true;
       }
       if (ruleIds.includes("RULE_GAZE")) {
-        await this.levelSession.stopGaze();
+        if (matched && definition.maintainGaze) {
+          this.prototypeGazeTargetId = targetId;
+          this.prototypeGazeMaintainAt = Date.now() + 2000;
+        } else {
+          await this.levelSession.stopGaze();
+          this.prototypeGazeTargetId = undefined;
+          this.prototypeGazeMaintainAt = 0;
+        }
       }
       const state = await this.levelSession.refreshState();
       this.applyRoomMechanismStates(state);
@@ -576,6 +586,8 @@ export class BeyondTheUnknownGameEntry extends Component {
         this.makeIdempotencyKey(`prototype-settle-${this.pendingLevelId}`)
       );
       this.levelSession = undefined;
+      this.prototypeGazeTargetId = undefined;
+      this.prototypeGazeMaintainAt = 0;
       this.currentMode = "MENU";
       this.moveTarget = undefined;
       this.drawPersonalRoom("探索完成", true);
@@ -668,6 +680,8 @@ export class BeyondTheUnknownGameEntry extends Component {
       this.pendingLevelName = entry.level.level_name;
       this.pendingLevelId = entry.level.level_id;
       this.prototypeComboDefinitions = parsePrototypeComboDefinitions(level.config);
+      this.prototypeGazeTargetId = undefined;
+      this.prototypeGazeMaintainAt = 0;
       this.currentMode = "PERSONAL_LEVEL";
       this.moveTarget = undefined;
       this.mapSession.leave();
@@ -857,7 +871,7 @@ export class BeyondTheUnknownGameEntry extends Component {
             -size.height / 2 + 112,
             buttonWidth,
             42,
-            () => this.castPrototypeCombo(definition.comboId, definition.targetId, definition.ruleIds)
+            () => this.castPrototypeCombo(definition)
           ));
         });
 
