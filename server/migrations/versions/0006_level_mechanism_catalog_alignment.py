@@ -1,6 +1,6 @@
 from alembic import op
 
-revision = "0006_level_mechanism_catalog_alignment"
+revision = "0006_mech_catalog_align"
 down_revision = "0005_rules_mechanisms"
 branch_labels = None
 depends_on = None
