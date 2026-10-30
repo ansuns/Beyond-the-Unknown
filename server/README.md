@@ -102,3 +102,14 @@ The map instance capacity and movement/reconnect limits are configurable through
 
 
 VS-5 was merged into `main` after the Python/Ruff, PostgreSQL migration/integration, and Docker Compose smoke jobs passed. This confirms the backend contract and tested flows only; production score weights, reward definitions, room objectives, mechanism positions, and law tuning remain content/configuration gates.
+
+
+## RabbitMQ worker delivery policy
+
+- The consumer channel enables publisher confirms and consumes with manual acknowledgements and prefetch 10.
+- Successful task handlers are ACKed only after completion.
+- Invalid envelopes and unregistered task types are published to the durable dead-letter exchange/queue and ACKed only after broker confirmation.
+- Transient handler failures are copied to a durable retry queue with a persistent message and incremented `x-retry-count`; the original is ACKed only after the retry publish is confirmed. The retry queue uses `RABBITMQ_RETRY_DELAY_MS` (default 5000 ms) TTL before routing the message back to the main queue.
+- After `RABBITMQ_MAX_RETRIES` (default 3) retries, the message is sent to the DLQ. If a retry/DLQ publish is not confirmed, the original delivery is NACKed with requeue=true.
+- Every registered consumer must still enforce business idempotency using the envelope's `idempotency_key`; delivery is at-least-once, not exactly-once.
+- Current registered handler is only `worker.ping`. Transactional Outbox integration with gameplay write transactions is still a separate release-readiness task.
