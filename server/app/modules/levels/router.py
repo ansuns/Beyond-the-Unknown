@@ -1,4 +1,5 @@
 from typing import Annotated
+from uuid import UUID
 
 from fastapi import APIRouter, Depends, Header, HTTPException, Request, status
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -17,7 +18,7 @@ from app.modules.levels.repository import (
     list_levels,
     start_level,
 )
-from app.modules.levels.schemas import LevelEnterRequest, LevelRunRequest
+from app.modules.gameplay.service import (\n    InvalidLawAction,\n    LawCooldown,\n    LawIdempotencyConflict,\n    LevelRunNotFound,\n    MechanismNotFound,\n    apply_law_action,\n    get_run_mechanisms,\n)\nfrom app.modules.levels.schemas import LawActionRequest, LevelEnterRequest, LevelRunRequest
 from app.realtime.manager import map_connections
 from app.schemas.envelope import success_envelope
 
@@ -118,5 +119,66 @@ async def post_abandon_level(
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,
             detail="Completed or failed runs cannot be abandoned",
+        ) from exc
+    return success_envelope(data, request.state.request_id)
+
+
+@router.post("/law/action")
+async def post_law_action(
+    payload: LawActionRequest,
+    request: Request,
+    idempotency_key: Annotated[
+        str, Header(alias="Idempotency-Key", min_length=8, max_length=200)
+    ],
+    player_id=Depends(get_current_player_id),
+    session: AsyncSession = Depends(get_session),
+) -> dict:
+    try:
+        data = await apply_law_action(
+            session,
+            player_id,
+            payload.run_id,
+            payload.rule_id,
+            payload.mechanism_id,
+            payload.action,
+            idempotency_key,
+        )
+    except LevelRunNotFound as exc:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Level run not found"
+        ) from exc
+    except MechanismNotFound as exc:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Mechanism does not belong to this personal run",
+        ) from exc
+    except LawIdempotencyConflict as exc:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="Idempotency key was used with a different law action",
+        ) from exc
+    except LawCooldown as exc:
+        raise HTTPException(
+            status_code=status.HTTP_429_TOO_MANY_REQUESTS, detail=str(exc)
+        ) from exc
+    except InvalidLawAction as exc:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT, detail=str(exc)
+        ) from exc
+    return success_envelope(data, request.state.request_id)
+
+
+@router.get("/runs/{run_id}/mechanisms")
+async def get_personal_run_mechanisms(
+    run_id: UUID,
+    request: Request,
+    player_id=Depends(get_current_player_id),
+    session: AsyncSession = Depends(get_session),
+) -> dict:
+    try:
+        data = await get_run_mechanisms(session, player_id, run_id)
+    except LevelRunNotFound as exc:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Level run not found"
         ) from exc
     return success_envelope(data, request.state.request_id)
