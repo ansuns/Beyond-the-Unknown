@@ -55,8 +55,9 @@
 - [x] WS 首包 AUTH、消息序列号、方向/动作白名单、MOVE/ACTION 频率限制；当前 AOI 使用同实例全可见回退，精确半径/网格待联调。
 - [ ] level_run 归属检查；机关状态通过 (run_id, player_id) 复合外键隔离。
 - [x] VS-3：levels目录、入口校验、level_enter_requests业务幂等、单玩家单活跃run、CREATED/RUNNING/ABANDONED状态流转。
-- [ ] VS-4：服务端 rule_catalog / combo_catalog / player_unlocked_rules；施法必须验证 run 归属、法则权限、冷却、目标类型/范围、幂等键；机关状态按 (run_id, player_id, mechanism_config_id) 隔离。
-- [ ] VS-4：回声显形、注视维持/中断、逆流反转/超时恢复；组合顺序/时间窗校验与机关状态机联动。
+- [x] VS-4：服务端 rule_catalog / combo_catalog / player_unlocked_rules；施法验证 run 归属、法则权限、冷却、目标类型/范围、幂等键；机关状态按 (run_id, player_id, mechanism_config_id) 隔离。
+- [x] VS-4：回声显形、注视维持/中断、逆流反转/超时恢复；组合顺序/时间窗校验与机关状态机联动（数值与坐标仍待调参）。
+- [ ] VS-5：发现个人幂等、全服首次原子档案、收藏、progress_version快照、目标校验结算、奖励领取、三榜积分流水与快照、HIDDEN-ROUTE-01解锁。
 - [ ] 玩法事件由服务端推导 discovery；客户端不能直接写发现事实。
 - [ ] 结算事务：锁定 run → settlement → 发现/收藏 → world_archive INSERT ON CONFLICT → 积分流水 → progress_version + 1 → snapshot。
 - [ ] 周榜/月赛季分别写 period_id；全服首发现仅荣誉，不计分。
