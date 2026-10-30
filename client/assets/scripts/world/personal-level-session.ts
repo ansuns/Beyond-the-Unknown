@@ -20,14 +20,23 @@ export class PersonalLevelSession {
     return this.activeRunId;
   }
 
+  async enter(
+    levelId: string,
+    entranceId: string,
+    idempotencyKey: string
+  ): Promise<LevelEnterData> {
+    const entry = await this.api.enterLevel(levelId, entranceId, idempotencyKey);
+    this.activeRunId = entry.run_id;
+    return entry;
+  }
+
   async enterAndStart(
     levelId: string,
     entranceId: string,
     idempotencyKey: string
   ): Promise<{ entry: LevelEnterData; run: LevelRunData }> {
-    const entry = await this.api.enterLevel(levelId, entranceId, idempotencyKey);
-    this.activeRunId = entry.run_id;
-    const run = await this.api.startLevel(entry.run_id);
+    const entry = await this.enter(levelId, entranceId, idempotencyKey);
+    const run = await this.start();
     return { entry, run };
   }
 
