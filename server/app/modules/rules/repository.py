@@ -673,9 +673,9 @@ async def _match_combo(
             )
         ).mappings().one_or_none()
         expected_types = {
-            "MECH_BRIDGE": "PLATFORM_BRIDGE",
-            "MECH_ENERGY_GATE": "ENERGY_NODE",
-            "MECH_MOVING_PLATFORM": "MOVING_OBJECT",
+            "M02-BRIDGE-01": "PLATFORM_BRIDGE",
+            "M03-ENERGY-01": "ENERGY_NODE",
+            "M04-PLATFORM-01": "MOVING_OBJECT",
         }
         if (
             mechanism is None
