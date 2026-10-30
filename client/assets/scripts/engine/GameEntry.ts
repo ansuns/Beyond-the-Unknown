@@ -32,7 +32,11 @@ import {
   type PrototypeComboDefinition
 } from "../world/prototype-combos";
 import {
+  calculatePrototypeRoomScale,
+  getPrototypeRoomDimensions,
   parsePrototypeLayoutConfig,
+  prototypeLevelToLocal,
+  prototypeLocalToLevel,
   type PrototypeLayoutConfig
 } from "../world/prototype-layout";
 import { formatProgressSummary } from "../ui/progress-summary";
@@ -806,43 +810,19 @@ export class BeyondTheUnknownGameEntry extends Component {
   }
 
   private prototypeRoomDimensions(): { width: number; height: number } {
-    const { bounds } = this.prototypeLayout;
-    return {
-      width: (bounds.maxX - bounds.minX) * this.levelRoomScale,
-      height: (bounds.maxY - bounds.minY) * this.levelRoomScale
-    };
+    return getPrototypeRoomDimensions(this.prototypeLayout.bounds, this.levelRoomScale);
   }
 
   private prototypeLevelToLocal(x: number, y: number): { x: number; y: number } {
-    const room = this.prototypeRoomDimensions();
-    const { bounds } = this.prototypeLayout;
-    return {
-      x: -room.width / 2 + (x - bounds.minX) * this.levelRoomScale,
-      y: -room.height / 2 + (y - bounds.minY) * this.levelRoomScale
-    };
+    return prototypeLevelToLocal({ x, y }, this.prototypeLayout.bounds, this.levelRoomScale);
   }
 
   private prototypeLocalToLevel(x: number, y: number): { x: number; y: number } {
-    const room = this.prototypeRoomDimensions();
-    const { bounds } = this.prototypeLayout;
-    return {
-      x: Math.max(
-        bounds.minX,
-        Math.min(bounds.maxX, (x + room.width / 2) / this.levelRoomScale + bounds.minX)
-      ),
-      y: Math.max(
-        bounds.minY,
-        Math.min(bounds.maxY, (y + room.height / 2) / this.levelRoomScale + bounds.minY)
-      )
-    };
+    return prototypeLocalToLevel({ x, y }, this.prototypeLayout.bounds, this.levelRoomScale);
   }
 
   private updatePrototypeRoomScale(size: { width: number; height: number }): void {
-    const spanX = this.prototypeLayout.bounds.maxX - this.prototypeLayout.bounds.minX;
-    const spanY = this.prototypeLayout.bounds.maxY - this.prototypeLayout.bounds.minY;
-    const availableWidth = Math.max(160, size.width - 64);
-    const availableHeight = Math.max(120, size.height - 240);
-    this.levelRoomScale = Math.min(40, availableWidth / spanX, availableHeight / spanY);
+    this.levelRoomScale = calculatePrototypeRoomScale(this.prototypeLayout.bounds, size);
   }
 
   private sendLevelPosition(position: { x: number; y: number }): void {
