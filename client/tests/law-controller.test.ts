@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from "vitest";
 import { LawController, LawUnavailableError } from "../assets/scripts/world/law-controller";
 import type { PersonalLevelSession } from "../assets/scripts/world/personal-level-session";
-import type { LawRuleId, RuleCatalogData } from "../assets/scripts/network/types";
+import type { RuleCatalogData } from "../assets/scripts/network/types";
 
 function makeSession(catalog: RuleCatalogData) {
   return {
