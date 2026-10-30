@@ -24,6 +24,7 @@ import { SessionStore } from "../player/session-store";
 import { CharacterSelectionSession } from "../player/character-selection-session";
 import { MapSession } from "../world/map-session";
 import { PersonalLevelSession } from "../world/personal-level-session";
+import { deriveRoom01VisualState } from "../world/room01-presentation";
 import { formatProgressSummary } from "../ui/progress-summary";
 
 const { ccclass, property } = _decorator;
@@ -656,10 +657,9 @@ export class BeyondTheUnknownGameEntry extends Component {
       }
       return node;
     };
-    const hiddenVisible =
-      this.roomMechanismStates.get("M01-HIDEABLE-01")?.visible === true;
-    const exitOpen =
-      this.roomMechanismStates.get("M01-EXIT-01")?.status === "TRIGGERED";
+    const roomVisualState = deriveRoom01VisualState(this.roomMechanismStates);
+    const hiddenVisible = roomVisualState.hiddenTargetVisible;
+    const exitOpen = roomVisualState.exitOpen;
     drawMarker("HiddenObject", 5, 4, new Color(125, 207, 236, 255), 14, hiddenVisible);
     drawMarker(
       "LightMarker",
