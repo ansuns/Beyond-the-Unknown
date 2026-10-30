@@ -27,9 +27,18 @@ async def wechat_login(
     try:
         data = await login_with_wechat(session, provider, settings, payload.wx_code)
     except InvalidWeChatCode as exc:
-        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid WeChat login code") from exc
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Invalid WeChat login code",
+        ) from exc
     except PlayerBannedError as exc:
-        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Player account is unavailable") from exc
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Player account is unavailable",
+        ) from exc
     except (WeChatProviderUnavailable, ValueError) as exc:
-        raise HTTPException(status_code=status.HTTP_503_SERVICE_UNAVAILABLE, detail="Login service unavailable") from exc
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="Login service unavailable",
+        ) from exc
     return success_envelope(data, payload.request_id)

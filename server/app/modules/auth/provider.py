@@ -1,7 +1,7 @@
 from typing import Protocol
 
-from fastapi import Depends
 import httpx
+from fastapi import Depends
 
 from app.core.config import Settings, get_settings
 
@@ -34,13 +34,21 @@ class WeChatCodeExchange:
         }
         try:
             async with httpx.AsyncClient(
-                timeout=self.settings.wechat_api_timeout_seconds, transport=self.transport
+                timeout=self.settings.wechat_api_timeout_seconds,
+                transport=self.transport,
             ) as client:
                 response = await client.get(self.settings.wechat_api_url, params=params)
                 response.raise_for_status()
                 payload = response.json()
-        except (httpx.TimeoutException, httpx.RequestError, httpx.HTTPStatusError, ValueError) as exc:
-            raise WeChatProviderUnavailable("WeChat identity service is unavailable") from exc
+        except (
+            httpx.TimeoutException,
+            httpx.RequestError,
+            httpx.HTTPStatusError,
+            ValueError,
+        ) as exc:
+            raise WeChatProviderUnavailable(
+                "WeChat identity service is unavailable"
+            ) from exc
 
         if not isinstance(payload, dict):
             raise WeChatProviderUnavailable("WeChat identity response is malformed")
@@ -49,7 +57,9 @@ class WeChatCodeExchange:
             try:
                 parsed_error_code = int(error_code)
             except (TypeError, ValueError):
-                raise WeChatProviderUnavailable("WeChat identity service returned an invalid error") from None
+                raise WeChatProviderUnavailable(
+                    "WeChat identity service returned an invalid error"
+                ) from None
             if parsed_error_code in {40029, 40163}:
                 raise InvalidWeChatCode("WeChat login code is invalid or already used")
             raise WeChatProviderUnavailable("WeChat identity service rejected the request")

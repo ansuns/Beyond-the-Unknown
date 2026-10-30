@@ -25,10 +25,17 @@ class Settings(BaseSettings):
 
     def validate_auth_secrets(self) -> None:
         if len(self.jwt_secret) < 32 or len(self.openid_hmac_secret) < 32:
-            raise ValueError("JWT_SECRET and OPENID_HMAC_SECRET must contain at least 32 characters")
+            raise ValueError(
+                "JWT_SECRET and OPENID_HMAC_SECRET must contain at least 32 characters"
+            )
         if self.app_env not in {"local", "test"}:
-            if self.jwt_secret == _LOCAL_JWT_SECRET or self.openid_hmac_secret == _LOCAL_OPENID_SECRET:
-                raise ValueError("Production authentication secrets must be explicitly configured")
+            if (
+                self.jwt_secret == _LOCAL_JWT_SECRET
+                or self.openid_hmac_secret == _LOCAL_OPENID_SECRET
+            ):
+                raise ValueError(
+                    "Production authentication secrets must be explicitly configured"
+                )
 
 
 @lru_cache

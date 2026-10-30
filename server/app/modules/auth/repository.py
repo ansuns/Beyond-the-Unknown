@@ -9,14 +9,17 @@ class PlayerBannedError(Exception):
     pass
 
 
-async def get_or_create_player(session: AsyncSession, openid_digest: str) -> tuple[dict[str, Any], bool]:
+async def get_or_create_player(
+    session: AsyncSession, openid_digest: str
+) -> tuple[dict[str, Any], bool]:
     async with session.begin():
         inserted = (
             await session.execute(
                 text("""
                     INSERT INTO players (wx_openid) VALUES (:openid)
                     ON CONFLICT (wx_openid) DO NOTHING
-                    RETURNING player_id, current_character_id, progress_version, status::text AS status
+                    RETURNING player_id, current_character_id, progress_version,
+                              status::text AS status
                 """),
                 {"openid": openid_digest},
             )
@@ -26,7 +29,8 @@ async def get_or_create_player(session: AsyncSession, openid_digest: str) -> tup
             row = (
                 await session.execute(
                     text("""
-                        SELECT player_id, current_character_id, progress_version, status::text AS status
+                        SELECT player_id, current_character_id, progress_version,
+                               status::text AS status
                         FROM players WHERE wx_openid = :openid
                     """),
                     {"openid": openid_digest},

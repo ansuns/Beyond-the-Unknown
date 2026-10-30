@@ -1,4 +1,4 @@
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from typing import Any
 
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -27,5 +27,5 @@ async def login_with_wechat(
         "character_id": player["current_character_id"],
         "is_new_player": is_new_player,
         "progress_version": player["progress_version"],
-        "server_time": int(datetime.now(timezone.utc).timestamp()),
+        "server_time": int(datetime.now(UTC).timestamp()),
     }

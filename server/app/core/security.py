@@ -1,6 +1,6 @@
 import hashlib
 import hmac
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 from uuid import UUID
 
 import jwt
@@ -18,7 +18,7 @@ def hash_wechat_openid(openid: str, pepper: str) -> str:
 def create_access_token(player_id: UUID, secret: str, expires_in_seconds: int) -> str:
     if len(secret) < 32:
         raise ValueError("JWT secret must contain at least 32 characters")
-    now = datetime.now(timezone.utc)
+    now = datetime.now(UTC)
     return jwt.encode(
         {"sub": str(player_id), "iss": JWT_ISSUER, "iat": now,
          "exp": now + timedelta(seconds=expires_in_seconds)},
