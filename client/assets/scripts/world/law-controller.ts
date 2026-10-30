@@ -109,7 +109,7 @@ export class LawController {
     return result;
   }
 
-  async stopGaze(): Promise<GazeStopData> {
+  hasActiveGaze(): boolean {\n    return this.gazeTargetId !== undefined;\n  }\n\n  async stopGaze(): Promise<GazeStopData> {
     // Stopping an existing effect must remain possible even if catalog tuning
     // has since been disabled by the server.
     const result = await this.session.stopGaze();
