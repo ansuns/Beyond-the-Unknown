@@ -335,7 +335,12 @@ def test_outbox_finalizes_season_and_grants_rank_reward_once() -> None:
                      reward_id, is_enabled, config_status)
                 VALUES
                     (:condition_id, 'SEASON_RANK',
-                     '{"season_type":"WEEKLY","board_type":"EXPLORE","rank_min":1,"rank_max":1}'::jsonb,
+                     jsonb_build_object(
+                         'season_type', 'WEEKLY',
+                         'board_type', 'EXPLORE',
+                         'rank_min', 1,
+                         'rank_max', 1
+                     ),
                      :reward_id, true, 'READY')
                 ON CONFLICT (condition_id) DO UPDATE
                 SET condition_config = EXCLUDED.condition_config,
