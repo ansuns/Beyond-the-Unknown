@@ -1,0 +1,253 @@
+openapi: 3.1.0
+info:
+  title: Beyond the Unknown Game API
+  version: 1.0.0
+  description: REST contract for Cocos Creator 3.x client and Node.js TypeScript server.
+servers:
+  - url: https://{host}/api/v1
+    variables:
+      host: { default: api.example.invalid }
+security:
+  - bearerAuth: []
+tags:
+  - { name: Auth }
+  - { name: Player }
+  - { name: Map }
+  - { name: Level }
+  - { name: Discovery }
+  - { name: Collection }
+  - { name: Reward }
+  - { name: Leaderboard }
+  - { name: Archive }
+paths:
+  /auth/login:
+    post:
+      tags: [Auth]
+      security: []
+      operationId: login
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [wx_code, request_id]
+              properties:
+                wx_code: { type: string, minLength: 1 }
+                request_id: { type: string, minLength: 1, maxLength: 128 }
+      responses:
+        '200':
+          description: Login successful
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/EnvelopeLogin' }
+        '400': { $ref: '#/components/responses/BadRequest' }
+  /player/characters:
+    get:
+      tags: [Player]
+      operationId: getCharacters
+      responses:
+        '200':
+          description: Character choices
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/EnvelopeObject' }
+  /player/character:
+    put:
+      tags: [Player]
+      operationId: selectCharacter
+      parameters: [{ $ref: '#/components/parameters/RequestId' }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [character_id]
+              properties: { character_id: { type: string } }
+      responses:
+        '200': { description: Selected }
+        '404': { $ref: '#/components/responses/NotFound' }
+  /map/enter:
+    post:
+      tags: [Map]
+      operationId: enterMap
+      parameters: [{ $ref: '#/components/parameters/RequestId' }]
+      responses:
+        '200':
+          description: Map instance assigned
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/EnvelopeObject' }
+  /level/enter:
+    post:
+      tags: [Level]
+      operationId: enterLevel
+      parameters: [{ $ref: '#/components/parameters/RequestId' }, { $ref: '#/components/parameters/IdempotencyKey' }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [level_id]
+              properties: { level_id: { type: string } }
+      responses:
+        '200':
+          description: Personal run created
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/EnvelopeObject' }
+  /level/settle:
+    post:
+      tags: [Level]
+      operationId: settleLevel
+      parameters: [{ $ref: '#/components/parameters/RequestId' }, { $ref: '#/components/parameters/IdempotencyKey' }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [run_id]
+              properties: { run_id: { type: string, format: uuid } }
+      responses:
+        '200':
+          description: Idempotent settlement result
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/EnvelopeObject' }
+        '409': { $ref: '#/components/responses/Conflict' }
+  /discovery:
+    get:
+      tags: [Discovery]
+      operationId: listDiscoveries
+      responses:
+        '200':
+          description: Current player's discoveries
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/EnvelopeObject' }
+  /collection:
+    get:
+      tags: [Collection]
+      operationId: listCollections
+      responses:
+        '200':
+          description: Current player's collection
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/EnvelopeObject' }
+  /reward:
+    get:
+      tags: [Reward]
+      operationId: listRewards
+      responses:
+        '200':
+          description: Owned and claimable rewards
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/EnvelopeObject' }
+  /reward/claim:
+    post:
+      tags: [Reward]
+      operationId: claimReward
+      parameters: [{ $ref: '#/components/parameters/RequestId' }, { $ref: '#/components/parameters/IdempotencyKey' }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [player_reward_id]
+              properties: { player_reward_id: { type: string, format: uuid } }
+      responses:
+        '200': { description: Claimed (idempotent) }
+        '409': { $ref: '#/components/responses/Conflict' }
+  /leaderboard/{type}:
+    get:
+      tags: [Leaderboard]
+      operationId: getLeaderboard
+      parameters:
+        - name: type
+          in: path
+          required: true
+          schema: { type: string, enum: [EXPLORE, CLEAR, COLLECT] }
+        - name: season_id
+          in: query
+          schema: { type: string }
+        - name: scope
+          in: query
+          schema: { type: string, enum: [top, around, self], default: top }
+      responses:
+        '200':
+          description: Leaderboard page
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/EnvelopeObject' }
+  /season:
+    get:
+      tags: [Leaderboard]
+      operationId: getCurrentSeasons
+      responses:
+        '200': { description: Current weekly and monthly periods }
+  /world-archive:
+    get:
+      tags: [Archive]
+      operationId: listWorldArchive
+      responses:
+        '200':
+          description: Global first-discovery archive
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/EnvelopeObject' }
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+  parameters:
+    RequestId:
+      name: X-Request-Id
+      in: header
+      required: true
+      schema: { type: string, maxLength: 128 }
+    IdempotencyKey:
+      name: Idempotency-Key
+      in: header
+      required: true
+      description: Stable per business operation; reuse unchanged for retries. Never substitute X-Request-Id.
+      schema: { type: string, minLength: 8, maxLength: 200 }
+  schemas:
+    EnvelopeLogin:
+      type: object
+      required: [code, message, data, request_id]
+      properties:
+        code: { type: integer }
+        message: { type: string }
+        request_id: { type: string }
+        data:
+          type: object
+          required: [player_id, is_new_player, progress_version, server_time]
+          properties:
+            player_id: { type: string, format: uuid }
+            character_id: { type: [string, 'null'] }
+            is_new_player: { type: boolean }
+            progress_version: { type: integer, minimum: 0 }
+            server_time: { type: integer, description: Unix epoch seconds }
+    EnvelopeObject:
+      type: object
+      required: [code, message, data, request_id]
+      properties:
+        code: { type: integer }
+        message: { type: string }
+        data: { type: object, additionalProperties: true }
+        request_id: { type: string }
+  responses:
+    BadRequest:
+      description: Invalid request
+    NotFound:
+      description: Resource not found or not owned
+    Conflict:
+      description: State conflict or idempotency key reused with a different payload
