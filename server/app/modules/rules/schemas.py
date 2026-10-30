@@ -24,3 +24,8 @@ class RuleRunRequest(BaseModel):
 class RuleMaintainRequest(BaseModel):
     run_id: UUID
     target_id: str = Field(min_length=1, max_length=100)
+
+
+class MechanismInteractRequest(BaseModel):
+    run_id: UUID
+    mechanism_id: str = Field(min_length=1, max_length=100)
