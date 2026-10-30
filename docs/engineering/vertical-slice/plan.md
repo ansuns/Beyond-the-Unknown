@@ -1,7 +1,7 @@
 # 第一阶段垂直切片开发与测试清单
 
-- 版本：VS-6B.0
-- 状态：VS-0 至 VS-6A 服务端基础、权威法则、发现/结算/奖励/排行榜、赛季审核与 Transactional Outbox 已合并并通过 CI；ROOM-01 服务端回声显形、出口前置条件、移动校验、交互幂等与结算闭环已实现并通过服务端集成/Compose CI；Cocos 客户端已接入 ROOM-01 几何原型、移动、回声/出口交互、状态显形与结算流程，客户端 CI 通过。正式美术/音效、Cocos 编辑器导入、微信开发者工具构建和真机联调仍未完成。
+- 版本：VS-6C.0
+- 状态：VS-0 至 VS-6A 服务端基础、权威法则、发现/结算/奖励/排行榜、赛季审核与 Transactional Outbox 已合并并通过 CI；ROOM-01 至 ROOM-05 与隐藏结局已接入几何玩法原型，ROOM-02/03/04/05 组合施放及关卡结算由服务端集成测试覆盖；隐藏路线按 ROOM-05 三组组合的顺序与机关映射验证。客户端组合控件已改为读取关卡配置，ROOM-04/05 持续凝视租约由客户端自动续期。PR #78、#79、#80 已合并，主分支 CI 正在执行。正式美术/音效资源尚未制作（资源清单 112 项均为 MISSING），Cocos 编辑器导入、微信开发者工具构建和真机联调仍未完成。
 - 基线：GDD V0.2；Cocos Creator 3.8.8 + TypeScript；Python 3.12+ + FastAPI；PostgreSQL；Redis；RabbitMQ
 - 目标：端到端验证“登录—共享主地图—进入个人关卡—施放法则—机关解谜—服务端结算—永久进度恢复”。
 - 策略：先完成 ROOM-01 可玩闭环，再以配置驱动接入 ROOM-02 至 ROOM-05 与隐藏结局。
@@ -11,7 +11,7 @@
 ### 必须包含
 - Cocos Creator 3.x 客户端：启动/登录、主地图、移动、交互、法则 UI、个人关卡、结算 UI。
 - Python FastAPI 模块化单体：Auth、Player、MapInstance、LevelRun、Rule、Mechanism、Discovery、Settlement、Progress。
-- Python 3.12+ + FastAPI；SQLAlchemy 2.x async + asyncpg；Alembic 管理 PostgreSQL 迁移 0001–0008；Pydantic 2.x 校验契约。Redis 首阶段可暂缓，不能作为永久数据唯一来源；RabbitMQ 用于后台异步任务，Worker 独立运行。
+- Python 3.12+ + FastAPI；SQLAlchemy 2.x async + asyncpg；Alembic 管理 PostgreSQL 迁移 0001–0015；Pydantic 2.x 校验契约。Redis 首阶段可暂缓，不能作为永久数据唯一来源；RabbitMQ 用于后台异步任务，Worker 独立运行。
 - WebSocket AUTH、ENTER/LEAVE、MOVE_SYNC、PING/PONG；机关状态由服务端权威推送。
 - ROOM-01 回声显形 HIDEABLE、激活出口。
 - 幂等结算、个人发现、world_archive 原子抢占、progress_version 更新。
@@ -33,7 +33,9 @@
 | VS-4 核心玩法 | 法则目录、权威施法、冷却/持续效果、三组预设组合、个人机关状态机 | 服务端规则目录、权限/目标/范围校验、冷却/注视租约、机关状态隔离与三组组合已合并；客户端 LawController 已接入并通过 CI；数值/坐标仍为 TUNING_REQUIRED，场景表现待做 |
 | VS-5 发现与结算 | discovery、world_archive、settlements、score_events、进度快照、奖励与三榜 | 服务端已合并并通过迁移/集成/Compose CI；积分权重、正式奖励定义和部分目标内容仍待配置 |
 | VS-6A 赛季结算与异步任务 | 周/月赛季封榜、最终三榜快照、审核/自动批准、排名奖励、task_outbox、Worker receipt/重试/DLQ | 已合并（PR #52）并通过 CI；故障恢复演练、积分纠错接口与正式运营配置仍待完成 |
-| VS-6 联调验收 | 真机包、自动化报告、性能/断线测试 | 本文验收项通过或阻塞缺陷有负责人 |
+| VS-6B 多房间几何原型 | ROOM-01～05、隐藏结局几何场景；ROOM-05 隐藏路线；各房间组合和结算集成测试 | 已合并 PR #78；服务端/客户端 CI 通过。正式美术、音效和 Cocos/微信真机验证仍未完成 |
+| VS-6C 配置驱动与关卡契约 | 每个房间的 prototype_combos、持续凝视配置；JSON Schema、数据库配置和客户端控件一致性 | 已合并 PR #80；迁移 0012–0015 与配置契约测试通过 CI |
+| VS-7 联调验收 | 真机包、自动化报告、性能/断线测试 | 本文验收项通过或阻塞缺陷有负责人 |
 
 ## 3. 客户端任务（Cocos Creator 3.x）
 - [x] 建立 TypeScript core/network/player/world 基础模块；level/rules/ui 随后续玩法切片增加。
@@ -46,13 +48,13 @@
 - [x] ROOM-01 法则施放输入与回声命中后显形反馈（几何原型按钮）；正式冷却 UI 与完整 HUD 仍待做。
 - [x] Cocos Creator 3.8.8 项目结构、Boot 场景、微信登录/共享地图/远端占位角色/点击移动/个人房间进入与放弃的几何原型。
 - [ ] Cocos 编辑器实际导入、场景序列化、目标 hit-testing、机关动画/音效与 HUD；微信开发者工具构建和真机验证。
-- [x] ROOM-01 关卡目标/机关表现读取服务端状态；其他房间尚未接入。
+- [x] ROOM-01～05 与隐藏结局几何原型读取服务端关卡/机关状态；组合控件读取 levels.config.prototype_combos，不再在 GameEntry 中按房间 ID 硬编码组合列表。
 - [ ] 加载、断网、重连、结算与错误状态。
 
 ## 4. 服务端任务
 - [x] 建立 Python 模块化单体基础：app/api、core、modules/auth、players、characters、maps、levels、rules、progress、workers、tests。
 - [x] 使用 FastAPI + Uvicorn；VS-1 登录/玩家接口已更新 OpenAPI 契约。
-- [x] 使用 SQLAlchemy 2.x async + asyncpg；Alembic 0001–0008 已在 CI 干净 PostgreSQL 上执行。
+- [x] 使用 SQLAlchemy 2.x async + asyncpg；Alembic 0001–0015 已在 CI 干净 PostgreSQL/Compose 环境执行。
 - [x] VS-2 WebSocket 处理器采用 async I/O；CPU 密集计算不得阻塞事件循环。当前连接管理器仅支持单 API 进程，水平扩展前必须接入 Redis presence/pub-sub。
 - [x] RabbitMQ 与 Python Worker：版本化任务 envelope、持久化队列/消息、Publisher Confirms、手动 ACK、数据库记录的有限指数退避重试与 DLQ（VS-6A）。
 - [x] 赛季周期到期与结算任务通过 PostgreSQL task_outbox 同事务写入；Relay 仅在 RabbitMQ publisher confirm 后标记 PUBLISHED；Worker 使用 worker_task_receipts 幂等处理（VS-6A）。
@@ -72,7 +74,7 @@
 ## 5. 测试清单
 
 ### 数据库
-- [x] 空库执行 0001–0011 成功并登记迁移版本；0008 增加赛季审核字段、task_outbox 与 worker_task_receipts，0010 完成机制 ID 对齐，0011 建立 ROOM-01 原型坐标/交互配置。
+- [x] 空库执行 0001–0015 成功并登记迁移版本；0012 修正 ROOM-05 目标/隐藏路线机关 ID，0013 建立多房间几何原型位置，0014 写入每关组合预设，0015 修正 ROOM-03 能量机关到门机关的 canonical link。
 - [ ] 外键、枚举、CHECK、唯一约束正反例测试。
 - [ ] 同一玩家重复进入同一关卡生成不同 run_id。
 - [ ] 同一机关配置在不同 run 可独立保存；同 run 重复配置被拒绝。
@@ -99,9 +101,9 @@
 - [x] 同一 run 的机关状态由服务端状态接口读取；不同 run 的机关状态隔离。
 - [x] 未完成退出后重新进入创建新 run；关卡生命周期集成测试覆盖。
 - [x] 重复结算不重复产生发现、积分、奖励（VS-5 集成测试）。
-- [ ] 五个 room_index 唯一且恰好 1–5；隐藏关卡 room_index=null。
-- [ ] HIDDEN-ROUTE-01 缺失、禁用、前置房间不齐或组合序列错误时不能解锁。
-- [ ] 前置条件满足且路线启用时，LV-HIDDEN-01 可进入独立 run。
+- [x] 五个 room_index 唯一且恰好 1–5；隐藏关卡 room_index=null（内容契约自动验证）。
+- [x] HIDDEN-ROUTE-01 缺失、禁用、前置房间不齐或组合序列错误由内容契约验证；组合 ID 与 M05 机关按顺序映射到 ROOM-05 目标。
+- [ ] 前置条件满足后通过真实客户端进入 LV-HIDDEN-01、交互 H01-END 并完成独立 run（服务端路线解锁逻辑已有测试，端到端进入/结局尚待补测）。
 
 ### 永久进度与排行榜
 - [ ] 重登后角色、发现、收藏、已完成关卡、奖励保持。
@@ -145,3 +147,14 @@
 - [ ] 赛季审核窗口内的积分纠错流水及重算审批；当前支持批准/驳回，尚未开放纠错写接口。
 - [ ] 正式积分权重、排名奖励档位和时区配置由策划/运维确认后启用。
 - [ ] Cocos 编辑器导入、场景 hit-testing/HUD/动画、微信开发者工具与真机联调。
+
+
+## 9. VS-6B/6C 多房间原型与数据契约（PR #78、#79、#80）
+- [x] ROOM-02、ROOM-03、ROOM-04、ROOM-05 和 LV-HIDDEN-01 的几何原型场景与基本交互已接入 Cocos GameEntry。
+- [x] ROOM-02/03/04/05 组合施放与必要目标结算有服务端集成测试；ROOM-03 canonical door link 已迁移并断言结算，ROOM-04/05 持续凝视由租约维持。
+- [x] ROOM-05 三组组合目标统一为 M05-BRIDGE-01、M05-ENERGY-01、M05-REVERSE-01；HIDDEN-ROUTE-01 使用同一有序机关序列。
+- [x] levels.v1.json、JSON Schema、levels.config.prototype_combos 与 Cocos 组合控件使用相同数据；数据库配置与 JSON 配置在集成测试中对照。
+- [x] 内容契约检查唯一入口/机关/目标 ID、关联机关引用、组合目标/法则序列、持续凝视标志、隐藏路线启用状态及 COMBO→M05 目标顺序映射。
+- [ ] 隐藏结局独立 run 的真实客户端端到端流程、H01-END 交互与结算回归。
+- [ ] 正式美术/音效资源制作与导入；当前资源清单 112 项全部 MISSING，不能视为完成。
+- [ ] Cocos Creator 3.8.8 编辑器实际导入/构建、微信开发者工具构建、测试号真机联调及发布包验收。
