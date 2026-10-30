@@ -161,6 +161,7 @@ async def _grant_season_rank_rewards(
                 WHERE c.trigger_type = 'SEASON_RANK'
                   AND c.is_enabled = true AND c.config_status = 'READY'
                   AND r.is_enabled = true AND r.is_paid = false
+                  AND r.reward_type IN ('RT_APPEARANCE','RT_TITLE','RT_PET','RT_BADGE')
             """)
         )
     ).mappings().all()
@@ -184,8 +185,11 @@ async def _grant_season_rank_rewards(
         required_board = config.get("board_type")
         if required_board not in {"EXPLORE", "CLEAR", "COLLECT"}:
             continue
-        rank_min = int(config.get("rank_min", 1))
-        rank_max = int(config.get("rank_max", rank_min))
+        try:
+            rank_min = int(config.get("rank_min", 1))
+            rank_max = int(config.get("rank_max", rank_min))
+        except (TypeError, ValueError):
+            continue
         if rank_min < 1 or rank_max < rank_min:
             continue
         for entry in snapshots:
