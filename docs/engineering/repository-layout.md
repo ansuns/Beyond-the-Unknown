@@ -18,11 +18,12 @@ Beyond-the-Unknown/
 │   │   │   ├── auth/
 │   │   │   ├── players/
 │   │   │   ├── characters/
-│   │   │   ├── maps/               # add in VS-2
+│   │   │   ├── maps/               # map instance and spawn allocation
 │   │   │   ├── levels/             # add in VS-3
 │   │   │   ├── rules/              # add in VS-4
 │   │   │   ├── discoveries/        # add in VS-5
 │   │   │   └── settlements/        # add in VS-5
+│   │   ├── realtime/               # WebSocket auth, connection lifecycle and broadcasts
 │   │   ├── schemas/                # shared envelope/error structures
 │   │   ├── workers/                # RabbitMQ consumer entrypoints
 │   │   └── main.py                 # FastAPI composition root
@@ -95,8 +96,8 @@ modules/<domain>/
 
 ## 7. Current implementation
 
-- Established: api, core, modules/auth, modules/players, modules/characters, schemas and workers.
-- VS-2 adds maps and realtime connection lifecycle.
+- Established: api, core, modules/auth, modules/players, modules/characters, modules/maps, realtime, schemas and workers.
+- VS-2 backend prototype: map allocation, player presence, WebSocket AUTH/ENTER/RECONNECT, MOVE_SYNC, ACTION_BROADCAST, PING/PONG and LEAVE.
 - VS-3 adds levels and personal run/mechanism isolation.
 - VS-4 adds rules and mechanisms.
 - VS-5 adds discoveries, collections, settlements, leaderboards and rewards.
