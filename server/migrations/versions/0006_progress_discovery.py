@@ -136,7 +136,7 @@ def upgrade() -> None:
         sa.Column("condition_id", sa.String(160), primary_key=True),
         sa.Column("trigger_type", sa.String(32), nullable=False),
         sa.Column("condition_config", JSONB(), nullable=False, server_default="{}"),
-        sa.Column("reward_id", sa.String(100), sa.ForeignKey("rewards.reward_id"), nullable=False),
+        sa.Column("reward_id", sa.String(100), sa.ForeignKey("rewards.reward_id", deferrable=True, initially="DEFERRED"), nullable=False),
         sa.Column("is_enabled", sa.Boolean(), nullable=False, server_default=sa.true()),
         sa.Column(
             "config_status",
@@ -145,7 +145,7 @@ def upgrade() -> None:
             server_default="CONTENT_PENDING",
         ),
         sa.CheckConstraint(
-            "trigger_type IN ('SCORE','COLLECTION','DISCOVERY','COMPOSITE','SEASON_RANK')",
+            "trigger_type IN ('SCORE','COLLECTION','DISCOVERY','COMPOSITE','SEASON_RANK','SETTLEMENT')",
             name="ck_reward_condition_trigger_type",
         ),
     )
@@ -155,6 +155,8 @@ def upgrade() -> None:
         "reward_conditions",
         ["condition_ref"],
         ["condition_id"],
+        deferrable=True,
+        initially="DEFERRED",
     )
     op.create_foreign_key(
         "fk_score_event_run_owner",
@@ -162,6 +164,11 @@ def upgrade() -> None:
         "level_runs",
         ["run_id", "player_id"],
         ["run_id", "player_id"],
+    )
+    op.create_index(
+        "idx_reward_conditions_trigger_type",
+        "reward_conditions",
+        ["trigger_type", "is_enabled", "config_status"],
     )
     op.create_index(
         "idx_player_collections_player_category",
@@ -374,6 +381,7 @@ def upgrade() -> None:
 
 def downgrade() -> None:
     op.drop_index("idx_player_collections_player_category", table_name="player_collections")
+    op.drop_index("idx_reward_conditions_trigger_type", table_name="reward_conditions")
     op.drop_constraint("fk_score_event_run_owner", "score_events", type_="foreignkey")
     op.drop_constraint("fk_rewards_condition_ref", "rewards", type_="foreignkey")
     op.drop_table("reward_conditions")
