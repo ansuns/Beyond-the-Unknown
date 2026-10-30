@@ -9,6 +9,8 @@ from app.modules.levels.repository import (
     ActiveLevelRunExists,
     IdempotencyConflict,
     InvalidLevelRunState,
+    InvalidLevelPosition,
+    update_level_position,
     LevelLocked,
     LevelNotFound,
     PlayerNotInMap,
@@ -17,7 +19,11 @@ from app.modules.levels.repository import (
     list_levels,
     start_level,
 )
-from app.modules.levels.schemas import LevelEnterRequest, LevelRunRequest
+from app.modules.levels.schemas import (
+    LevelEnterRequest,
+    LevelPositionRequest,
+    LevelRunRequest,
+)
 from app.realtime.manager import map_connections
 from app.schemas.envelope import success_envelope
 
@@ -118,5 +124,27 @@ async def post_abandon_level(
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,
             detail="Completed or failed runs cannot be abandoned",
+        ) from exc
+    return success_envelope(data, request.state.request_id)
+
+
+@router.post("/position")
+async def post_level_position(
+    payload: LevelPositionRequest,
+    request: Request,
+    player_id=Depends(get_current_player_id),
+    session: AsyncSession = Depends(get_session),
+) -> dict:
+    try:
+        data = await update_level_position(
+            session, player_id, payload.run_id, payload.x, payload.y
+        )
+    except LevelNotFound as exc:
+        raise HTTPException(status_code=404, detail="Level run not found") from exc
+    except InvalidLevelRunState as exc:
+        raise HTTPException(status_code=409, detail="Level run is not active") from exc
+    except InvalidLevelPosition as exc:
+        raise HTTPException(
+            status_code=422, detail="Position is outside the configured room bounds"
         ) from exc
     return success_envelope(data, request.state.request_id)
