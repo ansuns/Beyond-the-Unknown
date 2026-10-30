@@ -25,6 +25,13 @@
 - 客户端不得直接提交发现事实、分数、奖励持有状态或机关最终状态。
 - 所有配置带 schema_version；加载前校验；未知字段默认拒绝（版本升级时显式迁移）。
 
+## VS-1 身份与玩家持久化决策
+- 微信登录码仅由服务端调用 `jscode2session` 交换；`session_key` 不返回客户端、不写日志、不持久化。
+- 现有 `players.wx_openid` 唯一列存储使用独立密钥计算的 HMAC-SHA256 摘要，不保留原始 OpenID；密钥通过 `OPENID_HMAC_SECRET` 注入。
+- JWT 使用独立的 `JWT_SECRET`，HS256、issuer 校验与短期过期时间；玩家身份只从 Bearer token 的 `sub` 读取。
+- 玩家首次创建与12个默认角色解锁处于同一数据库事务；OpenID 唯一约束与 `ON CONFLICT DO NOTHING` 处理并发首次登录。
+- 后端目录采用模块化单体：`app/api` 负责路由组合，`app/core` 负责基础设施与安全，`app/modules/<domain>` 负责领域用例/持久化，`app/workers` 负责异步消费者。
+
 ## 待定但不阻塞首个垂直切片
 - 微信登录正式凭证交换、JWT/会话实现细节。
 - 坐标单位、移动速度、碰撞尺寸、法则作用半径/持续时间/冷却。

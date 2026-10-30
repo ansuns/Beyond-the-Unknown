@@ -12,7 +12,6 @@ services:
       interval: 5s
       timeout: 3s
       retries: 20
-
   rabbitmq:
     image: rabbitmq:4-management-alpine
     environment:
@@ -25,7 +24,6 @@ services:
       interval: 5s
       timeout: 5s
       retries: 20
-
   api:
     build:
       context: .
@@ -34,12 +32,15 @@ services:
       APP_ENV: local
       DATABASE_URL: postgresql+asyncpg://beyond:beyond_dev_only@postgres:5432/beyond
       RABBITMQ_URL: amqp://beyond:beyond_dev_only@rabbitmq:5672/
+      WECHAT_APP_ID: ${WECHAT_APP_ID:-}
+      WECHAT_APP_SECRET: ${WECHAT_APP_SECRET:-}
+      JWT_SECRET: ${JWT_SECRET:-local-development-jwt-secret-change-before-deploy}
+      OPENID_HMAC_SECRET: ${OPENID_HMAC_SECRET:-local-development-openid-hmac-change-before-deploy}
     command: ["uv", "run", "--no-sync", "uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000"]
     ports: ["8000:8000"]
     depends_on:
       postgres: { condition: service_healthy }
       rabbitmq: { condition: service_healthy }
-
   worker:
     build:
       context: .
@@ -51,7 +52,6 @@ services:
     command: ["uv", "run", "--no-sync", "python", "-m", "app.workers.task_worker"]
     depends_on:
       rabbitmq: { condition: service_healthy }
-
 volumes:
   postgres_data:
   rabbitmq_data:

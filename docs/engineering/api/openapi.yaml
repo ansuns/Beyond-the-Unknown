@@ -1,7 +1,7 @@
 openapi: 3.1.0
 info:
   title: Beyond the Unknown Game API
-  version: 1.0.0
+  version: 1.1.0
   description: Language-agnostic REST contract for Cocos Creator 3.x TypeScript client and Python FastAPI server.
 servers:
   - url: https://{host}/api/v1
@@ -42,6 +42,17 @@ paths:
             application/json:
               schema: { $ref: '#/components/schemas/EnvelopeLogin' }
         '400': { $ref: '#/components/responses/BadRequest' }
+  /player/me:
+    get:
+      tags: [Player]
+      operationId: getPlayerMe
+      responses:
+        '200':
+          description: Current authenticated player profile
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/EnvelopeObject' }
+        '401': { description: Missing, invalid or expired bearer token }
   /player/characters:
     get:
       tags: [Player]
@@ -229,8 +240,11 @@ components:
         request_id: { type: string }
         data:
           type: object
-          required: [player_id, is_new_player, progress_version, server_time]
+          required: [access_token, token_type, expires_in, player_id, is_new_player, progress_version, server_time]
           properties:
+            access_token: { type: string }
+            token_type: { type: string, enum: [Bearer] }
+            expires_in: { type: integer }
             player_id: { type: string, format: uuid }
             character_id: { type: [string, 'null'] }
             is_new_player: { type: boolean }
