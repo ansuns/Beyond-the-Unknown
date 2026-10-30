@@ -2,7 +2,7 @@
 
 from alembic import op
 
-revision = "0014_room_prototype_combo_presets"
+revision = "0014_room_combos"
 down_revision = "0013_rooms_prototype_playable"
 branch_labels = None
 depends_on = None
