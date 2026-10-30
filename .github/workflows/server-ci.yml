@@ -4,12 +4,14 @@ on:
   pull_request:
     paths:
       - "server/**"
+      - "docs/engineering/**"
       - "docker-compose.yml"
       - ".github/workflows/server-ci.yml"
   push:
     branches: [main]
     paths:
       - "server/**"
+      - "docs/engineering/**"
       - "docker-compose.yml"
 
 jobs:
