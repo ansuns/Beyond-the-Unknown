@@ -91,7 +91,8 @@
         },
         "movement_speed": 3,
         "interaction_radius": 1.5
-      }
+      },
+      "prototype_combos": []
     },
     {
       "level_id": "LV-ROOM-02",
@@ -154,7 +155,18 @@
         },
         "movement_speed": 3,
         "interaction_radius": 1.5
-      }
+      },
+      "prototype_combos": [
+        {
+          "combo_id": "COMBO-001",
+          "target_mechanism_id": "M02-BRIDGE-01",
+          "rule_sequence": [
+            "RULE_ECHO",
+            "RULE_GAZE"
+          ],
+          "display_name": "施放组合一"
+        }
+      ]
     },
     {
       "level_id": "LV-ROOM-03",
@@ -232,7 +244,18 @@
         },
         "movement_speed": 3,
         "interaction_radius": 1.5
-      }
+      },
+      "prototype_combos": [
+        {
+          "combo_id": "COMBO-002",
+          "target_mechanism_id": "M03-ENERGY-01",
+          "rule_sequence": [
+            "RULE_ECHO",
+            "RULE_REVERSE"
+          ],
+          "display_name": "施放组合二"
+        }
+      ]
     },
     {
       "level_id": "LV-ROOM-04",
@@ -309,7 +332,18 @@
         },
         "movement_speed": 3,
         "interaction_radius": 1.5
-      }
+      },
+      "prototype_combos": [
+        {
+          "combo_id": "COMBO-003",
+          "target_mechanism_id": "M04-PLATFORM-01",
+          "rule_sequence": [
+            "RULE_GAZE",
+            "RULE_REVERSE"
+          ],
+          "display_name": "施放组合三"
+        }
+      ]
     },
     {
       "level_id": "LV-ROOM-05",
@@ -429,7 +463,36 @@
         },
         "movement_speed": 3,
         "interaction_radius": 1.5
-      }
+      },
+      "prototype_combos": [
+        {
+          "combo_id": "COMBO-001",
+          "target_mechanism_id": "M05-BRIDGE-01",
+          "rule_sequence": [
+            "RULE_ECHO",
+            "RULE_GAZE"
+          ],
+          "display_name": "组合一·桥梁"
+        },
+        {
+          "combo_id": "COMBO-002",
+          "target_mechanism_id": "M05-ENERGY-01",
+          "rule_sequence": [
+            "RULE_ECHO",
+            "RULE_REVERSE"
+          ],
+          "display_name": "组合二·能量"
+        },
+        {
+          "combo_id": "COMBO-003",
+          "target_mechanism_id": "M05-REVERSE-01",
+          "rule_sequence": [
+            "RULE_GAZE",
+            "RULE_REVERSE"
+          ],
+          "display_name": "组合三·逆流"
+        }
+      ]
     },
     {
       "level_id": "LV-HIDDEN-01",
@@ -518,7 +581,8 @@
         },
         "movement_speed": 3,
         "interaction_radius": 1.5
-      }
+      },
+      "prototype_combos": []
     }
   ],
   "hidden_routes": [
