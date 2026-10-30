@@ -1,5 +1,5 @@
-from alembic import op
 import sqlalchemy as sa
+from alembic import op
 
 
 revision = "0003_map_instance_members"
@@ -27,8 +27,18 @@ def upgrade() -> None:
         sa.Column("position_x", sa.Float(), nullable=False, server_default="0"),
         sa.Column("position_y", sa.Float(), nullable=False, server_default="0"),
         sa.Column("direction", sa.String(2), nullable=False, server_default="S"),
-        sa.Column("joined_at", sa.DateTime(timezone=True), nullable=False, server_default=sa.func.now()),
-        sa.Column("last_seen_at", sa.DateTime(timezone=True), nullable=False, server_default=sa.func.now()),
+        sa.Column(
+            "joined_at",
+            sa.DateTime(timezone=True),
+            nullable=False,
+            server_default=sa.func.now(),
+        ),
+        sa.Column(
+            "last_seen_at",
+            sa.DateTime(timezone=True),
+            nullable=False,
+            server_default=sa.func.now(),
+        ),
         sa.CheckConstraint(
             "direction IN ('N','NE','E','SE','S','SW','W','NW')",
             name="ck_map_member_direction",
