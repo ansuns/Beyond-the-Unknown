@@ -484,6 +484,7 @@ export class BeyondTheUnknownGameEntry extends Component {
   private async castRoomEcho(): Promise<void> {
     if (!this.levelSession) return;
     try {
+      await this.flushLevelPosition();
       const result = await this.levelSession.castRule(
         "RULE_ECHO",
         { targetId: "M01-HIDEABLE-01", targetPoint: { x: 5, y: 4 } },
@@ -618,6 +619,14 @@ export class BeyondTheUnknownGameEntry extends Component {
 
   private drawPersonalRoom(levelName: string, completed = false): void {
     if (!this.worldRoot) return;
+    for (const name of [
+      "RoomEchoButton",
+      "RoomExitButton",
+      "RoomAbandonButton",
+      "BackToWorldButton"
+    ]) {
+      this.root?.getChildByName(name)?.destroy();
+    }
     this.worldRoot.removeAllChildren();
     const size = this.worldRoot.getComponent(UITransform).contentSize;
     const room = new Node("Room01Prototype");
