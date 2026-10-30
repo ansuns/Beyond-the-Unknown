@@ -27,7 +27,11 @@ from app.modules.levels.repository import (
     list_levels,
     start_level,
 )
-from app.modules.levels.schemas import (\n    LawActionRequest,\n    LevelEnterRequest,\n    LevelRunRequest,\n)
+from app.modules.levels.schemas import (
+    LawActionRequest,
+    LevelEnterRequest,
+    LevelRunRequest,
+)
 from app.realtime.manager import map_connections
 from app.schemas.envelope import success_envelope
 
