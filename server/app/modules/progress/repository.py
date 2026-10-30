@@ -819,7 +819,7 @@ async def settle_level(
     )
 
     unlocked_route = await _try_unlock_hidden_route(
-        session, player_id, run_id, run["level_id"]
+        session, player_id
     )
     await _snapshot_progress(session, player_id)
     score_payload = {
@@ -859,20 +859,16 @@ async def settle_level(
 async def _try_unlock_hidden_route(
     session: AsyncSession,
     player_id: UUID,
-    run_id: UUID,
-    level_id: str,
 ) -> dict[str, Any] | None:
     routes = (
         await session.execute(
             text("""
-                SELECT hidden_route_id, prerequisite_levels,
+                SELECT hidden_route_id, prerequisite_levels, trigger_level_id,
                        trigger_combo_sequence, trigger_mechanism_sequence,
                        result_level_id
                 FROM hidden_routes
-                WHERE trigger_level_id = :level_id
-                  AND is_enabled = true AND config_status = 'READY'
-            """),
-            {"level_id": level_id},
+                WHERE is_enabled = true AND config_status = 'READY'
+            """)
         )
     ).mappings().all()
     for route in routes:
@@ -891,31 +887,55 @@ async def _try_unlock_hidden_route(
         if set(prerequisites) - set(completed):
             continue
 
-        combo_rows = (
+        candidate_runs = (
             await session.execute(
                 text("""
-                    SELECT result #>> '{combo,combo_id}' AS combo_id,
-                           result #>> '{combo,mechanism_id}' AS mechanism_id
-                    FROM rule_cast_events
-                    WHERE run_id = :run_id AND player_id = :player_id
-                      AND result #>> '{combo,combo_id}' IS NOT NULL
-                    ORDER BY created_at ASC
+                    SELECT run_id
+                    FROM settlements
+                    WHERE player_id = :player_id
+                      AND level_id = :trigger_level_id
+                      AND result_status = 'COMPLETED'
+                    ORDER BY created_at DESC
                 """),
-                {"run_id": run_id, "player_id": player_id},
+                {
+                    "player_id": player_id,
+                    "trigger_level_id": route["trigger_level_id"],
+                },
             )
-        ).mappings().all()
+        ).scalars().all()
         expected_combos = list(route["trigger_combo_sequence"])
         expected_mechanisms = list(route["trigger_mechanism_sequence"])
-        matched = 0
-        for row in combo_rows:
-            if (
-                row["combo_id"] == expected_combos[matched]
-                and row["mechanism_id"] == expected_mechanisms[matched]
-            ):
-                matched += 1
-                if matched == len(expected_combos):
-                    break
-        if matched != len(expected_combos):
+        if len(expected_combos) != len(expected_mechanisms):
+            continue
+
+        matched_run_id = None
+        for candidate_run_id in candidate_runs:
+            combo_rows = (
+                await session.execute(
+                    text("""
+                        SELECT result #>> '{combo,combo_id}' AS combo_id,
+                               result #>> '{combo,mechanism_id}' AS mechanism_id
+                        FROM rule_cast_events
+                        WHERE run_id = :run_id AND player_id = :player_id
+                          AND result #>> '{combo,combo_id}' IS NOT NULL
+                        ORDER BY created_at ASC
+                    """),
+                    {"run_id": candidate_run_id, "player_id": player_id},
+                )
+            ).mappings().all()
+            matched = 0
+            for row in combo_rows:
+                if (
+                    row["combo_id"] == expected_combos[matched]
+                    and row["mechanism_id"] == expected_mechanisms[matched]
+                ):
+                    matched += 1
+                    if matched == len(expected_combos):
+                        break
+            if matched == len(expected_combos):
+                matched_run_id = candidate_run_id
+                break
+        if matched_run_id is None:
             continue
 
         inserted = (
@@ -930,7 +950,7 @@ async def _try_unlock_hidden_route(
                 {
                     "player_id": player_id,
                     "route_id": route["hidden_route_id"],
-                    "run_id": run_id,
+                    "run_id": matched_run_id,
                 },
             )
         ).scalar_one_or_none()
@@ -939,11 +959,11 @@ async def _try_unlock_hidden_route(
                 session,
                 player_id,
                 "DISC-HIDDEN-ROUTE-01",
-                run_id,
-                level_id,
+                matched_run_id,
+                route["trigger_level_id"],
                 {
-                    "level_id": level_id,
-                    "run_id": str(run_id),
+                    "level_id": route["trigger_level_id"],
+                    "run_id": str(matched_run_id),
                     "hidden_route_id": route["hidden_route_id"],
                 },
                 create_snapshot=False,
