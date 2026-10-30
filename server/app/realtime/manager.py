@@ -116,4 +116,18 @@ class MapConnectionManager:
             await self.broadcast(instance_id, player_id, "LEAVE", {"player_id": player_id})
 
 
+    async def evict_player(self, instance_id: str, player_id: str) -> None:
+        key = (instance_id, player_id)
+        async with self.lock:
+            connection = self.connections.pop(key, None)
+            existed = self.avatars.pop(key, None) is not None
+        if connection is not None:
+            try:
+                await connection.websocket.close(code=4002, reason="Entered personal level")
+            except Exception:
+                pass
+        if existed:
+            await self.broadcast(instance_id, player_id, "LEAVE", {"player_id": player_id})
+
+
 map_connections = MapConnectionManager()

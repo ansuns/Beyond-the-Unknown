@@ -12,7 +12,7 @@ class FakeWebSocket:
     async def send_json(self, message):
         self.messages.append(message)
 
-    async def close(self, code=1000):
+    async def close(self, code=1000, reason=None):
         self.closed_code = code
 
 
@@ -65,3 +65,24 @@ async def test_reconnecting_player_replaces_old_socket_without_old_socket_detach
     assert old_socket.closed_code == 4001
     assert await manager.detach(old_socket, "instance-1", "player-1") is False
     assert await manager.detach(new_socket, "instance-1", "player-1") is True
+
+
+@pytest.mark.asyncio
+async def test_evict_player_closes_socket_and_broadcasts_leave():
+    manager = MapConnectionManager()
+    player_socket = FakeWebSocket()
+    observer_socket = FakeWebSocket()
+    avatar = {"player_id": "player-1", "x": 0.0, "y": 0.0, "direction": "S"}
+    await manager.attach(player_socket, "instance-1", "player-1", avatar)
+    await manager.attach(
+        observer_socket,
+        "instance-1",
+        "player-2",
+        {"player_id": "player-2", "x": 2.0, "y": 0.0, "direction": "S"},
+    )
+
+    await manager.evict_player("instance-1", "player-1")
+
+    assert player_socket.closed_code == 4002
+    assert await manager.avatar("instance-1", "player-1") is None
+    assert observer_socket.messages[-1]["cmd"] == "LEAVE"

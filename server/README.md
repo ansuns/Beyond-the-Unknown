@@ -63,3 +63,14 @@ All player endpoints require a Bearer JWT. The API derives player identity from 
 The current WebSocket connection manager is single-process/in-memory. It is a vertical-slice implementation for local integration and must be replaced by a Redis-backed presence/pub-sub adapter before horizontal scaling. AOI currently uses same-instance visibility as a fallback; radius/grid parameters remain pending GDD tuning. Spawn positions, 160 logical-units/second movement speed, 10 Hz movement cap, 5 actions per 10 seconds, 60-second reconnect grace and 20-player instance capacity are prototype configuration values, not production-certified limits.
 
 The map instance capacity and movement/reconnect limits are configurable through the `MAP_*` environment variables. The current 20-player value is a test target only; production capacity must be established by load testing.
+
+
+## VS-3 personal level runs (in review)
+
+- `GET /api/v1/level/`: enabled level catalog; hidden levels are listed as locked until authoritative route gating is implemented.
+- `POST /api/v1/level/enter`: requires Bearer JWT, `Idempotency-Key`, `level_id` and `entrance_id`. Creates one player-owned `CREATED` run, stores an idempotency record, releases the main-map membership/instance seat and evicts the in-process map socket.
+- `POST /api/v1/level/start`: transitions the caller-owned run from `CREATED` to `RUNNING`; repeated start is idempotent.
+- `POST /api/v1/level/abandon`: transitions a caller-owned `CREATED`/ `RUNNING` run to `ABANDONED`; repeated abandon is idempotent.
+- At most one `CREATED` or `RUNNING` run may exist per player. The database partial unique index is the final concurrency guard.
+- The five room catalog entries and the hidden ending use stable IDs from GDD V0.2. Spatial layout, art, exact mechanism instances and hidden-route unlock conditions remain configuration/content work.
+- Settlement, score/discovery/reward writes and permanent progress are not implemented in VS-3; they belong to the later authoritative gameplay/settlement slices.
