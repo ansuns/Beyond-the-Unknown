@@ -1,6 +1,11 @@
 import { describe, expect, it } from "vitest";
 
-import { parsePrototypeLayoutConfig } from "../assets/scripts/world/prototype-layout";
+import {
+  calculatePrototypeRoomScale,
+  parsePrototypeLayoutConfig,
+  prototypeLevelToLocal,
+  prototypeLocalToLevel
+} from "../assets/scripts/world/prototype-layout";
 
 describe("parsePrototypeLayoutConfig", () => {
   const validConfig = {
@@ -35,5 +40,39 @@ describe("parsePrototypeLayoutConfig", () => {
       ...validConfig,
       prototype_controls: { movement_speed: 3 }
     })).toThrow(/invalid values/);
+  });
+});
+
+describe("prototype layout coordinate contract", () => {
+  const bounds = { minX: 10, maxX: 22, minY: -4, maxY: 4 };
+
+  it("round-trips all room corners with non-zero coordinate origins", () => {
+    const scale = 20;
+    const min = prototypeLevelToLocal({ x: 10, y: -4 }, bounds, scale);
+    const max = prototypeLevelToLocal({ x: 22, y: 4 }, bounds, scale);
+    expect(min).toEqual({ x: -120, y: -80 });
+    expect(max).toEqual({ x: 120, y: 80 });
+    expect(prototypeLocalToLevel(min, bounds, scale)).toEqual({ x: 10, y: -4 });
+    expect(prototypeLocalToLevel(max, bounds, scale)).toEqual({ x: 22, y: 4 });
+  });
+
+  it("clamps touch coordinates outside the room back to configured bounds", () => {
+    expect(prototypeLocalToLevel({ x: -999, y: 999 }, bounds, 20)).toEqual({
+      x: 10,
+      y: 4
+    });
+  });
+
+  it("fits the room to viewport while respecting the maximum scale", () => {
+    expect(calculatePrototypeRoomScale(bounds, { width: 640, height: 600 })).toBe(40);
+    expect(calculatePrototypeRoomScale(bounds, { width: 320, height: 400 })).toBeCloseTo(16);
+  });
+
+  it("rejects invalid room scale and viewport geometry", () => {
+    expect(() => prototypeLevelToLocal({ x: 10, y: -4 }, bounds, 0)).toThrow(/positive finite/);
+    expect(() => calculatePrototypeRoomScale(
+      { ...bounds, maxX: 10 },
+      { width: 320, height: 400 }
+    )).toThrow(/positive and finite/);
   });
 });
