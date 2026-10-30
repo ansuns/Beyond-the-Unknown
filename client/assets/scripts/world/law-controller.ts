@@ -75,7 +75,7 @@ export class LawController {
     );
     if (ruleId === "RULE_GAZE" && target.targetId) {
       this.gazeTargetId = target.targetId;
-      this.lastGazeMaintainAt = 0;
+      this.lastGazeMaintainAt = this.now();
     }
     this.state = await this.level.refreshState();
     return result;
