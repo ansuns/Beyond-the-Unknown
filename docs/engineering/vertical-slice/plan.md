@@ -31,7 +31,7 @@
 | VS-2 共享主地图 | 地图实例分配、WS鉴权、ENTER/LEAVE、MOVE_SYNC、动作广播、心跳与重连保留 | 服务端单进程原型已合并；客户端 WebSocket/MapSession/WorldPlaySession 已合并；自动重连、移动表现、精细 AOI 与 Redis 多节点仍待完成 |
 | VS-3 个人关卡 | levels目录、个人run创建/开始/放弃、进入幂等与主地图席位释放 | 后端接口与迁移已合并；客户端 PersonalLevelSession/WorldPlaySession 可进入并启动个人 run；ROOM-01 场景与结算仍待做 |
 | VS-4 核心玩法 | 法则目录、权威施法、冷却/持续效果、三组预设组合、个人机关状态机 | 服务端规则目录、权限/目标/范围校验、冷却/注视租约、机关状态隔离与三组组合已合并；客户端 LawController 已接入并通过 CI；数值/坐标仍为 TUNING_REQUIRED，场景表现待做 |
-| VS-5 发现与结算 | discovery、world_archive、settlements、score_events、进度快照 | 结算幂等；重登后永久进度可见 |
+| VS-5 发现与结算 | discovery、world_archive、settlements、score_events、进度快照、奖励与三榜 | 服务端实现已提交，等待 CI/行为验证；正式积分权重与部分内容目标仍待配置 |
 | VS-6 联调验收 | 真机包、自动化报告、性能/断线测试 | 本文验收项通过或阻塞缺陷有负责人 |
 
 ## 3. 客户端任务（Cocos Creator 3.x）
