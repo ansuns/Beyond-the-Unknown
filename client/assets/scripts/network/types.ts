@@ -115,6 +115,8 @@ export interface LevelCatalogItem {
   config: Record<string, unknown>;
 }
 
+export type LevelEntrySummary = Omit<LevelCatalogItem, "is_unlocked">;
+
 export interface LevelCatalogData {
   levels: LevelCatalogItem[];
 }
@@ -132,7 +134,7 @@ export interface LevelEnterData {
   run_id: string;
   map_instance_id: string | null;
   status: "CREATED" | "RUNNING" | "COMPLETED" | "FAILED" | "ABANDONED";
-  level: LevelCatalogItem;
+  level: LevelEntrySummary;
   idempotent_replay: boolean;
 }
 
