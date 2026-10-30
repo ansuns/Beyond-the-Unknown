@@ -12,6 +12,7 @@
 - REST client attaches Bearer access token, `X-Request-Id`, timeout and typed API errors; `createWeChatFetch(wx)` adapts native `wx.request`.
 - Map WebSocket client follows protocol v1: AUTH must be first (seq 0), then ENTER/RECONNECT; client messages use monotonic sequence numbers. `createWeChatWebSocketFactory(wx)` adapts native `wx.connectSocket`.
 - Map session orchestration performs login → map enter → WebSocket connect and exposes authoritative server events.
+- On unexpected WebSocket close, `MapSession` reconnects with the same `instance_id`/`session_id` during the server-provided grace period using bounded exponential backoff; intentional leave/dispose suppresses reconnect.
 - Access tokens are held in memory by default. Never persist WeChat `session_key` or secrets in the client.
 
 ## Backend endpoints
