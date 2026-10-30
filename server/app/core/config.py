@@ -26,6 +26,7 @@ class Settings(BaseSettings):
     map_move_rate_hz: float = 10.0
     map_action_rate_limit: int = 5
     map_action_window_seconds: int = 10
+    server_timezone: str = "UTC"
 
     model_config = SettingsConfigDict(env_file=".env", extra="ignore")
 
