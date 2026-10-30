@@ -21,7 +21,7 @@
 
 ## 当前基线
 
-GDD V0.2 已完成首轮跨章节规则、MVP 范围、数据字典、UI/API 映射与修订复核。服务端 VS-0 基础设施与 VS-1 身份/玩家持久化已进入 main 并通过 CI。VS-2 共享地图/WebSocket 单进程原型正在 PR #10 中审查；其数据库迁移与 Docker Compose smoke 检查已通过，Python lint 尚待修复后重新验证，尚未合并。Cocos 客户端接入、Redis 多节点 presence/pub-sub、正式 AOI、玩法闭环、生产消息重试/Outbox、设备压测及生产部署仍属于后续工作。
+GDD V0.2 已完成首轮跨章节规则、MVP 范围、数据字典、UI/API 映射与修订复核。VS-0 至 VS-4 的服务端基础、身份持久化、共享地图、个人关卡、法则与机关权威逻辑，以及客户端 REST/WebSocket 编排已合并至 main。VS-5 发现、结算、永久进度、奖励与三榜能力正在独立分支实现并等待 CI 审核；尚未合并。完整 Cocos 场景表现、关卡坐标/法则数值配置、ROOM-01 出口交互范围校验、赛季审核发奖、RabbitMQ Outbox/Worker、Redis 多节点 presence/pub-sub、正式 AOI、真机端到端、设备压测及生产部署仍未完成。
 
 ## 工程原则
 
