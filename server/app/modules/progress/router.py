@@ -24,7 +24,11 @@ from app.modules.progress.repository import (
     list_world_archive,
     settle_level,
 )
-from app.modules.progress.schemas import LevelSettleRequest, RewardClaimRequest
+from app.modules.progress.schemas import (
+    LevelSettleRequest,
+    RewardClaimRequest,
+    SeasonReviewRequest,
+)
 from app.modules.progress.season_service import (
     SeasonNotFound,
     SeasonNotReviewable,
