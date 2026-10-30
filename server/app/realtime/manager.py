@@ -36,6 +36,17 @@ class MapConnectionManager:
         end
         return 0
     """
+    _DELETE_PRESENCE_SCRIPT = """
+        local owner = redis.call('GET', KEYS[1])
+        if ARGV[1] ~= '' then
+            if owner ~= ARGV[1] then return 0 end
+        elseif owner then
+            return 0
+        end
+        redis.call('DEL', KEYS[1], KEYS[2])
+        redis.call('ZREM', KEYS[3], ARGV[2])
+        return 1
+    """
 
     def __init__(
         self,
@@ -350,37 +361,58 @@ class MapConnectionManager:
             value = self.avatars.get((instance_id, player_id))
             return value.copy() if value else None
 
-    async def _delete_presence(self, instance_id: str, player_id: str) -> None:
+    async def _delete_presence(
+        self, instance_id: str, player_id: str, expected_lease_token: str | None
+    ) -> bool:
         if self.redis is None:
-            return
-        await self.redis.delete(
-            self._owner_key(instance_id, player_id),
-            self._avatar_key(instance_id, player_id),
+            return True
+        return bool(
+            await self.redis.eval(
+                self._DELETE_PRESENCE_SCRIPT,
+                3,
+                self._owner_key(instance_id, player_id),
+                self._avatar_key(instance_id, player_id),
+                self._presence_key(instance_id),
+                expected_lease_token or "",
+                player_id,
+            )
         )
-        await self.redis.zrem(self._presence_key(instance_id), player_id)
 
-    async def remove_avatar(self, instance_id: str, player_id: str) -> None:
+    async def remove_avatar(
+        self,
+        instance_id: str,
+        player_id: str,
+        expected_lease_token: str | None = None,
+    ) -> None:
         key = (instance_id, player_id)
         async with self.lock:
-            self.connections.pop(key, None)
+            current = self.connections.get(key)
+            if expected_lease_token is not None:
+                if current is not None and current.lease_token != expected_lease_token:
+                    return
+                if current is not None:
+                    self.connections.pop(key, None)
+            elif current is not None:
+                # A delayed disconnect/expiry callback must not remove a newer live socket.
+                return
             existed = self.avatars.pop(key, None) is not None
-        await self._delete_presence(instance_id, player_id)
-        if existed:
+        removed = await self._delete_presence(
+            instance_id, player_id, expected_lease_token
+        )
+        if existed and removed:
             await self.broadcast(instance_id, player_id, "LEAVE", {"player_id": player_id})
 
     async def evict_player(self, instance_id: str, player_id: str) -> None:
         key = (instance_id, player_id)
         async with self.lock:
-            connection = self.connections.pop(key, None)
-            existed = self.avatars.pop(key, None) is not None
+            connection = self.connections.get(key)
+            lease_token = connection.lease_token if connection is not None else None
         if connection is not None:
             try:
                 await connection.websocket.close(code=4002, reason="Entered personal level")
             except Exception:
                 pass
-        await self._delete_presence(instance_id, player_id)
-        if existed:
-            await self.broadcast(instance_id, player_id, "LEAVE", {"player_id": player_id})
+        await self.remove_avatar(instance_id, player_id, lease_token)
 
 
 map_connections = MapConnectionManager()
