@@ -562,6 +562,16 @@ def test_mechanism_catalog_and_references_match_canonical_gdd_ids() -> None:
                         """
                     )
                 )
+                room3_objectives = await connection.execute(
+                    text(
+                        """
+                        SELECT objective_id, mechanism_config_id
+                        FROM level_objectives
+                        WHERE level_id = 'LV-ROOM-03'
+                        ORDER BY objective_id
+                        """
+                    )
+                )
                 combo_targets = await connection.execute(
                     text(
                         """
@@ -593,6 +603,7 @@ def test_mechanism_catalog_and_references_match_canonical_gdd_ids() -> None:
                 "catalog": [dict(row._mapping) for row in catalog],
                 "objectives_without_mechanisms": objectives_without_mechanisms,
                 "room5_objectives": [dict(row._mapping) for row in room5_objectives],
+                "room3_objectives": [dict(row._mapping) for row in room3_objectives],
                 "route": route,
                 "combo_targets": [row[0] for row in combo_targets],
                 "hidden_discovery": hidden_discovery,
@@ -616,6 +627,9 @@ def test_mechanism_catalog_and_references_match_canonical_gdd_ids() -> None:
     assert ("LV-HIDDEN-01", "H01-GATE") in ids
     assert ("LV-HIDDEN-01", "H01-END") in ids
     assert contract["objectives_without_mechanisms"] == 0
+    assert {
+        row["mechanism_config_id"] for row in contract["room3_objectives"]
+    } == {"M03-DOOR-01"}
     assert contract["route"] == [
         "M05-BRIDGE-01",
         "M05-ENERGY-01",
