@@ -30,3 +30,6 @@ GDD V0.2 已完成首轮跨章节规则、MVP 范围、数据字典、UI/API 映
 - 配置和密钥通过环境变量注入，禁止提交真实凭证。
 - 数据库变更必须通过 Alembic migration。
 - 每个纵向切片通过独立分支、PR 与自动化测试后再合并。
+
+
+当前 VS-6A 分支正在实现赛季审核工作流、RabbitMQ Transactional Outbox 与 Worker 幂等处理；仍需真机 Cocos 导入/微信构建和性能验证。
