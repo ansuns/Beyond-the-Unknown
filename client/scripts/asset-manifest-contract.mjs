@@ -85,7 +85,7 @@ export function validateAssetManifestStructure(manifest, levelConfig, strict = f
   )].sort();
 
   if (manifest?.schema_version !== 1) add("asset manifest schema_version must be 1");
-  if (manifest?.gdd_version !== "0.2") add("asset manifest GDD baseline must be 0.2");
+  if (manifest?.gdd_version !== "0.3") add("asset manifest GDD baseline must be 0.3");
   if (!Array.isArray(manifest?.entries)) add("entries must be an array");
   if (!sameOrderedValues(manifest?.character_ids, expectedCharacters)) {
     add("manifest must include exactly CHR_001 through CHR_012 in order");
@@ -99,19 +99,43 @@ export function validateAssetManifestStructure(manifest, levelConfig, strict = f
   }
 
   const expected = new Map();
+  const expectedDirectories = new Map();
   for (const characterId of expectedCharacters) {
     for (const [suffix, category] of CHARACTER_CATEGORIES) {
-      addExpected(expected, `${characterId}_${suffix}`, category);
+      const id = `${characterId}_${suffix}`;
+      addExpected(expected, id, category);
+      const folder = suffix === "PORTRAIT" ? "portrait"
+        : suffix === "MODEL" ? "model"
+        : suffix === "PREVIEW" ? "preview" : "animation";
+      expectedDirectories.set(id, `assets/resources/characters/${characterId}/${folder}`);
     }
   }
   for (const [suffix, category] of MAIN_MAP_ASSETS) {
-    addExpected(expected, `MAP_MAIN_001_${suffix}`, category);
+    const id = `MAP_MAIN_001_${suffix}`;
+    addExpected(expected, id, category);
+    expectedDirectories.set(id, `assets/resources/maps/MAP_MAIN_001/${suffix.toLowerCase()}`);
   }
-  for (const levelId of expectedLevels) addExpected(expected, `${levelId}_GEOMETRY`, "level_geometry");
-  for (const mechanismId of expectedMechanisms) addExpected(expected, mechanismId, "mechanism");
-  for (const id of EFFECT_IDS) addExpected(expected, id, "effect");
-  for (const id of UI_IDS) addExpected(expected, id, "ui");
-  for (const id of AUDIO_IDS) addExpected(expected, id, "audio");
+  for (const levelId of expectedLevels) {
+    const id = `${levelId}_GEOMETRY`;
+    addExpected(expected, id, "level_geometry");
+    expectedDirectories.set(id, `assets/resources/levels/${levelId}`);
+  }
+  for (const mechanismId of expectedMechanisms) {
+    addExpected(expected, mechanismId, "mechanism");
+    expectedDirectories.set(mechanismId, `assets/resources/mechanisms/${mechanismId}`);
+  }
+  for (const id of EFFECT_IDS) {
+    addExpected(expected, id, "effect");
+    expectedDirectories.set(id, "assets/resources/effects");
+  }
+  for (const id of UI_IDS) {
+    addExpected(expected, id, "ui");
+    expectedDirectories.set(id, "assets/resources/ui");
+  }
+  for (const id of AUDIO_IDS) {
+    addExpected(expected, id, "audio");
+    expectedDirectories.set(id, "assets/resources/audio");
+  }
 
   const ids = new Set();
   const fileOwners = new Map();
@@ -137,6 +161,10 @@ export function validateAssetManifestStructure(manifest, levelConfig, strict = f
         entry.expected_directory.startsWith("/") ||
         entry.expected_directory.split("/").includes("..")) {
       add(`${id}: expected_directory must be a safe client-relative resources path`);
+    }
+    const expectedDirectory = expectedDirectories.get(id);
+    if (expectedDirectory && entry.expected_directory !== expectedDirectory) {
+      add(`${id}: expected_directory must be ${expectedDirectory}, got ${entry.expected_directory}`);
     }
     if (!entry.source_chapter || !entry.acceptance) {
       add(`${id}: source_chapter and acceptance are required`);
