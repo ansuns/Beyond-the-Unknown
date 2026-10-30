@@ -322,9 +322,12 @@ class MapConnectionManager:
             return True
         released = await self.redis.eval(
             self._RELEASE_SCRIPT,
-            1,
+            3,
             self._owner_key(instance_id, player_id),
+            self._presence_key(instance_id),
+            self._avatar_key(instance_id, player_id),
             current.lease_token,
+            player_id,
         )
         if not released:
             async with self.lock:
