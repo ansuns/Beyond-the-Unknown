@@ -76,7 +76,9 @@ def upgrade() -> None:
             'content_status', 'PROTOTYPE_TUNING_PENDING',
             'prototype_bounds', jsonb_build_object('min_x', 0, 'max_x', 12, 'min_y', 0, 'max_y', 8),
             'prototype_spawn', jsonb_build_object('x', 1, 'y', 4),
-            'prototype_controls', jsonb_build_object('movement_speed', 3.0, 'interaction_radius', 1.5)
+            'prototype_controls', jsonb_build_object(
+                'movement_speed', 3.0, 'interaction_radius', 1.5
+            )
         )
         WHERE level_id = 'LV-ROOM-01'
         """
