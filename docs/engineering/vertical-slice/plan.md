@@ -19,7 +19,7 @@
 
 ### 不做
 - 正式广告 SDK/广告展示、成就系统、交易/好友/公会。
-- 完整赛季发奖后台、排行榜 UI、隐藏结局最终美术。
+- 完整赛季运营后台 UI、排行榜 UI、隐藏结局最终美术。
 - 未完成机关状态跨退出恢复；微服务拆分、分库分表。
 
 ## 2. 里程碑
@@ -53,8 +53,8 @@
 - [x] 使用 FastAPI + Uvicorn；VS-1 登录/玩家接口已更新 OpenAPI 契约。
 - [x] 使用 SQLAlchemy 2.x async + asyncpg；Alembic 0001/0002 已在 CI 干净 PostgreSQL 上执行。
 - [x] VS-2 WebSocket 处理器采用 async I/O；CPU 密集计算不得阻塞事件循环。当前连接管理器仅支持单 API 进程，水平扩展前必须接入 Redis presence/pub-sub。
-- [x] RabbitMQ durable task/retry/DLQ queues、手动 ACK、publisher confirms、TTL 延迟重试与有限重试次数；当前仅注册 worker.ping 示例任务，业务消费者尚未接入。
-- [ ] 关键业务写入与消息发布采用 Transactional Outbox；增加业务任务消费者与幂等收件记录，保证数据库提交与消息发布原子衔接。
+- [x] RabbitMQ durable task/retry/DLQ queues、手动 ACK、publisher confirms、TTL 延迟重试与有限重试次数；已注册赛季 finalization/auto-approval 业务消费者。
+- [x] 关键业务异步任务采用 Transactional Outbox；赛季最终结算任务使用数据库收件回执幂等处理，保证任务写入与消息发布原子衔接。
 - [x] 玩家身份只从 JWT 认证上下文取得；每个受保护请求查询账号状态，封禁账号立即拒绝。
 - [ ] REST 写请求验证 schema、频率限制与幂等键。
 - [x] WS 首包 AUTH、消息序列号、方向/动作白名单、MOVE/ACTION 频率限制；当前 AOI 使用同实例全可见回退，精确半径/网格待联调。
@@ -70,7 +70,7 @@
 ## 5. 测试清单
 
 ### 数据库
-- [x] 空库执行 0001–0007 成功并登记迁移版本。
+- [x] 空库执行 0001–0008 成功并登记迁移版本（VS-6A CI 待验证）。
 - [ ] 外键、枚举、CHECK、唯一约束正反例测试。
 - [x] Worker 成功 ACK、暂时失败重试、重试耗尽进入 DLQ、无效 envelope 直接 DLQ、发布未确认时原消息 NACK/requeue。
 - [ ] 同一玩家重复进入同一关卡生成不同 run_id。
