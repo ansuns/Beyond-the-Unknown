@@ -178,6 +178,28 @@ flowchart LR
 
 不得以mechanism_config_id单独作为主键；相同机关配置在不同玩家run中必须分别保存。
 
+#### discovery_catalog（发现内容配置）
+
+- discovery_id varchar PK；全服唯一发现ID
+- discovery_type varchar；DIS_HIDDEN_OBJ/DIS_HIDDEN_AREA/DIS_RULE_EFFECT/DIS_COMBO/DIS_PUZZLE/DIS_ENDING
+- level_id varchar nullable
+- location jsonb；地图/区域配置定位
+- related_rule varchar nullable
+- display_name varchar
+- is_enabled boolean
+- UNIQUE(discovery_id)
+
+#### collection_catalog（图鉴藏品配置）
+
+- collection_id varchar PK
+- codex_category varchar CAT_AREA/CAT_RULE/CAT_CREATURE/CAT_RELIC/CAT_ENDING
+- source_discovery_id varchar nullable FK discovery_catalog
+- display_name varchar
+- description text
+- asset_id varchar nullable
+- sort_order integer
+- is_enabled boolean
+
 #### player_discoveries（玩家个人发现）
 - player_id uuid FK players
 - discovery_id varchar；第10章全局发现配置ID
