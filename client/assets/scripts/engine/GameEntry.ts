@@ -294,6 +294,63 @@ export class BeyondTheUnknownGameEntry extends Component {
     if (this.statusLabel) this.statusLabel.string = message;
   }
 
+  private async refreshProgress(): Promise<void> {
+    if (!this.api) {
+      this.setStatus("请先登录，再查看个人进度");
+      return;
+    }
+    const results = await Promise.allSettled([
+      this.api.getPlayerProgress(),
+      this.api.listPlayerDiscoveries(),
+      this.api.listPlayerCollections(),
+      this.api.listRewards(),
+      this.api.listWorldArchive(50),
+      this.api.getLeaderboard("EXPLORE", "WEEKLY", "SELF", 1),
+      this.api.getLeaderboard("CLEAR", "WEEKLY", "SELF", 1),
+      this.api.getLeaderboard("COLLECT", "WEEKLY", "SELF", 1)
+    ]);
+    const [
+      progress,
+      discoveries,
+      collections,
+      rewards,
+      archive,
+      exploreLeaderboard,
+      clearLeaderboard,
+      collectLeaderboard
+    ] = results;
+    if (this.progressLabel) {
+      this.progressLabel.string = formatProgressSummary({
+        completedLevels:
+          progress.status === "fulfilled" ? progress.value.completed_level_ids.length : undefined,
+        discoveries:
+          discoveries.status === "fulfilled" ? discoveries.value.discoveries.length : undefined,
+        collections:
+          collections.status === "fulfilled" ? collections.value.collections.length : undefined,
+        pendingRewards:
+          rewards.status === "fulfilled" ? rewards.value.pending.length : undefined,
+        worldArchiveRecords:
+          archive.status === "fulfilled" ? archive.value.records.length : undefined,
+        weeklyExploreRank:
+          exploreLeaderboard.status === "fulfilled"
+            ? exploreLeaderboard.value.my_rank?.rank ?? null
+            : undefined,
+        weeklyClearRank:
+          clearLeaderboard.status === "fulfilled"
+            ? clearLeaderboard.value.my_rank?.rank ?? null
+            : undefined,
+        weeklyCollectRank:
+          collectLeaderboard.status === "fulfilled"
+            ? collectLeaderboard.value.my_rank?.rank ?? null
+            : undefined
+      });
+    }
+    const failed = results.filter((result) => result.status === "rejected").length;
+    this.setStatus(
+      failed === 0 ? "个人进度与三榜数据已刷新" : `进度部分不可用：${failed}/8 项读取失败`
+    );
+  }
+
   private makeIdempotencyKey(prefix: string): string {
     return `${prefix}-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
   }
