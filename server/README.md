@@ -61,3 +61,5 @@ All player endpoints require a Bearer JWT. The API derives player identity from 
 - Supported server events: `AUTH_OK`, `ENTER` snapshot/event, `MOVE_SYNC`, `ACTION_BROADCAST`, `PONG`, `LEAVE`, `ERROR`.
 
 The current WebSocket connection manager is single-process/in-memory. It is a vertical-slice implementation for local integration and must be replaced by a Redis-backed presence/pub-sub adapter before horizontal scaling. AOI currently uses same-instance visibility as a fallback; radius/grid parameters remain pending GDD tuning. Spawn positions, 160 logical-units/second movement speed, 10 Hz movement cap, 5 actions per 10 seconds, 60-second reconnect grace and 20-player instance capacity are prototype configuration values, not production-certified limits.
+
+The map instance capacity and movement/reconnect limits are configurable through the `MAP_*` environment variables. The current 20-player value is a test target only; production capacity must be established by load testing.
