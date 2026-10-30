@@ -54,6 +54,16 @@ export function validateLevelContentConfig(config) {
         spawn.y < bounds.min_y || spawn.y > bounds.max_y) {
       add(`${level.level_id}: prototype spawn must be inside configured bounds`);
     }
+    if (!Number.isFinite(layout?.movement_speed) || layout.movement_speed <= 0) {
+      add(`${level.level_id}: prototype movement_speed must be positive`);
+    }
+    if (!Number.isFinite(layout?.interaction_radius) || layout.interaction_radius <= 0) {
+      add(`${level.level_id}: prototype interaction_radius must be positive`);
+    }
+    if (!Number.isInteger(layout?.position_sync_interval_ms) ||
+        layout.position_sync_interval_ms < 50 || layout.position_sync_interval_ms > 1000) {
+      add(`${level.level_id}: prototype position_sync_interval_ms must be an integer from 50 to 1000`);
+    }
 
     for (const mechanism of mechanisms) {
       const position = mechanism.position;
