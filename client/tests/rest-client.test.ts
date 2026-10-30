@@ -55,18 +55,18 @@ describe("RestClient", () => {
   });
 
 
-  it("sends personal law actions with bearer auth and an idempotency key", async () => {
+  it("casts a rule through the authoritative API with target data and idempotency", async () => {
     const fetchImpl = vi.fn<typeof fetch>().mockResolvedValue(new Response(JSON.stringify({
       code: 0,
       message: "ok",
       request_id: "server-id",
       data: {
         run_id: "run-1",
-        mechanism_id: "M02-BRIDGE-01",
-        rule_id: "RULE_GAZE",
-        action: "APPLY",
-        state: { state: "OPEN", combo_completed: true },
-        combo_id: "COMBO-001",
+        rule_id: "RULE_ECHO",
+        target_id: "MECH_BRIDGE",
+        effects: [{ mechanism_id: "MECH_BRIDGE", state: { visible: true } }],
+        combo: null,
+        cooldown_until: "2026-10-30T14:00:05Z",
         idempotent_replay: false
       }
     }), { status: 200 }));
@@ -77,38 +77,32 @@ describe("RestClient", () => {
       requestId: () => "law-request"
     });
 
-    const result = await api.applyLawAction(
+    const result = await api.castRule(
       "run-1",
-      "RULE_GAZE",
-      "M02-BRIDGE-01",
-      "APPLY",
-      "law-action-0001"
+      "RULE_ECHO",
+      { targetId: "MECH_BRIDGE", targetPoint: { x: 1, y: 2 } },
+      "law-cast-0001"
     );
-    expect(result.combo_id).toBe("COMBO-001");
+    expect(result.effects[0].mechanism_id).toBe("MECH_BRIDGE");
     const [url, init] = fetchImpl.mock.calls[0];
-    expect(url).toBe("https://example.test/api/v1/level/law/action");
+    expect(url).toBe("https://example.test/api/v1/level/rule/cast");
     const headers = init?.headers as Record<string, string>;
     expect(headers.Authorization).toBe("Bearer jwt-token");
-    expect(headers["Idempotency-Key"]).toBe("law-action-0001");
+    expect(headers["Idempotency-Key"]).toBe("law-cast-0001");
     expect(JSON.parse(String(init?.body))).toEqual({
       run_id: "run-1",
-      rule_id: "RULE_GAZE",
-      mechanism_id: "M02-BRIDGE-01",
-      action: "APPLY"
+      rule_id: "RULE_ECHO",
+      target_id: "MECH_BRIDGE",
+      target_point: { x: 1, y: 2 }
     });
   });
 
-  it("reads only the requested personal run mechanism endpoint", async () => {
+  it("lists the server-owned rule catalog", async () => {
     const fetchImpl = vi.fn<typeof fetch>().mockResolvedValue(new Response(JSON.stringify({
       code: 0,
       message: "ok",
       request_id: "server-id",
-      data: {
-        run_id: "run-1",
-        level_id: "LV-ROOM-01",
-        status: "RUNNING",
-        mechanisms: []
-      }
+      data: { rules: [{ rule_id: "RULE_ECHO", is_unlocked: true, config_status: "TUNING_REQUIRED" }] }
     }), { status: 200 }));
     const api = new RestClient({
       baseUrl: "https://example.test/api/v1",
@@ -116,11 +110,66 @@ describe("RestClient", () => {
       fetchImpl
     });
 
-    const result = await api.getRunMechanisms("run-1");
-    expect(result.run_id).toBe("run-1");
-    expect(fetchImpl.mock.calls[0][0]).toBe(
-      "https://example.test/api/v1/level/runs/run-1/mechanisms"
-    );
+    const result = await api.listRules();
+    expect(result.rules[0].rule_id).toBe("RULE_ECHO");
+    expect(fetchImpl.mock.calls[0][0]).toBe("https://example.test/api/v1/level/rules");
   });
 
+  it("maintains and stops gaze using the backend's dedicated endpoints", async () => {
+    const fetchImpl = vi.fn<typeof fetch>()
+      .mockResolvedValueOnce(new Response(JSON.stringify({
+        code: 0, message: "ok", request_id: "r1",
+        data: { run_id: "run-1", target_id: "MECH_BRIDGE", maintained_at: "2026-10-30T14:00:00Z" }
+      }), { status: 200 }))
+      .mockResolvedValueOnce(new Response(JSON.stringify({
+        code: 0, message: "ok", request_id: "r2",
+        data: { run_id: "run-1", stopped: true, target_id: "MECH_BRIDGE" }
+      }), { status: 200 }));
+    const api = new RestClient({
+      baseUrl: "https://example.test/api/v1",
+      token: () => "jwt-token",
+      fetchImpl
+    });
+
+    await api.maintainGaze("run-1", "MECH_BRIDGE");
+    await api.stopGaze("run-1");
+    expect(fetchImpl.mock.calls[0][0]).toBe("https://example.test/api/v1/level/rule/maintain");
+    expect(JSON.parse(String(fetchImpl.mock.calls[0][1]?.body))).toEqual({
+      run_id: "run-1", target_id: "MECH_BRIDGE"
+    });
+    expect(fetchImpl.mock.calls[1][0]).toBe("https://example.test/api/v1/level/rule/stop");
+    expect(JSON.parse(String(fetchImpl.mock.calls[1][1]?.body))).toEqual({ run_id: "run-1" });
+  });
+
+  it("reads the authoritative state endpoint for one personal run", async () => {
+    const fetchImpl = vi.fn<typeof fetch>().mockResolvedValue(new Response(JSON.stringify({
+      code: 0, message: "ok", request_id: "server-id",
+      data: { run_id: "run-1", level_id: "LV-ROOM-01", mechanisms: [] }
+    }), { status: 200 }));
+    const api = new RestClient({
+      baseUrl: "https://example.test/api/v1",
+      token: () => "jwt-token",
+      fetchImpl
+    });
+
+    const result = await api.getLevelState("run-1");
+    expect(result.run_id).toBe("run-1");
+    expect(fetchImpl.mock.calls[0][0]).toBe("https://example.test/api/v1/level/state/run-1");
+  });
+
+  it("preserves structured cooldown details from the backend", async () => {
+    const fetchImpl = vi.fn<typeof fetch>().mockResolvedValue(new Response(JSON.stringify({
+      detail: { code: "RULE_COOLDOWN", remaining_ms: 250 }
+    }), { status: 409 }));
+    const api = new RestClient({ baseUrl: "https://example.test/api/v1", fetchImpl });
+
+    try {
+      await api.listRules();
+      throw new Error("Expected request to fail");
+    } catch (error) {
+      expect(error).toBeInstanceOf(ApiError);
+      expect((error as ApiError).message).toBe("RULE_COOLDOWN");
+      expect((error as ApiError).details).toEqual({ code: "RULE_COOLDOWN", remaining_ms: 250 });
+    }
+  });
 });
