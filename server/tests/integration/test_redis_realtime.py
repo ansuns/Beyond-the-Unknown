@@ -93,11 +93,18 @@ def test_two_api_nodes_share_presence_and_fanout_with_connection_lease() -> None
             assert await first.detach(
                 first_socket, instance_id, "player-1"
             ) is False
+            # A delayed cleanup from the superseded socket must not delete the new lease.
+            await first.remove_avatar(instance_id, "player-1", first_lease)
             assert await second.is_owner(
                 instance_id, "player-1", replacement_lease
             ) is True
+            assert await first_client.get(
+                first._owner_key(instance_id, "player-1")
+            ) == replacement_lease
 
-            await second.remove_avatar(instance_id, "player-1")
+            await second.remove_avatar(
+                instance_id, "player-1", replacement_lease
+            )
             leave = await wait_for_command(second_socket, "LEAVE")
             assert leave["payload"]["player_id"] == "player-1"
         finally:
