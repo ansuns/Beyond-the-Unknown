@@ -36,10 +36,12 @@ export class RestClient {
   }
 
   async login(wxCode: string): Promise<LoginData> {
+    const requestId = this.requestId();
     return this.request<LoginData>("/auth/login", {
       method: "POST",
-      body: JSON.stringify({ wx_code: wxCode, request_id: this.requestId() }),
-      authenticated: false
+      body: JSON.stringify({ wx_code: wxCode, request_id: requestId }),
+      authenticated: false,
+      requestId
     });
   }
 
@@ -49,9 +51,9 @@ export class RestClient {
 
   private async request<T>(
     path: string,
-    options: { method: string; body?: string; authenticated?: boolean }
+    options: { method: string; body?: string; authenticated?: boolean; requestId?: string }
   ): Promise<T> {
-    const requestId = this.requestId();
+    const requestId = options.requestId ?? this.requestId();
     const headers: Record<string, string> = {
       Accept: "application/json",
       "Content-Type": "application/json",
@@ -82,7 +84,7 @@ export class RestClient {
       return payload.data;
     } catch (error) {
       if (error instanceof ApiError) throw error;
-      if (error instanceof DOMException && error.name === "AbortError") {
+      if (error instanceof Error && error.name === "AbortError") {
         throw new ApiError("Request timed out", 0, undefined, requestId);
       }
       throw new ApiError(error instanceof Error ? error.message : "Network request failed", 0, undefined, requestId);
