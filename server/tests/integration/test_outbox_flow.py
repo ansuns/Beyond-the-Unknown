@@ -13,6 +13,7 @@ from app.modules.outbox.repository import (
     enqueue_outbox_event,
 )
 from app.workers.outbox_dispatcher import dispatch_pending_once
+from app.workers.task_worker import handle_level_settled
 
 pytestmark = [
     pytest.mark.integration,
@@ -79,6 +80,21 @@ def test_outbox_event_is_transactional_idempotent_and_published() -> None:
             assert envelope["task_type"] == "game.level.settled"
             assert envelope["payload"]["result_id"] == "result-1"
 
+            await handle_level_settled(envelope)
+            await handle_level_settled(envelope)
+
+            async with session_factory() as session:
+                receipt_count = (
+                    await session.execute(
+                        text("""
+                            SELECT count(*)
+                            FROM processed_task_messages
+                            WHERE idempotency_key = :idempotency_key
+                        """),
+                        {"idempotency_key": key},
+                    )
+                ).scalar_one()
+                assert receipt_count == 1
             async with session_factory() as session:
                 row = (
                     await session.execute(
@@ -93,8 +109,12 @@ def test_outbox_event_is_transactional_idempotent_and_published() -> None:
                 assert row["published_at"] is not None
                 assert row["attempts"] == 1
         finally:
-            if event_id is not None:
-                async with engine.begin() as connection:
+            async with engine.begin() as connection:
+                await connection.execute(
+                    text("DELETE FROM processed_task_messages WHERE idempotency_key = :key"),
+                    {"key": key},
+                )
+                if event_id is not None:
                     await connection.execute(
                         text("DELETE FROM outbox_events WHERE event_id = :event_id"),
                         {"event_id": event_id},
