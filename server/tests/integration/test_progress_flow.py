@@ -113,7 +113,9 @@ def _set_test_content(ready: bool) -> None:
             """, None),
             ("""
                 UPDATE level_mechanism_catalog
-                SET position_x = NULL, position_y = NULL
+                SET position_x = 6.0, position_y = 4.0
+                WHERE level_id = 'LV-ROOM-02'
+                  AND mechanism_config_id = 'M02-BRIDGE-01'
             """, None),
             ("""
                 UPDATE score_rule_config
