@@ -93,6 +93,7 @@ def test_two_api_nodes_share_presence_and_fanout_with_connection_lease() -> None
             assert await first.detach(
                 first_socket, instance_id, "player-1"
             ) is False
+            await first.evict_player(instance_id, "player-1")
             assert await second.is_owner(
                 instance_id, "player-1", replacement_lease
             ) is True
