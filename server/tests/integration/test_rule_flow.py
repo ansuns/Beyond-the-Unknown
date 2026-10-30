@@ -514,7 +514,7 @@ def test_mechanism_catalog_and_references_match_canonical_gdd_ids() -> None:
                 "combo_targets": [row[0] for row in combo_targets],
                 "hidden_discovery": hidden_discovery,
                 "level_prototype_combos": {
-                    row["level_id"]: row["prototype_combos"]
+                    row._mapping["level_id"]: row._mapping["prototype_combos"]
                     for row in level_prototype_combos
                 },
             }
