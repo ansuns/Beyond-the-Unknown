@@ -8,7 +8,10 @@ import aio_pika
 from aio_pika import ExchangeType
 from aio_pika.abc import AbstractExchange, AbstractIncomingMessage
 
+from sqlalchemy import text
+
 from app.core.config import get_settings
+from app.core.database import SessionFactory
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -30,7 +33,32 @@ async def handle_ping(envelope: dict[str, Any]) -> None:
     logger.info("Accepted worker.ping task_id=%s", envelope["task_id"])
 
 
-TASK_HANDLERS: dict[str, TaskHandler] = {"worker.ping": handle_ping}
+async def handle_level_settled(envelope: dict[str, Any]) -> None:
+    async with SessionFactory() as session:
+        await session.execute(
+            text("""
+                INSERT INTO processed_task_messages
+                    (idempotency_key, task_id, task_type)
+                VALUES (:idempotency_key, :task_id, :task_type)
+                ON CONFLICT (idempotency_key) DO NOTHING
+            """),
+            {
+                "idempotency_key": envelope["idempotency_key"],
+                "task_id": envelope["task_id"],
+                "task_type": envelope["task_type"],
+            },
+        )
+        await session.commit()
+    logger.info(
+        "Recorded idempotent level-settled event task_id=%s",
+        envelope["task_id"],
+    )
+
+
+TASK_HANDLERS: dict[str, TaskHandler] = {
+    "worker.ping": handle_ping,
+    "game.level.settled": handle_level_settled,
+}
 
 
 def decode_envelope(body: bytes) -> dict[str, Any]:
