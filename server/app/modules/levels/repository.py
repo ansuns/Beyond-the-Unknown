@@ -92,7 +92,6 @@ async def list_levels(
     result = []
     for row in rows:
         item = _level_payload(row)
-        item["is_unlocked"] = not item["is_hidden"]
         result.append(item)
     return result
 
