@@ -74,6 +74,7 @@ export class BeyondTheUnknownGameEntry extends Component {
   private levelPosition = { x: 1, y: 4 };
   private levelAvatar?: Node;
   private levelPositionSyncPromise?: Promise<void>;
+  private pendingLevelPosition?: { x: number; y: number };
   private readonly roomControlNodes: Node[] = [];
   private roomMechanismStates = new Map<string, Record<string, unknown>>();
   private roomMechanismCatalog = new Map<string, {
@@ -753,6 +754,7 @@ export class BeyondTheUnknownGameEntry extends Component {
     this.levelPosition = { x: 1, y: 4 };
     this.levelMoveSendElapsed = 0;
     this.levelPositionSyncPromise = undefined;
+    this.pendingLevelPosition = undefined;
     this.roomMechanismStates.clear();
     this.roomMechanismCatalog.clear();
     this.prototypeRuleCooldownUntil.clear();
@@ -783,24 +785,50 @@ export class BeyondTheUnknownGameEntry extends Component {
   }
 
   private sendLevelPosition(position: { x: number; y: number }): void {
-    if (!this.levelSession || this.levelPositionSyncPromise) return;
     const session = this.levelSession;
-    const request = session.updatePosition(position.x, position.y)
-      .catch((error) => {
-        this.setStatus(`位置同步失败：${error instanceof Error ? error.message : "网络错误"}`);
-      })
-      .finally(() => {
-        if (this.levelPositionSyncPromise === request) {
-          this.levelPositionSyncPromise = undefined;
+    if (!session) return;
+
+    // Keep the newest sample while one request is in flight. Dropping samples
+    // here can leave the authoritative server position behind the local avatar.
+    this.pendingLevelPosition = { ...position };
+    if (this.levelPositionSyncPromise) return;
+
+    let failed = false;
+    const request = (async () => {
+      while (this.pendingLevelPosition && this.levelSession === session) {
+        const next = this.pendingLevelPosition;
+        this.pendingLevelPosition = undefined;
+        try {
+          await session.updatePosition(next.x, next.y);
+        } catch (error) {
+          failed = true;
+          this.setStatus(`位置同步失败：${error instanceof Error ? error.message : "网络错误"}`);
+          break;
         }
-      });
+      }
+    })().finally(() => {
+      if (this.levelPositionSyncPromise === request) {
+        this.levelPositionSyncPromise = undefined;
+      }
+      // Do not spin on a failed request. The next movement sample or explicit
+      // flush will retry the latest position.
+      if (!failed && this.pendingLevelPosition && this.levelSession === session) {
+        this.sendLevelPosition(this.pendingLevelPosition);
+      }
+    });
     this.levelPositionSyncPromise = request;
   }
 
   private async flushLevelPosition(): Promise<void> {
-    if (!this.levelSession) return;
+    const session = this.levelSession;
+    if (!session) return;
+    this.sendLevelPosition({ ...this.levelPosition });
     if (this.levelPositionSyncPromise) await this.levelPositionSyncPromise;
-    await this.levelSession.updatePosition(this.levelPosition.x, this.levelPosition.y);
+    if (this.levelSession !== session) return;
+    // Explicit interactions must never use a stale server-side position,
+    // even if a background movement update previously failed.
+    await session.updatePosition(this.levelPosition.x, this.levelPosition.y);
+    this.pendingLevelPosition = undefined;
   }
 
   private clearRoomControls(): void {
