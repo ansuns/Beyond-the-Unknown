@@ -43,6 +43,7 @@ function makeWorldPlaySession(activeGaze = false) {
     })
   };
   const level = {
+    activeRun: vi.fn().mockReturnValue(undefined),
     enterAndStart: vi.fn().mockResolvedValue({
       entry: { run_id: "run-1" },
       run: { run_id: "run-1", status: "RUNNING" }
