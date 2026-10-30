@@ -106,7 +106,7 @@ async def _load_mechanism_state(
         text("""
             INSERT INTO mechanism_states
                 (run_id, player_id, mechanism_config_id, mechanism_type, state)
-            VALUES (:run_id, :player_id, :mechanism_id, :mechanism_type, :state)
+            VALUES (:run_id, :player_id, :mechanism_id, :mechanism_type, CAST(:state AS jsonb))
             ON CONFLICT (run_id, mechanism_config_id) DO NOTHING
         """),
         {
@@ -114,11 +114,11 @@ async def _load_mechanism_state(
             "player_id": player_id,
             "mechanism_id": mechanism["mechanism_config_id"],
             "mechanism_type": mechanism["mechanism_type"],
-            "state": {
+            "state": json.dumps({
                 "status": mechanism["initial_state"],
                 "direction": mechanism["config"].get("initial_direction", 1),
                 "visible": mechanism["config"].get("visible_by_default", True),
-            },
+            }),
         },
     )
     row = (
@@ -150,12 +150,12 @@ async def _save_mechanism_state(
     await session.execute(
         text("""
             UPDATE mechanism_states
-            SET state = :state, updated_at = now()
+            SET state = CAST(:state AS jsonb), updated_at = now()
             WHERE run_id = :run_id AND player_id = :player_id
               AND mechanism_config_id = :mechanism_id
         """),
         {
-            "state": state,
+            "state": json.dumps(state),
             "run_id": run_id,
             "player_id": player_id,
             "mechanism_id": mechanism_id,
@@ -484,7 +484,7 @@ async def cast_rule(
             UPDATE player_rule_states
             SET cooldown_until = :cooldown_until,
                 active_target_id = :active_target_id,
-                active_effect = :active_effect,
+                active_effect = CAST(:active_effect AS jsonb),
                 expires_at = :expires_at,
                 last_maintained_at = CASE
                     WHEN :rule_id = 'RULE_GAZE' THEN :now ELSE last_maintained_at END,
@@ -494,7 +494,7 @@ async def cast_rule(
         {
             "cooldown_until": cooldown_until,
             "active_target_id": active_target,
-            "active_effect": active_effect,
+            "active_effect": json.dumps(active_effect),
             "expires_at": expires_at,
             "rule_id": rule_id,
             "now": now,
@@ -517,18 +517,19 @@ async def cast_rule(
             INSERT INTO rule_cast_events
                 (run_id, player_id, rule_id, target_id, target_point,
                  idempotency_key, request_hash, result)
-            VALUES (:run_id, :player_id, :rule_id, :target_id, :target_point,
-                    :idempotency_key, :request_hash, :result)
+            VALUES (:run_id, :player_id, :rule_id, :target_id,
+                    CAST(:target_point AS jsonb), :idempotency_key, :request_hash,
+                    CAST(:result AS jsonb))
         """),
         {
             "run_id": run_id,
             "player_id": player_id,
             "rule_id": rule_id,
             "target_id": target_id,
-            "target_point": target_point,
+            "target_point": json.dumps(target_point) if target_point is not None else None,
             "idempotency_key": idempotency_key,
             "request_hash": request_hash,
-            "result": result,
+            "result": json.dumps(result),
         },
     )
     await session.commit()
