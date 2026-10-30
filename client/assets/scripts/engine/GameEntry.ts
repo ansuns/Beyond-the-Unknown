@@ -557,6 +557,7 @@ export class BeyondTheUnknownGameEntry extends Component {
 
   private async castRoomEcho(): Promise<void> {
     if (!this.levelSession) return;
+    this.moveTarget = undefined;
     try {
       await this.flushLevelPosition();
       const hiddenTarget = this.roomMechanismCatalog.get("M01-HIDEABLE-01");
@@ -583,6 +584,7 @@ export class BeyondTheUnknownGameEntry extends Component {
     if (!this.levelSession || this.prototypeActionInFlight) return;
     const { comboId, targetId, ruleIds } = definition;
     this.prototypeActionInFlight = true;
+    this.moveTarget = undefined;
     try {
       await this.flushLevelPosition();
       let matched = false;
@@ -637,6 +639,7 @@ export class BeyondTheUnknownGameEntry extends Component {
   private async settlePrototypeRoom(): Promise<void> {
     if (!this.levelSession || this.prototypeActionInFlight) return;
     this.prototypeActionInFlight = true;
+    this.moveTarget = undefined;
     try {
       await this.flushLevelPosition();
       if (this.prototypeGazeTargetId) {
@@ -678,6 +681,7 @@ export class BeyondTheUnknownGameEntry extends Component {
 
   private async interactHiddenEnding(): Promise<void> {
     if (!this.levelSession) return;
+    this.moveTarget = undefined;
     try {
       await this.flushLevelPosition();
       const result = await this.levelSession.interact(
@@ -699,6 +703,7 @@ export class BeyondTheUnknownGameEntry extends Component {
 
   private async interactRoomExit(): Promise<void> {
     if (!this.levelSession) return;
+    this.moveTarget = undefined;
     try {
       await this.flushLevelPosition();
       const result = await this.levelSession.interact(
@@ -1108,6 +1113,7 @@ export class BeyondTheUnknownGameEntry extends Component {
       this.setStatus("当前不在个人关卡中");
       return;
     }
+    this.moveTarget = undefined;
     try {
       this.setStatus("正在保存并放弃当前关卡…");
       // Abandon is allowed to proceed even if a best-effort position sync fails.
