@@ -178,3 +178,104 @@ export interface CharacterSelectionData {
   success: boolean;
   current_character_id: string;
 }
+
+
+export interface PlayerProgressData {
+  progress_version: number;
+  current_character_id: string | null;
+  completed_level_ids: string[];
+  permanent_progress: Record<string, unknown>;
+  snapshot_at?: string;
+}
+
+export interface DiscoveryItem {
+  discovery_id: string;
+  discovery_type: string;
+  display_name: string;
+  level_id: string | null;
+  related_rule: string | null;
+  first_discovered_at: string;
+  trigger_count: number;
+}
+
+export interface CollectionItem {
+  collection_id: string;
+  codex_category: string;
+  display_name: string;
+  description: string;
+  asset_id: string | null;
+  sort_order: number;
+  source: string;
+  source_id: string;
+  obtained_at: string;
+}
+
+export interface WorldArchiveItem {
+  discovery_id: string;
+  display_name: string;
+  first_player_id: string;
+  first_discovered_at: string;
+  location: Record<string, unknown>;
+  related_rule: string | null;
+}
+
+export interface PlayerRewardItem {
+  player_reward_id: string;
+  reward_id: string;
+  reward_type: string;
+  reward_name: string;
+  payload: Record<string, unknown>;
+  grant_mode: "AUTO" | "CLAIM";
+  status: "PENDING_CLAIM" | "OWNED";
+  source: string;
+  source_id: string;
+  granted_at: string;
+  claimed_at: string | null;
+}
+
+export interface RewardInboxData {
+  pending: PlayerRewardItem[];
+  owned: PlayerRewardItem[];
+}
+
+export interface RewardClaimData {
+  player_reward_id: string;
+  reward_id: string;
+  status: "OWNED";
+  already_claimed: boolean;
+}
+
+export type LeaderboardType = "EXPLORE" | "CLEAR" | "COLLECT";
+export type LeaderboardPeriod = "WEEKLY" | "MONTHLY";
+export type LeaderboardScope = "TOP" | "AROUND" | "SELF";
+
+export interface LeaderboardEntry {
+  player_id: string;
+  score: number;
+  rank: number;
+  snapshot_at: string;
+  is_self: boolean;
+}
+
+export interface LeaderboardData {
+  season_id: string;
+  period_type: LeaderboardPeriod;
+  start_at_utc: string;
+  end_at_utc: string;
+  board_type: LeaderboardType;
+  scope: LeaderboardScope;
+  entries: LeaderboardEntry[];
+  my_rank: { rank: number; score: number } | null;
+  is_snapshot: boolean;
+}
+
+export interface SettlementData {
+  result_id: string;
+  run_id?: string;
+  level_id: string;
+  result_status: "COMPLETED" | "FAILED";
+  completion_time_ms: number;
+  score_payload: Record<string, unknown>;
+  unlocked_hidden_level_id?: string | null;
+  idempotent_replay: boolean;
+}
