@@ -305,21 +305,21 @@ paths:
       responses:
         '200': { description: Claimed (idempotent) }
         '409': { $ref: '#/components/responses/Conflict' }
-  /leaderboard/{type}:
+  /leaderboard/{board_type}:
     get:
       tags: [Leaderboard]
       operationId: getLeaderboard
       parameters:
-        - name: type
+        - name: board_type
           in: path
           required: true
           schema: { type: string, enum: [EXPLORE, CLEAR, COLLECT] }
-        - name: season_id
+        - name: season_type
           in: query
-          schema: { type: string }
-        - name: scope
+          schema: { type: string, enum: [WEEKLY, MONTHLY], default: WEEKLY }
+        - name: limit
           in: query
-          schema: { type: string, enum: [top, around, self], default: top }
+          schema: { type: integer, minimum: 1, maximum: 100, default: 50 }
       responses:
         '200':
           description: Leaderboard page
@@ -342,6 +342,71 @@ paths:
           content:
             application/json:
               schema: { $ref: '#/components/schemas/EnvelopeObject' }
+  /level/settle:
+    post:
+      tags: [Level]
+      operationId: settleLevel
+      parameters: [{ $ref: '#/components/parameters/RequestId' }, { $ref: '#/components/parameters/IdempotencyKey' }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [run_id]
+              properties: { run_id: { type: string, format: uuid } }
+      responses:
+        '200': { description: Authoritative settlement, completion time and progress version }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409': { description: Run not active or required objectives incomplete }
+  /progress/me:
+    get:
+      tags: [Player]
+      operationId: getMyProgress
+      responses:
+        '200': { description: Permanent discovery, collection and completed-level summary }
+  /leaderboard:
+    get:
+      tags: [Leaderboard]
+      operationId: getLeaderboardByQuery
+      parameters:
+        - { name: board_type, in: query, required: true, schema: { type: string, enum: [EXPLORE, CLEAR, COLLECT] } }
+        - { name: season_type, in: query, schema: { type: string, enum: [WEEKLY, MONTHLY], default: WEEKLY } }
+        - { name: limit, in: query, schema: { type: integer, minimum: 1, maximum: 100, default: 50 } }
+      responses:
+        '200': { description: Current board page and authenticated player's rank }
+  /season:
+    get:
+      tags: [Leaderboard]
+      operationId: getCurrentSeasons
+      responses:
+        '200': { description: Current weekly and monthly season windows in UTC }
+  /discovery/me:
+    get:
+      tags: [Discovery]
+      operationId: getMyDiscoveries
+      responses:
+        '200': { description: Authenticated player's personal discoveries }
+  /collection/me:
+    get:
+      tags: [Collection]
+      operationId: getMyCollections
+      responses:
+        '200': { description: Authenticated player's collected codex entries }
+  /world-archive:
+    get:
+      tags: [Archive]
+      operationId: getWorldArchive
+      parameters:
+        - { name: limit, in: query, schema: { type: integer, minimum: 1, maximum: 100, default: 50 } }
+      responses:
+        '200': { description: Public global first-discovery archive without private account identifiers }
+  /reward/me:
+    get:
+      tags: [Reward]
+      operationId: getMyRewards
+      responses:
+        '200': { description: Owned and pending-claim rewards }
 components:
   securitySchemes:
     bearerAuth:
