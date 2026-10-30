@@ -62,6 +62,10 @@ export class BeyondTheUnknownGameEntry extends Component {
   private pendingLevelName = "";
   private moveTarget?: { x: number; y: number };
   private moveSendElapsed = 0;
+  private levelMoveSendElapsed = 0;
+  private levelPosition = { x: 1, y: 4 };
+  private levelAvatar?: Node;
+  private levelRoomScale = 40;
   private readonly worldPixelsPerUnit = 40;
   private readonly moveSpeedPixelsPerSecond = 160;
   private readonly moveSyncIntervalSeconds = 0.12;
@@ -76,6 +80,10 @@ export class BeyondTheUnknownGameEntry extends Component {
   }
 
   update(deltaTime: number): void {
+    if (this.currentMode === "PERSONAL_LEVEL") {
+      this.updatePersonalLevelMovement(deltaTime);
+      return;
+    }
     if (
       this.currentMode !== "WORLD" ||
       !this.moveTarget ||
@@ -420,28 +428,91 @@ export class BeyondTheUnknownGameEntry extends Component {
   }
 
   private onWorldTouch(event: any): void {
-    if (this.currentMode !== "WORLD" || !this.mapSession || !this.worldRoot) return;
+    if (!this.worldRoot) return;
     const transform = this.worldRoot.getComponent(UITransform);
     const uiPoint = event.getUILocation();
     const visible = view.getVisibleSize();
     const localX = uiPoint.x - visible.width / 2 - this.worldRoot.position.x;
     const localY = uiPoint.y - visible.height / 2 - this.worldRoot.position.y;
+    if (this.currentMode === "PERSONAL_LEVEL") {
+      this.moveTarget = {
+        x: Math.max(0, Math.min(12, (localX + transform.width / 2) / this.levelRoomScale)),
+        y: Math.max(0, Math.min(8, (localY + transform.height / 2) / this.levelRoomScale))
+      };
+      return;
+    }
+    if (this.currentMode !== "WORLD" || !this.mapSession) return;
     const margin = 20;
     const x = Math.max(
       (-transform.width / 2 + margin) / this.worldPixelsPerUnit,
-      Math.min(
-        (transform.width / 2 - margin) / this.worldPixelsPerUnit,
-        localX / this.worldPixelsPerUnit
-      )
+      Math.min((transform.width / 2 - margin) / this.worldPixelsPerUnit, localX / this.worldPixelsPerUnit)
     );
     const y = Math.max(
       (-transform.height / 2 + margin) / this.worldPixelsPerUnit,
-      Math.min(
-        (transform.height / 2 - margin) / this.worldPixelsPerUnit,
-        localY / this.worldPixelsPerUnit
-      )
+      Math.min((transform.height / 2 - margin) / this.worldPixelsPerUnit, localY / this.worldPixelsPerUnit)
     );
     this.moveTarget = { x, y };
+  }
+
+  private updatePersonalLevelMovement(deltaTime: number): void {
+    if (!this.moveTarget || !this.levelAvatar || !this.levelSession) return;
+    const dx = this.moveTarget.x - this.levelPosition.x;
+    const dy = this.moveTarget.y - this.levelPosition.y;
+    const distance = Math.hypot(dx, dy);
+    const step = 3 * Math.max(0, deltaTime);
+    const reached = distance <= step || distance < 0.001;
+    this.levelPosition = reached
+      ? { ...this.moveTarget }
+      : { x: this.levelPosition.x + dx / distance * step, y: this.levelPosition.y + dy / distance * step };
+    this.levelAvatar.setPosition(
+      -240 + this.levelPosition.x * this.levelRoomScale,
+      -160 + this.levelPosition.y * this.levelRoomScale,
+      0
+    );
+    this.levelMoveSendElapsed += deltaTime;
+    if (this.levelMoveSendElapsed >= 0.12 || reached) {
+      const position = { ...this.levelPosition };
+      void this.levelSession.updatePosition(position.x, position.y).catch((error) => {
+        this.setStatus(`位置同步失败：${error instanceof Error ? error.message : "网络错误"}`);
+      });
+      this.levelMoveSendElapsed = 0;
+    }
+    if (reached) this.moveTarget = undefined;
+  }
+
+  private async castRoomEcho(): Promise<void> {
+    if (!this.levelSession) return;
+    try {
+      const result = await this.levelSession.castRule(
+        "RULE_ECHO",
+        { targetId: "M01-HIDEABLE-01", targetPoint: { x: 5, y: 4 } },
+        this.makeIdempotencyKey("room01-echo")
+      );
+      await this.levelSession.refreshState();
+      this.setStatus(result.effects.length ? "回声扩散：隐藏的符号显现了" : "回声没有回应");
+      this.drawPersonalRoom(this.pendingLevelName);
+    } catch (error) {
+      this.setStatus(`回声失败：${error instanceof Error ? error.message : "请稍后重试"}`);
+    }
+  }
+
+  private async interactRoomExit(): Promise<void> {
+    if (!this.levelSession) return;
+    try {
+      const result = await this.levelSession.interact(
+        "M01-EXIT-01",
+        this.makeIdempotencyKey("room01-exit")
+      );
+      if (result.state.status === "TRIGGERED") {
+        const settled = await this.levelSession.settle(this.makeIdempotencyKey("room01-settle"));
+        this.setStatus(`探索完成 · 用时 ${Math.round(settled.completion_time_ms / 1000)} 秒`);
+        this.currentMode = "MENU";
+        this.levelSession = undefined;
+        this.drawPersonalRoom("探索完成");
+      }
+    } catch (error) {
+      this.setStatus(`出口尚未开启或距离不足：${error instanceof Error ? error.message : "请继续探索"}`);
+    }
   }
 
   private async enterFirstRoom(): Promise<void> {
@@ -499,8 +570,10 @@ export class BeyondTheUnknownGameEntry extends Component {
         .map((rule) => `${rule.display_name}：${rule.config_status}`)
         .join("  ·  ");
     }
+    this.levelPosition = { x: 1, y: 4 };
+    this.levelMoveSendElapsed = 0;
     this.setStatus(
-      `已进入个人关卡 ${levelName} · ${runId.slice(0, 8)} · 法则可用配置 ${ready}/${configured.length}`
+      `已进入个人关卡 ${levelName} · 原型坐标/数值待实测 · 法则可用配置 ${ready}/${configured.length}`
     );
     this.drawPersonalRoom(levelName);
   }
@@ -509,26 +582,52 @@ export class BeyondTheUnknownGameEntry extends Component {
     if (!this.worldRoot) return;
     this.worldRoot.removeAllChildren();
     const size = this.worldRoot.getComponent(UITransform).contentSize;
-    const room = new Node("PersonalRoomPlaceholder");
+    const room = new Node("Room01Prototype");
     this.worldRoot.addChild(room);
-    room.addComponent(UITransform).setContentSize(size.width - 60, size.height - 60);
+    room.addComponent(UITransform).setContentSize(480, 320);
     const graphics = room.addComponent(Graphics);
-    graphics.lineWidth = 4;
-    graphics.strokeColor = new Color(111, 159, 184, 255);
-    graphics.fillColor = new Color(26, 48, 62, 255);
-    graphics.rect(-size.width / 2 + 30, -size.height / 2 + 30, size.width - 60, size.height - 60);
+    graphics.lineWidth = 3;
+    graphics.strokeColor = new Color(105, 169, 190, 255);
+    graphics.fillColor = new Color(18, 39, 55, 255);
+    graphics.rect(-240, -160, 480, 320);
     graphics.fill();
     graphics.stroke();
-    const labelNode = new Node("RoomStatus");
-    room.addChild(labelNode);
-    labelNode.addComponent(UITransform).setContentSize(size.width - 80, 90);
+
+    const drawMarker = (name: string, x: number, y: number, color: Color, radius: number, visible: boolean) => {
+      const node = new Node(name);
+      room.addChild(node);
+      node.setPosition(-240 + x * this.levelRoomScale, -160 + y * this.levelRoomScale, 0);
+      node.addComponent(UITransform).setContentSize(radius * 2, radius * 2);
+      const marker = node.addComponent(Graphics);
+      marker.fillColor = color;
+      marker.circle(0, 0, radius);
+      if (visible) marker.fill();
+      else {
+        marker.strokeColor = color;
+        marker.lineWidth = 2;
+        marker.stroke();
+      }
+      return node;
+    };
+    drawMarker("HiddenObject", 5, 4, new Color(125, 207, 236, 255), 14, false);
+    drawMarker("LightMarker", 7.5, 4, new Color(236, 211, 132, 255), 11, true);
+    drawMarker("ExitGate", 10.5, 4, new Color(155, 214, 174, 255), 17, true);
+    this.levelAvatar = drawMarker("Player", this.levelPosition.x, this.levelPosition.y, new Color(115, 220, 255, 255), 12, true);
+
+    const labelNode = new Node("RoomTitle");
+    this.worldRoot.addChild(labelNode);
+    labelNode.setPosition(0, size.height / 2 - 30, 0);
+    labelNode.addComponent(UITransform).setContentSize(size.width - 40, 28);
     const label = labelNode.addComponent(Label);
-    label.string = `${levelName}\n场景与机关坐标待内容配置；法则数值未批准前保持关闭`;
-    label.fontSize = 20;
-    label.lineHeight = 32;
-    label.color = new Color(218, 232, 240, 255);
+    label.string = `${levelName} · ROOM-01 原型`;
+    label.fontSize = 16;
+    label.color = new Color(226, 237, 246, 255);
     label.horizontalAlign = Label.HorizontalAlign.CENTER;
-    label.verticalAlign = Label.VerticalAlign.CENTER;
+
+    this.createButton("RoomEchoButton", "回声 · 显形", -95, -size.height / 2 + 155, 150, 42, () => this.castRoomEcho());
+    this.createButton("RoomExitButton", "靠近出口并交互", 95, -size.height / 2 + 155, 170, 42, () => this.interactRoomExit());
+    this.createButton("RoomAbandonButton", "放弃返回", size.width / 2 - 82, -size.height / 2 + 105, 130, 38, () => this.returnToWorld());
+    this.setStatus("点击房间地面移动：先走近隐藏目标使用回声，再前往出口交互");
   }
 
   private async returnToWorld(): Promise<void> {
