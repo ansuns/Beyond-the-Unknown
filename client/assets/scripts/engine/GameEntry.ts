@@ -21,6 +21,7 @@ import type { MapServerEvent } from "../network/types";
 import { createWeChatFetch, createWeChatWebSocketFactory } from "../platform/wechat-network";
 import { WeChatPlatform } from "../platform/wechat-platform";
 import { SessionStore } from "../player/session-store";
+import { CharacterSelectionSession } from "../player/character-selection-session";
 import { MapSession } from "../world/map-session";
 import { PersonalLevelSession } from "../world/personal-level-session";
 import { formatProgressSummary } from "../ui/progress-summary";
@@ -49,6 +50,8 @@ export class BeyondTheUnknownGameEntry extends Component {
   private rulesLabel?: Label;
   private progressLabel?: Label;
   private mapSession?: MapSession;
+  private characterSession?: CharacterSelectionSession;
+  private currentCharacterId?: string;
   private levelSession?: PersonalLevelSession;
   private api?: RestClient;
   private sessionStore?: SessionStore;
@@ -201,6 +204,15 @@ export class BeyondTheUnknownGameEntry extends Component {
       () => this.refreshProgress()
     );
     this.createButton(
+      "CharacterButton",
+      "切换角色",
+      0,
+      size.height / 2 - 145,
+      110,
+      44,
+      () => this.cycleCharacter()
+    );
+    this.createButton(
       "EmoteButton",
       "招呼",
       size.width / 2 - 72,
@@ -315,12 +327,20 @@ export class BeyondTheUnknownGameEntry extends Component {
       });
       const map = await this.mapSession.enter((event) => this.onMapEvent(event));
       this.localPlayerId = this.sessionStore!.playerId();
+      this.characterSession = new CharacterSelectionSession(this.api!);
+      try {
+        const characterCatalog = await this.characterSession.load();
+        this.currentCharacterId = characterCatalog.current_character_id ?? undefined;
+      } catch {
+        this.currentCharacterId = undefined;
+      }
       this.currentMode = "WORLD";
       this.upsertAvatar({
         player_id: this.localPlayerId!,
         x: map.spawn_position.x,
         y: map.spawn_position.y,
-        direction: map.spawn_position.direction
+        direction: map.spawn_position.direction,
+        character_id: this.currentCharacterId
       }, true);
       this.setStatus(
         `已进入共享世界 · 在线实例 ${map.current_players}/${map.max_players} · ${map.instance_id.slice(0, 8)}`
@@ -353,25 +373,44 @@ export class BeyondTheUnknownGameEntry extends Component {
       node = new Node(local ? "LocalPlayer" : `RemotePlayer-${avatar.player_id.slice(0, 8)}`);
       this.worldRoot.addChild(node);
       node.addComponent(UITransform).setContentSize(34, 34);
-      const graphics = node.addComponent(Graphics);
-      graphics.fillColor = local
-        ? new Color(112, 220, 255, 255)
-        : new Color(255, 190, 105, 255);
-      graphics.circle(0, 0, 15);
-      graphics.fill();
+      node.addComponent(Graphics);
       const labelNode = new Node("PlayerLabel");
       node.addChild(labelNode);
       labelNode.setPosition(0, -27, 0);
       labelNode.addComponent(UITransform).setContentSize(110, 22);
       const label = labelNode.addComponent(Label);
-      label.string = local ? "我" : avatar.player_id.slice(0, 6);
       label.fontSize = 11;
       label.lineHeight = 14;
       label.color = Color.WHITE;
       label.horizontalAlign = Label.HorizontalAlign.CENTER;
       this.avatars.set(avatar.player_id, node);
     }
-    node.setPosition(avatar.x * 40, avatar.y * 40, 0);
+    const palette = [
+      new Color(112, 220, 255, 255),
+      new Color(255, 190, 105, 255),
+      new Color(177, 150, 255, 255),
+      new Color(122, 220, 174, 255),
+      new Color(255, 130, 155, 255),
+      new Color(235, 214, 116, 255),
+      new Color(105, 185, 220, 255),
+      new Color(216, 150, 110, 255),
+      new Color(153, 196, 125, 255),
+      new Color(205, 145, 220, 255),
+      new Color(120, 205, 205, 255),
+      new Color(230, 160, 190, 255)
+    ];
+    const seed = [...(avatar.character_id ?? avatar.player_id)].reduce(
+      (sum, char) => sum + char.charCodeAt(0),
+      0
+    );
+    const graphics = node.getComponent(Graphics);
+    graphics.clear();
+    graphics.fillColor = palette[seed % palette.length];
+    graphics.circle(0, 0, 15);
+    graphics.fill();
+    const label = node.getChildByName("PlayerLabel")?.getComponent(Label);
+    if (label) label.string = local ? "我" : (avatar.character_id ?? avatar.player_id).slice(0, 6);
+    node.setPosition(avatar.x * this.worldPixelsPerUnit, avatar.y * this.worldPixelsPerUnit, 0);
   }
 
   private removeAvatar(playerId: string): void {
