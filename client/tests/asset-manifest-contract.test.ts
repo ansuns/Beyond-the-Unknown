@@ -19,6 +19,22 @@ describe("asset manifest contract", () => {
     expect(result.counts.MISSING).toBe(112);
   });
 
+  it("rejects an asset directory that does not match its canonical asset ID", () => {
+    const invalid = structuredClone(manifest);
+    invalid.entries.find((entry) => entry.asset_id === "M01-HIDEABLE-01").expected_directory =
+      "assets/resources/mechanisms/MEC_HIDEABLE";
+    expect(validateAssetManifestStructure(invalid, levels).errors.join("\n")).toContain(
+      "M01-HIDEABLE-01: expected_directory must be assets/resources/mechanisms/M01-HIDEABLE-01"
+    );
+  });
+
+  it("rejects a manifest that points at an outdated GDD version", () => {
+    const invalid = { ...manifest, gdd_version: "0.2" };
+    expect(validateAssetManifestStructure(invalid, levels).errors.join("\n")).toContain(
+      "asset manifest GDD baseline must be 0.3"
+    );
+  });
+
   it("rejects a missing character asset entry", () => {
     const invalid = structuredClone(manifest) as MutableManifest;
     invalid.entries = invalid.entries.filter((entry) => entry.asset_id !== "CHR_012_ANIMATION_SET");
