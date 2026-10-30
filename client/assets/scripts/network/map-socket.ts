@@ -27,7 +27,8 @@ export class MapSocketClient {
     accessToken: string,
     membership: Pick<MapEnterData, "instance_id" | "session_id">,
     onEvent: MapEventHandler,
-    reconnect = false
+    reconnect = false,
+    onDisconnect?: (event: { code?: number; reason?: string }) => void
   ): Promise<void> {
     return new Promise((resolve, reject) => {
       const socket = this.factory(this.url);
@@ -95,8 +96,13 @@ export class MapSocketClient {
         finish(new Error("Map WebSocket connection failed"));
       };
       socket.onclose = (event) => {
+        const wasReady = this.ready;
         this.ready = false;
-        if (!settled) finish(new Error(`Map WebSocket closed during handshake (${event.code ?? 0})`));
+        if (!settled) {
+          finish(new Error(`Map WebSocket closed during handshake (${event.code ?? 0})`));
+        } else if (wasReady) {
+          onDisconnect?.(event);
+        }
       };
     });
   }
