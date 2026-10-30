@@ -230,18 +230,17 @@ async def apply_law_action(
         last = (
             await session.execute(
                 text("""
-                    SELECT created_at FROM law_action_events
+                    SELECT (extract(epoch FROM (now() - created_at)) * 1000)::bigint
+                    FROM law_action_events
                     WHERE run_id = :run_id
                       AND rule_id = :rule_id AND action = 'APPLY'
                     ORDER BY created_at DESC LIMIT 1
                 """),
-                {"run_id": run_id, "mechanism_id": mechanism_id, "rule_id": rule_id},
+                {"run_id": run_id, "rule_id": rule_id},
             )
         ).scalar_one_or_none()
         if last is not None:
-            remaining = settings.law_cooldown_ms - int(
-                (datetime.now(timezone.utc) - last).total_seconds() * 1000
-            )
+            remaining = settings.law_cooldown_ms - int(last)
             if remaining > 0:
                 raise LawCooldown(f"Law is cooling down for {remaining} ms")
 
@@ -253,7 +252,8 @@ async def apply_law_action(
         previous = (
             await session.execute(
                 text("""
-                    SELECT rule_id, created_at
+                    SELECT rule_id,
+                           (extract(epoch FROM (now() - created_at)) * 1000)::bigint AS elapsed_ms
                     FROM law_action_events
                     WHERE run_id = :run_id AND mechanism_config_id = :mechanism_id
                       AND action = 'APPLY'
@@ -267,9 +267,6 @@ async def apply_law_action(
 
     level = _level_config(run["level_id"])
     configured_combos = set(level.get("required_combos", []))
-    mechanism_config = next(
-        item for item in level["mechanisms"] if item["mechanism_id"] == mechanism_id
-    )
     expected_type = {
         "COMBO-001": "PLATFORM_BRIDGE",
         "COMBO-002": "ENERGY_NODE",
