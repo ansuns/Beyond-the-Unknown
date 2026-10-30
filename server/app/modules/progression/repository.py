@@ -671,3 +671,18 @@ async def get_world_archive(
         )
     ).mappings().all()
     return [dict(row) for row in rows]
+
+
+async def get_current_seasons(
+    session: AsyncSession,
+) -> list[dict[str, Any]]:
+    periods = await ensure_current_periods(session)
+    return [
+        {
+            "season_id": item["season_id"],
+            "season_type": item["season_type"],
+            "start_at_utc": item["start"].isoformat(),
+            "end_at_utc": item["end"].isoformat(),
+        }
+        for item in periods
+    ]
