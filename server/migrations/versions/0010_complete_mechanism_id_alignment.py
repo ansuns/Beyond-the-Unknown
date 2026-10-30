@@ -3,7 +3,7 @@
 import sqlalchemy as sa
 from alembic import op
 
-revision = "0010_complete_mechanism_id_alignment"
+revision = "0010_mech_id_complete"
 down_revision = "0009_gdd_mechanism_ids"
 branch_labels = None
 depends_on = None
