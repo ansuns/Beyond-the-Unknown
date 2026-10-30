@@ -85,3 +85,16 @@ The map instance capacity and movement/reconnect limits are configurable through
 - The first three preset combos are catalogued exactly as COMBO-001..003; matching checks target identity, order sensitivity and configured time window.
 - Mechanism states are stored by `(run_id, player_id, mechanism_config_id)`; rule cooldowns and active effects are isolated by `(run_id, player_id, rule_id)`.
 - GDD V0.2 leaves cooldowns, effect radii, timed durations, gaze lease and combo time windows pending. The migration deliberately stores these values as NULL and marks the catalog `TUNING_REQUIRED`; rule casting returns HTTP 503 until reviewed tuning values and actual mechanism positions are supplied. No unapproved gameplay numbers are hardcoded.
+
+
+## VS-5 progression slice (implementation branch)
+
+- Migration `0007_vs5_progression` aligns mechanism terminal states with configured required objectives, seeds the six GDD V0.2 discovery records and their codex collection mappings, and adds `score_rule_config`.
+- Discovery writes are server-derived from successful RULE_ECHO in ROOM-01 and configured combo results. Personal discovery, world-first archive, collection grants and any configured condition rewards share the caller's transaction.
+- Settlement checks every configured `necessary_objectives` against the authenticated player's `mechanism_states`; the client cannot submit objective completion or score. It writes one settlement per run, updates `level_runs`, appends configured CLEAR score events and creates a permanent progress snapshot.
+- Hidden ending entry requires all five room settlements plus `DIS_HIDDEN_ROUTE_CLUE`; the clue is derived when ROOM-05's server-side mechanism states satisfy every configured objective.
+- Read APIs: `GET /discovery/me`, `GET /collection/me`, `GET /world-archive`, `GET /progress/me`, `GET /leaderboard/{board_type}`, `GET /season`, `GET /reward/me`; settlement: `POST /level/settle`; claim: `POST /reward/claim`.
+- Weekly and monthly periods are generated from `SERVER_TIMEZONE` (IANA zone, default UTC) and stored as UTC. Expired active periods are snapshotted into `SETTLING/REVIEW`; ranking rewards are not issued before review/approved rank thresholds are configured.
+- `score_rule_config` ships with all three score rules disabled and `delta=NULL`. Do not enable them until the GDD's EXP_DISCOVER/CLEAR_STAGE/COLLECT_NEW weights are approved. The API explicitly returns zero completion score with `PENDING_BALANCE_CONFIGURATION` until then.
+- Ranking currently uses shared `RANK()` ties and labels this policy provisional. The GDD's tie policy remains an Open Question.
+- Known playable-slice blockers remain: level mechanism positions and rule numeric tuning are still `TUNING_REQUIRED`; ROOM-01 exit interaction needs a server-authoritative in-level interaction/range input; full Cocos scene effects and true-device end-to-end flow remain VS-6 work.
