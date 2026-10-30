@@ -128,3 +128,18 @@
 - P0：跨玩家数据泄露、重复结算/奖励、客户端伪造完成、世界首发现竞争错误，任一存在均禁止推进。
 - P1：断线重连、弱网、设备性能、加载问题必须有修复计划。
 - 自动化测试、真机冒烟、迁移回滚演练通过后，才标记垂直切片完成。
+
+
+## 8. VS-6A 赛季结算与异步任务闭环（本分支）
+- [x] 赛季边界扫描：worker 按 SERVER_TIMEZONE 创建周/月周期并发现到期 ACTIVE 周期。
+- [x] Transactional Outbox：业务事务写入 task_outbox，RabbitMQ relay 使用持久化消息与 publisher confirms。
+- [x] Worker task receipt：task_id/idempotency_key 数据库去重，重复投递不重复执行结算。
+- [x] 赛季最终快照：三榜分别聚合 score_events 并写 leaderboard_snapshots。
+- [x] REVIEW 审核期：到期赛季进入 SETTLING/REVIEW，review_until_utc 可配置。
+- [x] 内部审核接口：API Key 保护 APPROVE/REJECT；无审核动作时到期自动批准。
+- [x] 排名奖励：按 SEASON_RANK 条件授予非付费外观/称号/宠物/徽章，发放幂等。
+- [x] Worker 有限指数退避重试；超过最大次数后进入 RabbitMQ DLQ，并保留 FAILED outbox 记录。
+- [ ] RabbitMQ 真实服务故障/重启、发布确认丢失、重复投递、DLQ 恢复演练。
+- [ ] 赛季审核窗口内的积分纠错流水及重算审批；当前支持批准/驳回，尚未开放纠错写接口。
+- [ ] 正式积分权重、排名奖励档位和时区配置由策划/运维确认后启用。
+- [ ] Cocos 编辑器导入、场景 hit-testing/HUD/动画、微信开发者工具与真机联调。
