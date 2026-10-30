@@ -205,6 +205,15 @@ def test_room01_echo_exit_interaction_and_settlement() -> None:
             )
             assert far_echo.status_code == 422
 
+            for x in range(6, 11):
+                time.sleep(0.1)
+                at_exit = client.post(
+                    "/api/v1/level/position",
+                    headers=player["headers"],
+                    json={"run_id": run_id, "x": float(x), "y": 4},
+                )
+                assert at_exit.status_code == 200, at_exit.text
+
             locked_exit = client.post(
                 "/api/v1/level/mechanism/interact",
                 headers={
@@ -214,6 +223,15 @@ def test_room01_echo_exit_interaction_and_settlement() -> None:
                 json={"run_id": run_id, "mechanism_id": "M01-EXIT-01"},
             )
             assert locked_exit.status_code == 409
+
+            for x in range(9, 4, -1):
+                time.sleep(0.1)
+                near_hidden = client.post(
+                    "/api/v1/level/position",
+                    headers=player["headers"],
+                    json={"run_id": run_id, "x": float(x), "y": 4},
+                )
+                assert near_hidden.status_code == 200, near_hidden.text
 
             echo = client.post(
                 "/api/v1/level/rule/cast",
