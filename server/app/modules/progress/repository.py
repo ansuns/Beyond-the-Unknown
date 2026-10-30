@@ -9,6 +9,7 @@ from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import get_settings
+from app.modules.outbox.repository import enqueue_outbox_event
 
 
 class SettlementRunNotFound(Exception):
@@ -726,6 +727,19 @@ async def settle_level(
                 "player_id": player_id,
             },
         )
+        await enqueue_outbox_event(
+            session,
+            "game.level.settled",
+            {
+                "result_id": str(failed_result),
+                "run_id": str(run_id),
+                "player_id": str(player_id),
+                "level_id": run["level_id"],
+                "result_status": "FAILED",
+                "completion_time_ms": completion_time_ms,
+            },
+            f"level-settled:{run_id}",
+        )
         await session.commit()
         return {
             "result_id": str(failed_result),
@@ -850,6 +864,19 @@ async def settle_level(
             "score_payload": json.dumps(score_payload),
             "result_id": result,
         },
+    )
+    await enqueue_outbox_event(
+        session,
+        "game.level.settled",
+        {
+            "result_id": str(result),
+            "run_id": str(run_id),
+            "player_id": str(player_id),
+            "level_id": run["level_id"],
+            "result_status": "COMPLETED",
+            "completion_time_ms": completion_time_ms,
+        },
+        f"level-settled:{run_id}",
     )
     await session.commit()
     return {
