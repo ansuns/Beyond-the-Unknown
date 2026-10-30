@@ -5,6 +5,8 @@ from uuid import UUID
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.modules.progression.score_service import award_score_if_configured
+
 
 async def initialize_objectives(
     session: AsyncSession, player_id: UUID, run_id: UUID, level_id: str
@@ -155,9 +157,19 @@ async def record_discovery(
             {"player_id": player_id, "discovery_id": discovery_id},
         )
     ).scalars().all()
+    score_awards = await award_score_if_configured(
+        session, player_id, "EXP_DISCOVER", discovery_id, run_id
+    )
+    for collection_id in collections:
+        score_awards.extend(
+            await award_score_if_configured(
+                session, player_id, "COLLECT_NEW", collection_id, run_id
+            )
+        )
     return {
         "discovery_id": discovery_id,
         "personal_first": True,
         "world_first": world_first,
         "collections": list(collections),
+        "score_awards": score_awards,
     }
