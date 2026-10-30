@@ -1,3 +1,4 @@
+import hashlib
 import json
 from datetime import UTC, date, datetime, time, timedelta
 from typing import Any
@@ -519,7 +520,7 @@ async def record_discovery(
                 "COLLECT_NEW",
                 collection["collection_id"],
                 run_id,
-                f"collection:{collection['collection_id']}",
+                f"collection:{player_id}:{collection['collection_id']}",
             )
             await _grant_rewards_for_trigger(
                 session,
