@@ -1,5 +1,6 @@
 from functools import lru_cache
 
+from pydantic import Field
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 _LOCAL_JWT_SECRET = "local-development-jwt-secret-change-before-deploy"
@@ -29,7 +30,7 @@ class Settings(BaseSettings):
     map_action_rate_limit: int = 5
     map_action_window_seconds: int = 10
     server_timezone: str = "UTC"
-    season_review_window_seconds: int = 600
+    season_review_window_seconds: int = Field(default=600, ge=300, le=600)
     internal_api_key: str | None = None
 
     model_config = SettingsConfigDict(env_file=".env", extra="ignore")
