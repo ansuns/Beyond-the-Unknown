@@ -51,10 +51,3 @@ def downgrade() -> None:
         )
         """
     )
-    op.get_bind().exec_driver_sql(
-        """
-        UPDATE levels
-        SET config = config - 'prototype_bounds' - 'prototype_spawn' - 'prototype_controls'
-        WHERE level_id = 'LV-ROOM-01'
-        """
-    )
