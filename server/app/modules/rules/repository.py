@@ -358,6 +358,12 @@ async def cast_rule(
     if rule_state["cooldown_until"] and rule_state["cooldown_until"] > now:
         remaining = int((rule_state["cooldown_until"] - now).total_seconds() * 1000)
         raise RuleCoolingDown(max(remaining, 1))
+    if (
+        rule_id in {"RULE_GAZE", "RULE_REVERSE"}
+        and rule_state["active_target_id"] is not None
+        and rule_state["active_target_id"] != target_id
+    ):
+        raise RuleStateConflict
 
     allowed_types = set(rule["allowed_target_types"])
     if rule_id == "RULE_ECHO":
