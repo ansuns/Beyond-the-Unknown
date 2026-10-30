@@ -1,7 +1,7 @@
 # 第一阶段垂直切片开发与测试清单
 
 - 版本：VS-1.1
-- 状态：VS-0 服务端骨架已合并；VS-1 服务端身份与玩家持久化已合并并通过 CI；Cocos 客户端与 VS-2 共享地图尚未开始
+- 状态：VS-0 服务端骨架已合并；VS-1 服务端身份与玩家持久化已合并并通过 CI；VS-2 服务端共享地图/WebSocket 原型已实现并进入 CI；Cocos 客户端尚未初始化
 - 基线：GDD V0.2；Cocos Creator 3.x + TypeScript；Python 3.12+ + FastAPI；PostgreSQL；RabbitMQ
 - 目标：端到端验证“登录—共享主地图—进入个人关卡—施放法则—机关解谜—服务端结算—永久进度恢复”。
 - 策略：先完成 ROOM-01 可玩闭环，再以配置驱动接入 ROOM-02 至 ROOM-05 与隐藏结局。
@@ -28,7 +28,7 @@
 |---|---|---|
 | VS-0 工程骨架 | Python 服务端、配置/环境变量、Docker Compose（PostgreSQL、RabbitMQ、API、Worker） | 服务端骨架已完成；Cocos Creator 项目初始化仍待客户端切片 |
 | VS-1 身份与持久化 | 微信 code 服务端交换、players、12个角色初始化、JWT、玩家/角色 API、迁移与测试 | 服务端已完成并 CI 验证：重复/并发登录幂等、12角色解锁、选角、JWT；客户端 wx.login 接入待做 |
-| VS-2 共享主地图 | 地图实例、WS鉴权、进入/离开、移动同步 | 两客户端互相看到移动；断线可重新进入 |
+| VS-2 共享主地图 | 地图实例分配、WS鉴权、ENTER/LEAVE、MOVE_SYNC、动作广播、心跳与重连保留 | 服务端双连接集成测试通过；客户端接入、AOI精细化和Redis多节点仍待完成 |
 | VS-3 个人关卡 | level enter/run、ROOM-01 场景、个人机关状态 | 两玩家同时进入独立 run，互不影响 |
 | VS-4 核心玩法 | 回声法则、显形目标、出口机关状态机 | 服务端校验输入并广播权威状态 |
 | VS-5 发现与结算 | discovery、world_archive、settlements、score_events、进度快照 | 结算幂等；重登后永久进度可见 |
@@ -47,12 +47,12 @@
 - [x] 建立 Python 模块化单体基础：app/api、core、modules/auth、modules/players、modules/characters、schemas、workers、tests。后续按领域增加 map、level、rules 等模块。
 - [x] 使用 FastAPI + Uvicorn；VS-1 登录/玩家接口已更新 OpenAPI 契约。
 - [x] 使用 SQLAlchemy 2.x async + asyncpg；Alembic 0001/0002 已在 CI 干净 PostgreSQL 上执行。
-- [ ] WebSocket 处理器采用 async I/O；CPU 密集计算不得阻塞事件循环，必要时移交进程池/后台任务。
+- [x] VS-2 WebSocket 处理器采用 async I/O；CPU 密集计算不得阻塞事件循环。当前连接管理器仅支持单 API 进程，水平扩展前必须接入 Redis presence/pub-sub。
 - [ ] 部署 RabbitMQ 与 Python Worker；定义任务消息 schema、持久化队列/消息、手动 ACK、有限重试与 dead-letter queue。
 - [ ] 仅将可异步化的耗时工作投递到队列；消费者必须幂等，消息确认发生在业务处理成功之后；关键业务写入与消息发布采用 Transactional Outbox，避免数据库提交成功但消息丢失。
 - [x] 玩家身份只从 JWT 认证上下文取得；每个受保护请求查询账号状态，封禁账号立即拒绝。
 - [ ] REST 写请求验证 schema、频率限制与幂等键。
-- [ ] WS 方向白名单、序列号、速率限制、AOI 广播。
+- [x] WS 首包 AUTH、消息序列号、方向/动作白名单、MOVE/ACTION 频率限制；当前 AOI 使用同实例全可见回退，精确半径/网格待联调。
 - [ ] level_run 归属检查；机关状态通过 (run_id, player_id) 复合外键隔离。
 - [ ] 玩法事件由服务端推导 discovery；客户端不能直接写发现事实。
 - [ ] 结算事务：锁定 run → settlement → 发现/收藏 → world_archive INSERT ON CONFLICT → 积分流水 → progress_version + 1 → snapshot。
@@ -76,11 +76,11 @@
 - [x] 无效/过期 token 与封禁玩家的请求被拒绝（VS-1 集成测试）。
 - [ ] 副作用请求缺少 Idempotency-Key 时被拒绝。
 - [ ] 同键同请求体重试返回同一结果；同键不同请求体返回 409。
-- [ ] 未 AUTH 即发送 MOVE_SYNC 时断开。
+- [x] WebSocket AUTH 后才允许 ENTER/MOVE/ACTION；双连接集成测试覆盖同实例广播。
 - [ ] C2S 伪造 MECH_STATE 被拒绝。
-- [ ] MOVE_SYNC 越界、超频、乱序被丢弃或限流。
-- [ ] AOI 外玩家不收到无关广播。
-- [ ] 重连重新鉴权并获得在线快照；未完成谜题临时状态不恢复。
+- [x] MOVE_SYNC 非法坐标/方向、超速、超频和乱序输入由服务端拒绝或丢弃；逻辑地图边界仍待地图资源确定。
+- [ ] AOI 半径/网格与边界测试（当前原型采用同实例全可见回退，不代表最终 AOI）。
+- [x] 重连重新鉴权并校验 membership session；保留期内获得同实例在线快照。未完成谜题临时状态不恢复。
 
 ### 玩法与关卡
 - [ ] ROOM-01 回声命中范围内目标后显形。

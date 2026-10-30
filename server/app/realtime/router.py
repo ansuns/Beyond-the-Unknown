@@ -7,7 +7,6 @@ from uuid import UUID
 
 from fastapi import APIRouter, WebSocket, WebSocketDisconnect
 from sqlalchemy import text
-from sqlalchemy import text
 
 from app.core.config import get_settings
 from app.core.database import SessionFactory
@@ -133,6 +132,7 @@ async def map_websocket(websocket: WebSocket) -> None:
                 await websocket.close(code=4408)
                 return
 
+        joined = True
         await map_connections.attach(
             websocket,
             str(instance_id),
@@ -147,7 +147,6 @@ async def map_websocket(websocket: WebSocket) -> None:
         )
         async with SessionFactory() as session:
             await touch_membership(session, player_id, session_id)
-        joined = True
         last_seq = int(enter_message.get("seq", 0))
         last_move_at = asyncio.get_running_loop().time()
         action_times: deque[float] = deque()
