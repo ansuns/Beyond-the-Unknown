@@ -477,6 +477,15 @@ def test_mechanism_catalog_and_references_match_canonical_gdd_ids() -> None:
                         """
                     )
                 )
+                level_prototype_combos = await connection.execute(
+                    text(
+                        """
+                        SELECT level_id, config->'prototype_combos' AS prototype_combos
+                        FROM levels
+                        ORDER BY level_id
+                        """
+                    )
+                )
             return {
                 "catalog": [dict(row._mapping) for row in catalog],
                 "objectives_without_mechanisms": objectives_without_mechanisms,
@@ -484,6 +493,10 @@ def test_mechanism_catalog_and_references_match_canonical_gdd_ids() -> None:
                 "route": route,
                 "combo_targets": [row[0] for row in combo_targets],
                 "hidden_discovery": hidden_discovery,
+                "level_prototype_combos": {
+                    row["level_id"]: row["prototype_combos"]
+                    for row in level_prototype_combos
+                },
             }
         finally:
             await engine.dispose()
@@ -562,6 +575,7 @@ def test_mechanism_catalog_and_references_match_canonical_gdd_ids() -> None:
         for row in contract["catalog"]
     }
     for level in source_config["levels"]:
+        assert contract["level_prototype_combos"][level["level_id"]] == level["prototype_combos"]
         for mechanism in level["mechanisms"]:
             row = catalog_by_key[(level["level_id"], mechanism["mechanism_id"])]
             assert row["position_x"] == mechanism["position"]["x"]
