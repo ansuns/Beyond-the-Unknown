@@ -59,3 +59,22 @@ def test_echo_rejects_incompatible_mechanism() -> None:
     except InvalidLawAction:
         return
     raise AssertionError("Echo must reject unsupported mechanism types")
+
+
+def test_combo_completed_mechanism_rejects_later_state_mutation() -> None:
+    state = {
+        "state": "OPEN",
+        "base_state": "INVISIBLE",
+        "active_rules": ["RULE_ECHO", "RULE_GAZE"],
+        "revealed": True,
+        "gaze_active": True,
+        "reversed": False,
+        "combo_completed": True,
+        "combo_id": "COMBO-001",
+        "version": 4,
+        "config": {},
+    }
+    _apply_single_rule("PLATFORM_BRIDGE", state, "RULE_ECHO", "APPLY")
+    _apply_single_rule("PLATFORM_BRIDGE", state, "RULE_GAZE", "RELEASE")
+    assert state["state"] == "OPEN"
+    assert state["gaze_active"] is True
