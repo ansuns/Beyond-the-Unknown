@@ -49,3 +49,8 @@ The server currently marks numeric law tuning and mechanism positions as `TUNING
 
 
 The engine-independent LawController also validates point/object target shape from the server rule scope, tracks an active GAZE target, exposes the latest personal state snapshot, and renews GAZE only when one-third of the server lease timeout has elapsed. Call maintainGazeIfDue() from the scene update loop; it suppresses per-frame network spam. The server still validates actual target identity, range, tuning, cooldown, expiry and effects.
+
+
+## Player profile and character selection API
+
+RestClient now exposes getPlayerProfile(), listCharacters(), and selectCharacter(characterId) for the existing authenticated player endpoints. Character unlock state and the selected character are read from the server; the client must not infer unlocks or treat a local selection as authoritative.
