@@ -140,3 +140,63 @@ def test_personal_level_run_entry_is_idempotent_and_isolated() -> None:
             assert cleanup.status_code == 200
     finally:
         app.dependency_overrides.clear()
+
+
+def test_settlement_requires_server_authoritative_objectives_and_exposes_progression() -> None:
+    app.dependency_overrides[get_wechat_code_provider] = lambda: FakeWeChatProvider()
+    try:
+        with TestClient(app) as client:
+            player = _login_and_enter_map(client)
+            headers = {
+                **player["headers"],
+                "Idempotency-Key": "vs5-settlement-missing-objectives-01",
+            }
+            entered = client.post(
+                "/api/v1/level/enter",
+                headers=headers,
+                json={"level_id": "LV-ROOM-01", "entrance_id": "ENT-ROOM-01"},
+            )
+            assert entered.status_code == 200
+            run_id = entered.json()["data"]["run_id"]
+            started = client.post(
+                "/api/v1/level/start",
+                headers=player["headers"],
+                json={"run_id": run_id},
+            )
+            assert started.status_code == 200
+
+            rejected = client.post(
+                "/api/v1/level/settle",
+                headers=headers,
+                json={"run_id": run_id},
+            )
+            assert rejected.status_code == 409
+            detail = rejected.json()["detail"]
+            assert detail["code"] == "OBJECTIVES_INCOMPLETE"
+            assert set(detail["missing_objectives"]) == {
+                "OBJ-01-REVEAL",
+                "OBJ-01-EXIT",
+            }
+
+            progress = client.get("/api/v1/progress/me", headers=player["headers"])
+            assert progress.status_code == 200
+            assert progress.json()["data"]["completed_levels"] == 0
+
+            for board_type in ("EXPLORE", "CLEAR", "COLLECT"):
+                leaderboard = client.get(
+                    f"/api/v1/leaderboard/{board_type}?season_type=WEEKLY",
+                    headers=player["headers"],
+                )
+                assert leaderboard.status_code == 200
+                data = leaderboard.json()["data"]
+                assert data["board_type"] == board_type
+                assert data["season_type"] == "WEEKLY"
+                assert data["player_rank"] is None
+
+            discoveries = client.get(
+                "/api/v1/discovery/me", headers=player["headers"]
+            )
+            assert discoveries.status_code == 200
+            assert discoveries.json()["data"]["discoveries"] == []
+    finally:
+        app.dependency_overrides.clear()
