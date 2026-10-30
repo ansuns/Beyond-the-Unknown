@@ -43,4 +43,16 @@ describe("level progression selection", () => {
   it("returns undefined when there is no unlocked level", () => {
     expect(selectNextPlayableLevel([], [])).toBeUndefined();
   });
+
+  it("does not repeatedly enter a non-repeatable hidden ending after it is complete", () => {
+    const unlockedAndCompleted = levels.map((level) =>
+      level.level_id === "LV-HIDDEN-01" ? { ...level, is_unlocked: true } : level
+    );
+    expect(
+      selectNextPlayableLevel(unlockedAndCompleted, [
+        "LV-ROOM-01", "LV-ROOM-02", "LV-ROOM-03", "LV-ROOM-04",
+        "LV-ROOM-05", "LV-HIDDEN-01"
+      ])
+    ).toBeUndefined();
+  });
 });
