@@ -42,3 +42,12 @@ uv run ruff check .
 ```
 
 Integration tests use a fake WeChat provider. The production adapter calls WeChat `jscode2session`; `session_key` is neither returned nor persisted. The existing unique `wx_openid` column stores a keyed HMAC digest, not raw OpenID. Character display names and art asset IDs are placeholders until approved content/art direction is supplied.
+
+## VS-1 endpoints
+
+- `POST /api/v1/auth/login`: exchange a WeChat login code and create/resume the player.
+- `GET /api/v1/player/me`: retrieve the authenticated player's profile.
+- `GET /api/v1/player/characters`: list the player's unlocked characters.
+- `PUT /api/v1/player/character`: select an owned and enabled character.
+
+All player endpoints require a Bearer JWT. The API derives player identity from the token subject; callers must not submit a player ID.
