@@ -6,6 +6,8 @@ from uuid import UUID
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.modules.gameplay.service import initialize_mechanisms
+
 
 class LevelNotFound(Exception):
     pass
@@ -260,6 +262,7 @@ async def start_level(
         ).mappings().one()
     elif run["run_status"] != "RUNNING":
         raise InvalidLevelRunState
+    await initialize_mechanisms(session, run_id, player_id, run["level_id"])
     await session.commit()
     return {
         "run_id": str(run["run_id"]),
