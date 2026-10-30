@@ -372,6 +372,23 @@ async def cast_rule(
         x, y = target_point["x"], target_point["y"]
         if not math.isfinite(x) or not math.isfinite(y):
             raise RuleTargetInvalid
+        # ROOM-01 Echo is cast from the player's authoritative server position;
+        # target_point cannot be used to reveal objects across the whole room.
+        if run["level_id"] == "LV-ROOM-01":
+            position = (
+                await session.execute(
+                    text("""
+                        SELECT x, y FROM level_run_positions
+                        WHERE run_id = :run_id AND player_id = :player_id
+                        FOR UPDATE
+                    """),
+                    {"run_id": run_id, "player_id": player_id},
+                )
+            ).mappings().one_or_none()
+            if position is None or math.hypot(
+                float(position["x"]) - x, float(position["y"]) - y
+            ) > rule["radius"]:
+                raise RuleTargetInvalid
         candidates = (
             await session.execute(
                 text("""
