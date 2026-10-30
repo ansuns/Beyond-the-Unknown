@@ -565,39 +565,6 @@ async def settle_level(
     run_id: UUID,
     idempotency_key: str,
 ) -> dict[str, Any]:
-    existing = (
-        await session.execute(
-            text("""
-                SELECT result_id, level_id, result_status, completion_time_ms,
-                       score_payload, created_at
-                FROM settlements
-                WHERE run_id = :run_id AND player_id = :player_id
-            """),
-            {"run_id": run_id, "player_id": player_id},
-        )
-    ).mappings().one_or_none()
-    if existing is not None:
-        return {
-            "result_id": str(existing["result_id"]),
-            "level_id": existing["level_id"],
-            "result_status": existing["result_status"],
-            "completion_time_ms": existing["completion_time_ms"],
-            "score_payload": existing["score_payload"],
-            "idempotent_replay": True,
-        }
-
-    conflicting_key = (
-        await session.execute(
-            text("""
-                SELECT result_id FROM settlements
-                WHERE player_id = :player_id AND idempotency_key = :idempotency_key
-            """),
-            {"player_id": player_id, "idempotency_key": idempotency_key},
-        )
-    ).scalar_one_or_none()
-    if conflicting_key is not None:
-        raise SettlementIdempotencyConflict
-
     run = (
         await session.execute(
             text("""
@@ -614,6 +581,43 @@ async def settle_level(
     ).mappings().one_or_none()
     if run is None:
         raise SettlementRunNotFound
+
+    existing = (
+        await session.execute(
+            text("""
+                SELECT result_id, level_id, result_status, completion_time_ms,
+                       score_payload, created_at
+                FROM settlements
+                WHERE run_id = :run_id AND player_id = :player_id
+            """),
+            {"run_id": run_id, "player_id": player_id},
+        )
+    ).mappings().one_or_none()
+    if existing is not None:
+        await session.commit()
+        return {
+            "result_id": str(existing["result_id"]),
+            "level_id": existing["level_id"],
+            "result_status": existing["result_status"],
+            "completion_time_ms": existing["completion_time_ms"],
+            "score_payload": existing["score_payload"],
+            "idempotent_replay": True,
+        }
+
+    stored_idempotency_key = hashlib.sha256(
+        (str(player_id) + ":" + idempotency_key).encode("utf-8")
+    ).hexdigest()
+    conflicting_key = (
+        await session.execute(
+            text("""
+                SELECT result_id FROM settlements
+                WHERE idempotency_key = :idempotency_key
+            """),
+            {"idempotency_key": stored_idempotency_key},
+        )
+    ).scalar_one_or_none()
+    if conflicting_key is not None:
+        raise SettlementIdempotencyConflict
     if run["run_status"] != "RUNNING":
         raise SettlementStateConflict
 
