@@ -73,8 +73,48 @@ def _periods(now: datetime | None = None) -> list[dict[str, Any]]:
 async def ensure_current_periods(
     session: AsyncSession, now: datetime | None = None
 ) -> list[dict[str, Any]]:
-    periods = _periods(now)
+    current_time = now or datetime.now(UTC)
+    periods = _periods(current_time)
     for period in periods:
+        closed = (
+            await session.execute(
+                text("""
+                    UPDATE seasons
+                    SET status = 'SETTLING', settlement_status = 'REVIEW'
+                    WHERE season_type = CAST(:season_type AS season_type)
+                      AND end_at_utc <= :current_time
+                      AND status = 'ACTIVE'
+                    RETURNING season_id
+                """),
+                {
+                    "season_type": period["season_type"],
+                    "current_time": current_time,
+                },
+            )
+        ).scalars().all()
+        for season_id in closed:
+            for board_type in ("EXPLORE", "CLEAR", "COLLECT"):
+                await session.execute(
+                    text("""
+                        INSERT INTO leaderboard_snapshots
+                            (season_id, board_type, player_id, score, rank)
+                        SELECT
+                            :season_id,
+                            CAST(:board_type AS board_type),
+                            totals.player_id,
+                            totals.score,
+                            RANK() OVER (ORDER BY totals.score DESC)::integer
+                        FROM (
+                            SELECT player_id, SUM(delta)::bigint AS score
+                            FROM score_events
+                            WHERE period_id = :season_id
+                              AND board_type = CAST(:board_type AS board_type)
+                            GROUP BY player_id
+                        ) AS totals
+                        ON CONFLICT (season_id, board_type, player_id) DO NOTHING
+                    """),
+                    {"season_id": season_id, "board_type": board_type},
+                )
         await session.execute(
             text("""
                 INSERT INTO seasons
