@@ -1,3 +1,5 @@
+import json
+
 import sqlalchemy as sa
 from alembic import op
 
@@ -29,7 +31,7 @@ def upgrade() -> None:
         ("LV-ROOM-04", "MECH_MOVING_PLATFORM", "M04-PLATFORM-01"),
     )
     for level_id, old_id, new_id in id_pairs:
-        op.execute(
+        op.get_bind().execute(
             sa.text("""
                 UPDATE level_mechanism_catalog
                 SET mechanism_config_id = :new_id
@@ -81,7 +83,7 @@ def upgrade() -> None:
                 SET necessary_objectives = CAST(:objectives AS jsonb)
                 WHERE level_id = :level_id
             """),
-            {"level_id": level_id, "objectives": __import__("json").dumps(required)},
+            {"level_id": level_id, "objectives": json.dumps(required)},
         )
 
     op.execute(
