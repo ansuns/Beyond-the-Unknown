@@ -117,7 +117,7 @@ async def enter_level(
             raise IdempotencyConflict
         return {
             "run_id": str(prior["run_id"]),
-            "map_instance_id": str(prior["instance_id"]) if prior["instance_id"] else None,
+            "map_instance_id": None,
             "status": prior["run_status"],
             "level": _level_payload(prior),
             "idempotent_replay": True,
