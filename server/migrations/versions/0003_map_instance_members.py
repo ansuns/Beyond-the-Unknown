@@ -1,4 +1,4 @@
-from alembic import op
+from alembic import op  # noqa: I001
 import sqlalchemy as sa
 
 
