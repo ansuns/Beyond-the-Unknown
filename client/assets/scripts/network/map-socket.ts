@@ -68,6 +68,7 @@ export class MapSocketClient {
           socket.close(4400, "Invalid envelope");
           return;
         }
+        onEvent(event);
         if (event.cmd === "AUTH_FAIL") {
           finish(new Error(String(event.payload.reason ?? "WebSocket authentication failed")));
           socket.close(4401, "Authentication failed");
@@ -89,7 +90,6 @@ export class MapSocketClient {
           this.ready = true;
           finish();
         }
-        onEvent(event);
       };
       socket.onerror = () => {
         finish(new Error("Map WebSocket connection failed"));
