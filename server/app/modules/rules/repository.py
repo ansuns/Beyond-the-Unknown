@@ -307,7 +307,8 @@ async def cast_rule(
         await session.execute(
             text("""
                 SELECT rule_id, duration_type, scope_type, cooldown_ms, radius,
-                       duration_ms, allowed_target_types, config_status
+                       duration_ms, lease_timeout_ms, allowed_target_types,
+                       config_status
                 FROM rule_catalog
                 WHERE rule_id = :rule_id AND is_enabled = true
             """),
@@ -342,7 +343,8 @@ async def cast_rule(
     rule_state = (
         await session.execute(
             text("""
-                SELECT cooldown_until, active_target_id, active_effect, expires_at, last_maintained_at
+                SELECT cooldown_until, active_target_id, active_effect,
+                       expires_at, last_maintained_at
                 FROM player_rule_states
                 WHERE run_id = :run_id AND player_id = :player_id
                   AND rule_id = :rule_id
@@ -605,6 +607,13 @@ async def _match_combo(
         state = await _load_mechanism_state(session, run_id, player_id, mechanism)
         if state.get("status") == "LOCKED":
             continue
+        if state.get("status") in {"TRIGGERED", "LOCKED"}:
+            return {
+                "combo_id": combo["combo_id"],
+                "mechanism_id": target_id,
+                "status": state["status"],
+                "already_applied": True,
+            }
         transitions = list(state.get("transitions", []))
         if state.get("status") == "INACTIVE":
             transitions.append({"from": "INACTIVE", "to": "ACTIVE"})
@@ -691,7 +700,7 @@ async def stop_gaze(
         text("""
             UPDATE player_rule_states
             SET active_target_id = NULL, active_effect = '{}'::jsonb,
-                last_maintained_at = NULL, updated_at = now()
+                expires_at = NULL, last_maintained_at = NULL, updated_at = now()
             WHERE run_id = :run_id AND player_id = :player_id
               AND rule_id = 'RULE_GAZE'
         """),
@@ -699,3 +708,76 @@ async def stop_gaze(
     )
     await session.commit()
     return {"run_id": str(run_id), "stopped": True, "target_id": target_id}
+
+
+
+async def maintain_gaze(
+    session: AsyncSession,
+    player_id: UUID,
+    run_id: UUID,
+    target_id: str,
+) -> dict[str, Any]:
+    run = await _get_run(session, player_id, run_id)
+    now = datetime.now(UTC)
+    await _expire_rule_effects(
+        session, run_id, player_id, run["level_id"], now
+    )
+    state = (
+        await session.execute(
+            text("""
+                SELECT active_target_id
+                FROM player_rule_states
+                WHERE run_id = :run_id AND player_id = :player_id
+                  AND rule_id = 'RULE_GAZE'
+                FOR UPDATE
+            """),
+            {"run_id": run_id, "player_id": player_id},
+        )
+    ).mappings().one_or_none()
+    if state is None or state["active_target_id"] != target_id:
+        raise RuleStateConflict
+    await session.execute(
+        text("""
+            UPDATE player_rule_states
+            SET last_maintained_at = :now, updated_at = :now
+            WHERE run_id = :run_id AND player_id = :player_id
+              AND rule_id = 'RULE_GAZE'
+        """),
+        {"now": now, "run_id": run_id, "player_id": player_id},
+    )
+    await session.commit()
+    return {"run_id": str(run_id), "target_id": target_id, "maintained_at": now.isoformat()}
+
+
+async def get_level_state(
+    session: AsyncSession, player_id: UUID, run_id: UUID
+) -> dict[str, Any]:
+    run = await _get_run(session, player_id, run_id)
+    await _expire_rule_effects(
+        session, run_id, player_id, run["level_id"], datetime.now(UTC)
+    )
+    rows = (
+        await session.execute(
+            text("""
+                SELECT mechanism_config_id, mechanism_type, state, updated_at
+                FROM mechanism_states
+                WHERE run_id = :run_id AND player_id = :player_id
+                ORDER BY mechanism_config_id
+            """),
+            {"run_id": run_id, "player_id": player_id},
+        )
+    ).mappings().all()
+    await session.commit()
+    return {
+        "run_id": str(run_id),
+        "level_id": run["level_id"],
+        "mechanisms": [
+            {
+                "mechanism_id": row["mechanism_config_id"],
+                "mechanism_type": row["mechanism_type"],
+                "state": row["state"],
+                "updated_at": row["updated_at"].isoformat(),
+            }
+            for row in rows
+        ],
+    }
