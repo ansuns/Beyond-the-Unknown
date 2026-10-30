@@ -1,0 +1,1203 @@
+{
+  "schema_version": 1,
+  "project": "Beyond the Unknown",
+  "gdd_version": "0.2",
+  "status": "BLOCKED_ASSETS_NOT_DELIVERED",
+  "generated_from": [
+    "docs/gdd/chapters/无界之外_GDD_第3章_玩家角色系统.md",
+    "docs/gdd/chapters/无界之外_GDD_第4章_地图与场景系统.md",
+    "docs/gdd/chapters/无界之外_GDD_第6章_探索关卡系统.md",
+    "docs/gdd/chapters/无界之外_GDD_第9章_交互与机关系统.md",
+    "docs/gdd/chapters/无界之外_GDD_第16章_UI与交互界面规范.md",
+    "docs/gdd/chapters/无界之外_GDD_第18章_美术资源音效与测试验收规范.md"
+  ],
+  "character_ids": [
+    "CHR_001",
+    "CHR_002",
+    "CHR_003",
+    "CHR_004",
+    "CHR_005",
+    "CHR_006",
+    "CHR_007",
+    "CHR_008",
+    "CHR_009",
+    "CHR_010",
+    "CHR_011",
+    "CHR_012"
+  ],
+  "level_ids": [
+    "LV-ROOM-01",
+    "LV-ROOM-02",
+    "LV-ROOM-03",
+    "LV-ROOM-04",
+    "LV-ROOM-05",
+    "LV-HIDDEN-01"
+  ],
+  "mechanism_ids": [
+    "H01-END",
+    "H01-GATE",
+    "M01-EXIT-01",
+    "M01-HIDEABLE-01",
+    "M01-LIGHT-01",
+    "M02-BRIDGE-01",
+    "M03-DOOR-01",
+    "M03-ENERGY-01",
+    "M04-PLATFORM-01",
+    "M04-PLATFORM-02",
+    "M05-BRIDGE-01",
+    "M05-ENERGY-01",
+    "M05-HIDDEN-GATE",
+    "M05-REVERSE-01"
+  ],
+  "animation_contract": {
+    "idle_directions": [
+      "N",
+      "NE",
+      "E",
+      "SE",
+      "S",
+      "SW",
+      "W",
+      "NW"
+    ],
+    "move_directions": [
+      "N",
+      "NE",
+      "E",
+      "SE",
+      "S",
+      "SW",
+      "W",
+      "NW"
+    ],
+    "interact": true,
+    "actions": [
+      "ACT_001",
+      "ACT_002",
+      "ACT_003",
+      "ACT_004"
+    ]
+  },
+  "entries": [
+    {
+      "asset_id": "CHR_001_PORTRAIT",
+      "category": "character_portrait",
+      "required": true,
+      "status": "MISSING",
+      "expected_directory": "assets/resources/characters/CHR_001/portrait",
+      "files": [],
+      "source_chapter": "GDD 3.9 / 18.1",
+      "acceptance": "角色头像可按资源ID加载"
+    },
+    {
+      "asset_id": "CHR_001_MODEL",
+      "category": "character_model",
+      "required": true,
+      "status": "MISSING",
+      "expected_directory": "assets/resources/characters/CHR_001/model",
+      "files": [],
+      "source_chapter": "GDD 3.9 / 18.1",
+      "acceptance": "角色模型或2D角色主体资源可加载"
+    },
+    {
+      "asset_id": "CHR_001_PREVIEW",
+      "category": "character_preview",
+      "required": true,
+      "status": "MISSING",
+      "expected_directory": "assets/resources/characters/CHR_001/preview",
+      "files": [],
+      "source_chapter": "GDD 3.9 / 18.1",
+      "acceptance": "角色选择预览资源可加载"
+    },
+    {
+      "asset_id": "CHR_001_ANIMATION_SET",
+      "category": "character_animation",
+      "required": true,
+      "status": "MISSING",
+      "expected_directory": "assets/resources/characters/CHR_001/animation",
+      "files": [],
+      "source_chapter": "GDD 3.4 / 3.9 / 18.2",
+      "acceptance": "包含8方向IDLE、8方向MOVE、INTERACT及ACT_001至ACT_004"
+    },
+    {
+      "asset_id": "CHR_002_PORTRAIT",
+      "category": "character_portrait",
+      "required": true,
+      "status": "MISSING",
+      "expected_directory": "assets/resources/characters/CHR_002/portrait",
+      "files": [],
+      "source_chapter": "GDD 3.9 / 18.1",
+      "acceptance": "角色头像可按资源ID加载"
+    },
+    {
+      "asset_id": "CHR_002_MODEL",
+      "category": "character_model",
+      "required": true,
+      "status": "MISSING",
+      "expected_directory": "assets/resources/characters/CHR_002/model",
+      "files": [],
+      "source_chapter": "GDD 3.9 / 18.1",
+      "acceptance": "角色模型或2D角色主体资源可加载"
+    },
+    {
+      "asset_id": "CHR_002_PREVIEW",
+      "category": "character_preview",
+      "required": true,
+      "status": "MISSING",
+      "expected_directory": "assets/resources/characters/CHR_002/preview",
+      "files": [],
+      "source_chapter": "GDD 3.9 / 18.1",
+      "acceptance": "角色选择预览资源可加载"
+    },
+    {
+      "asset_id": "CHR_002_ANIMATION_SET",
+      "category": "character_animation",
+      "required": true,
+      "status": "MISSING",
+      "expected_directory": "assets/resources/characters/CHR_002/animation",
+      "files": [],
+      "source_chapter": "GDD 3.4 / 3.9 / 18.2",
+      "acceptance": "包含8方向IDLE、8方向MOVE、INTERACT及ACT_001至ACT_004"
+    },
+    {
+      "asset_id": "CHR_003_PORTRAIT",
+      "category": "character_portrait",
+      "required": true,
+      "status": "MISSING",
+      "expected_directory": "assets/resources/characters/CHR_003/portrait",
+      "files": [],
+      "source_chapter": "GDD 3.9 / 18.1",
+      "acceptance": "角色头像可按资源ID加载"
+    },
+    {
+      "asset_id": "CHR_003_MODEL",
+      "category": "character_model",
+      "required": true,
+      "status": "MISSING",
+      "expected_directory": "assets/resources/characters/CHR_003/model",
+      "files": [],
+      "source_chapter": "GDD 3.9 / 18.1",
+      "acceptance": "角色模型或2D角色主体资源可加载"
+    },
+    {
+      "asset_id": "CHR_003_PREVIEW",
+      "category": "character_preview",
+      "required": true,
+      "status": "MISSING",
+      "expected_directory": "assets/resources/characters/CHR_003/preview",
+      "files": [],
+      "source_chapter": "GDD 3.9 / 18.1",
+      "acceptance": "角色选择预览资源可加载"
+    },
+    {
+      "asset_id": "CHR_003_ANIMATION_SET",
+      "category": "character_animation",
+      "required": true,
+      "status": "MISSING",
+      "expected_directory": "assets/resources/characters/CHR_003/animation",
+      "files": [],
+      "source_chapter": "GDD 3.4 / 3.9 / 18.2",
+      "acceptance": "包含8方向IDLE、8方向MOVE、INTERACT及ACT_001至ACT_004"
+    },
+    {
+      "asset_id": "CHR_004_PORTRAIT",
+      "category": "character_portrait",
+      "required": true,
+      "status": "MISSING",
+      "expected_directory": "assets/resources/characters/CHR_004/portrait",
+      "files": [],
+      "source_chapter": "GDD 3.9 / 18.1",
+      "acceptance": "角色头像可按资源ID加载"
+    },
+    {
+      "asset_id": "CHR_004_MODEL",
+      "category": "character_model",
+      "required": true,
+      "status": "MISSING",
+      "expected_directory": "assets/resources/characters/CHR_004/model",
+      "files": [],
+      "source_chapter": "GDD 3.9 / 18.1",
+      "acceptance": "角色模型或2D角色主体资源可加载"
+    },
+    {
+      "asset_id": "CHR_004_PREVIEW",
+      "category": "character_preview",
+      "required": true,
+      "status": "MISSING",
+      "expected_directory": "assets/resources/characters/CHR_004/preview",
+      "files": [],
+      "source_chapter": "GDD 3.9 / 18.1",
+      "acceptance": "角色选择预览资源可加载"
+    },
+    {
+      "asset_id": "CHR_004_ANIMATION_SET",
+      "category": "character_animation",
+      "required": true,
+      "status": "MISSING",
+      "expected_directory": "assets/resources/characters/CHR_004/animation",
+      "files": [],
+      "source_chapter": "GDD 3.4 / 3.9 / 18.2",
+      "acceptance": "包含8方向IDLE、8方向MOVE、INTERACT及ACT_001至ACT_004"
+    },
+    {
+      "asset_id": "CHR_005_PORTRAIT",
+      "category": "character_portrait",
+      "required": true,
+      "status": "MISSING",
+      "expected_directory": "assets/resources/characters/CHR_005/portrait",
+      "files": [],
+      "source_chapter": "GDD 3.9 / 18.1",
+      "acceptance": "角色头像可按资源ID加载"
+    },
+    {
+      "asset_id": "CHR_005_MODEL",
+      "category": "character_model",
+      "required": true,
+      "status": "MISSING",
+      "expected_directory": "assets/resources/characters/CHR_005/model",
+      "files": [],
+      "source_chapter": "GDD 3.9 / 18.1",
+      "acceptance": "角色模型或2D角色主体资源可加载"
+    },
+    {
+      "asset_id": "CHR_005_PREVIEW",
+      "category": "character_preview",
+      "required": true,
+      "status": "MISSING",
+      "expected_directory": "assets/resources/characters/CHR_005/preview",
+      "files": [],
+      "source_chapter": "GDD 3.9 / 18.1",
+      "acceptance": "角色选择预览资源可加载"
+    },
+    {
+      "asset_id": "CHR_005_ANIMATION_SET",
+      "category": "character_animation",
+      "required": true,
+      "status": "MISSING",
+      "expected_directory": "assets/resources/characters/CHR_005/animation",
+      "files": [],
+      "source_chapter": "GDD 3.4 / 3.9 / 18.2",
+      "acceptance": "包含8方向IDLE、8方向MOVE、INTERACT及ACT_001至ACT_004"
+    },
+    {
+      "asset_id": "CHR_006_PORTRAIT",
+      "category": "character_portrait",
+      "required": true,
+      "status": "MISSING",
+      "expected_directory": "assets/resources/characters/CHR_006/portrait",
+      "files": [],
+      "source_chapter": "GDD 3.9 / 18.1",
+      "acceptance": "角色头像可按资源ID加载"
+    },
+    {
+      "asset_id": "CHR_006_MODEL",
+      "category": "character_model",
+      "required": true,
+      "status": "MISSING",
+      "expected_directory": "assets/resources/characters/CHR_006/model",
+      "files": [],
+      "source_chapter": "GDD 3.9 / 18.1",
+      "acceptance": "角色模型或2D角色主体资源可加载"
+    },
+    {
+      "asset_id": "CHR_006_PREVIEW",
+      "category": "character_preview",
+      "required": true,
+      "status": "MISSING",
+      "expected_directory": "assets/resources/characters/CHR_006/preview",
+      "files": [],
+      "source_chapter": "GDD 3.9 / 18.1",
+      "acceptance": "角色选择预览资源可加载"
+    },
+    {
+      "asset_id": "CHR_006_ANIMATION_SET",
+      "category": "character_animation",
+      "required": true,
+      "status": "MISSING",
+      "expected_directory": "assets/resources/characters/CHR_006/animation",
+      "files": [],
+      "source_chapter": "GDD 3.4 / 3.9 / 18.2",
+      "acceptance": "包含8方向IDLE、8方向MOVE、INTERACT及ACT_001至ACT_004"
+    },
+    {
+      "asset_id": "CHR_007_PORTRAIT",
+      "category": "character_portrait",
+      "required": true,
+      "status": "MISSING",
+      "expected_directory": "assets/resources/characters/CHR_007/portrait",
+      "files": [],
+      "source_chapter": "GDD 3.9 / 18.1",
+      "acceptance": "角色头像可按资源ID加载"
+    },
+    {
+      "asset_id": "CHR_007_MODEL",
+      "category": "character_model",
+      "required": true,
+      "status": "MISSING",
+      "expected_directory": "assets/resources/characters/CHR_007/model",
+      "files": [],
+      "source_chapter": "GDD 3.9 / 18.1",
+      "acceptance": "角色模型或2D角色主体资源可加载"
+    },
+    {
+      "asset_id": "CHR_007_PREVIEW",
+      "category": "character_preview",
+      "required": true,
+      "status": "MISSING",
+      "expected_directory": "assets/resources/characters/CHR_007/preview",
+      "files": [],
+      "source_chapter": "GDD 3.9 / 18.1",
+      "acceptance": "角色选择预览资源可加载"
+    },
+    {
+      "asset_id": "CHR_007_ANIMATION_SET",
+      "category": "character_animation",
+      "required": true,
+      "status": "MISSING",
+      "expected_directory": "assets/resources/characters/CHR_007/animation",
+      "files": [],
+      "source_chapter": "GDD 3.4 / 3.9 / 18.2",
+      "acceptance": "包含8方向IDLE、8方向MOVE、INTERACT及ACT_001至ACT_004"
+    },
+    {
+      "asset_id": "CHR_008_PORTRAIT",
+      "category": "character_portrait",
+      "required": true,
+      "status": "MISSING",
+      "expected_directory": "assets/resources/characters/CHR_008/portrait",
+      "files": [],
+      "source_chapter": "GDD 3.9 / 18.1",
+      "acceptance": "角色头像可按资源ID加载"
+    },
+    {
+      "asset_id": "CHR_008_MODEL",
+      "category": "character_model",
+      "required": true,
+      "status": "MISSING",
+      "expected_directory": "assets/resources/characters/CHR_008/model",
+      "files": [],
+      "source_chapter": "GDD 3.9 / 18.1",
+      "acceptance": "角色模型或2D角色主体资源可加载"
+    },
+    {
+      "asset_id": "CHR_008_PREVIEW",
+      "category": "character_preview",
+      "required": true,
+      "status": "MISSING",
+      "expected_directory": "assets/resources/characters/CHR_008/preview",
+      "files": [],
+      "source_chapter": "GDD 3.9 / 18.1",
+      "acceptance": "角色选择预览资源可加载"
+    },
+    {
+      "asset_id": "CHR_008_ANIMATION_SET",
+      "category": "character_animation",
+      "required": true,
+      "status": "MISSING",
+      "expected_directory": "assets/resources/characters/CHR_008/animation",
+      "files": [],
+      "source_chapter": "GDD 3.4 / 3.9 / 18.2",
+      "acceptance": "包含8方向IDLE、8方向MOVE、INTERACT及ACT_001至ACT_004"
+    },
+    {
+      "asset_id": "CHR_009_PORTRAIT",
+      "category": "character_portrait",
+      "required": true,
+      "status": "MISSING",
+      "expected_directory": "assets/resources/characters/CHR_009/portrait",
+      "files": [],
+      "source_chapter": "GDD 3.9 / 18.1",
+      "acceptance": "角色头像可按资源ID加载"
+    },
+    {
+      "asset_id": "CHR_009_MODEL",
+      "category": "character_model",
+      "required": true,
+      "status": "MISSING",
+      "expected_directory": "assets/resources/characters/CHR_009/model",
+      "files": [],
+      "source_chapter": "GDD 3.9 / 18.1",
+      "acceptance": "角色模型或2D角色主体资源可加载"
+    },
+    {
+      "asset_id": "CHR_009_PREVIEW",
+      "category": "character_preview",
+      "required": true,
+      "status": "MISSING",
+      "expected_directory": "assets/resources/characters/CHR_009/preview",
+      "files": [],
+      "source_chapter": "GDD 3.9 / 18.1",
+      "acceptance": "角色选择预览资源可加载"
+    },
+    {
+      "asset_id": "CHR_009_ANIMATION_SET",
+      "category": "character_animation",
+      "required": true,
+      "status": "MISSING",
+      "expected_directory": "assets/resources/characters/CHR_009/animation",
+      "files": [],
+      "source_chapter": "GDD 3.4 / 3.9 / 18.2",
+      "acceptance": "包含8方向IDLE、8方向MOVE、INTERACT及ACT_001至ACT_004"
+    },
+    {
+      "asset_id": "CHR_010_PORTRAIT",
+      "category": "character_portrait",
+      "required": true,
+      "status": "MISSING",
+      "expected_directory": "assets/resources/characters/CHR_010/portrait",
+      "files": [],
+      "source_chapter": "GDD 3.9 / 18.1",
+      "acceptance": "角色头像可按资源ID加载"
+    },
+    {
+      "asset_id": "CHR_010_MODEL",
+      "category": "character_model",
+      "required": true,
+      "status": "MISSING",
+      "expected_directory": "assets/resources/characters/CHR_010/model",
+      "files": [],
+      "source_chapter": "GDD 3.9 / 18.1",
+      "acceptance": "角色模型或2D角色主体资源可加载"
+    },
+    {
+      "asset_id": "CHR_010_PREVIEW",
+      "category": "character_preview",
+      "required": true,
+      "status": "MISSING",
+      "expected_directory": "assets/resources/characters/CHR_010/preview",
+      "files": [],
+      "source_chapter": "GDD 3.9 / 18.1",
+      "acceptance": "角色选择预览资源可加载"
+    },
+    {
+      "asset_id": "CHR_010_ANIMATION_SET",
+      "category": "character_animation",
+      "required": true,
+      "status": "MISSING",
+      "expected_directory": "assets/resources/characters/CHR_010/animation",
+      "files": [],
+      "source_chapter": "GDD 3.4 / 3.9 / 18.2",
+      "acceptance": "包含8方向IDLE、8方向MOVE、INTERACT及ACT_001至ACT_004"
+    },
+    {
+      "asset_id": "CHR_011_PORTRAIT",
+      "category": "character_portrait",
+      "required": true,
+      "status": "MISSING",
+      "expected_directory": "assets/resources/characters/CHR_011/portrait",
+      "files": [],
+      "source_chapter": "GDD 3.9 / 18.1",
+      "acceptance": "角色头像可按资源ID加载"
+    },
+    {
+      "asset_id": "CHR_011_MODEL",
+      "category": "character_model",
+      "required": true,
+      "status": "MISSING",
+      "expected_directory": "assets/resources/characters/CHR_011/model",
+      "files": [],
+      "source_chapter": "GDD 3.9 / 18.1",
+      "acceptance": "角色模型或2D角色主体资源可加载"
+    },
+    {
+      "asset_id": "CHR_011_PREVIEW",
+      "category": "character_preview",
+      "required": true,
+      "status": "MISSING",
+      "expected_directory": "assets/resources/characters/CHR_011/preview",
+      "files": [],
+      "source_chapter": "GDD 3.9 / 18.1",
+      "acceptance": "角色选择预览资源可加载"
+    },
+    {
+      "asset_id": "CHR_011_ANIMATION_SET",
+      "category": "character_animation",
+      "required": true,
+      "status": "MISSING",
+      "expected_directory": "assets/resources/characters/CHR_011/animation",
+      "files": [],
+      "source_chapter": "GDD 3.4 / 3.9 / 18.2",
+      "acceptance": "包含8方向IDLE、8方向MOVE、INTERACT及ACT_001至ACT_004"
+    },
+    {
+      "asset_id": "CHR_012_PORTRAIT",
+      "category": "character_portrait",
+      "required": true,
+      "status": "MISSING",
+      "expected_directory": "assets/resources/characters/CHR_012/portrait",
+      "files": [],
+      "source_chapter": "GDD 3.9 / 18.1",
+      "acceptance": "角色头像可按资源ID加载"
+    },
+    {
+      "asset_id": "CHR_012_MODEL",
+      "category": "character_model",
+      "required": true,
+      "status": "MISSING",
+      "expected_directory": "assets/resources/characters/CHR_012/model",
+      "files": [],
+      "source_chapter": "GDD 3.9 / 18.1",
+      "acceptance": "角色模型或2D角色主体资源可加载"
+    },
+    {
+      "asset_id": "CHR_012_PREVIEW",
+      "category": "character_preview",
+      "required": true,
+      "status": "MISSING",
+      "expected_directory": "assets/resources/characters/CHR_012/preview",
+      "files": [],
+      "source_chapter": "GDD 3.9 / 18.1",
+      "acceptance": "角色选择预览资源可加载"
+    },
+    {
+      "asset_id": "CHR_012_ANIMATION_SET",
+      "category": "character_animation",
+      "required": true,
+      "status": "MISSING",
+      "expected_directory": "assets/resources/characters/CHR_012/animation",
+      "files": [],
+      "source_chapter": "GDD 3.4 / 3.9 / 18.2",
+      "acceptance": "包含8方向IDLE、8方向MOVE、INTERACT及ACT_001至ACT_004"
+    },
+    {
+      "asset_id": "MAP_MAIN_001_SCENE",
+      "category": "main_map",
+      "required": true,
+      "status": "MISSING",
+      "expected_directory": "assets/resources/maps/MAP_MAIN_001/scene",
+      "files": [],
+      "source_chapter": "GDD 4.10 / 18.3",
+      "acceptance": "主地图scene资源与地图版本一致"
+    },
+    {
+      "asset_id": "MAP_MAIN_001_GROUND",
+      "category": "main_map",
+      "required": true,
+      "status": "MISSING",
+      "expected_directory": "assets/resources/maps/MAP_MAIN_001/ground",
+      "files": [],
+      "source_chapter": "GDD 4.10 / 18.3",
+      "acceptance": "主地图ground资源与地图版本一致"
+    },
+    {
+      "asset_id": "MAP_MAIN_001_PROPS",
+      "category": "main_map",
+      "required": true,
+      "status": "MISSING",
+      "expected_directory": "assets/resources/maps/MAP_MAIN_001/props",
+      "files": [],
+      "source_chapter": "GDD 4.10 / 18.3",
+      "acceptance": "主地图props资源与地图版本一致"
+    },
+    {
+      "asset_id": "MAP_MAIN_001_COLLISION",
+      "category": "main_map",
+      "required": true,
+      "status": "MISSING",
+      "expected_directory": "assets/resources/maps/MAP_MAIN_001/collision",
+      "files": [],
+      "source_chapter": "GDD 4.10 / 18.3",
+      "acceptance": "主地图collision资源与地图版本一致"
+    },
+    {
+      "asset_id": "MAP_MAIN_001_WALKABLE",
+      "category": "main_map",
+      "required": true,
+      "status": "MISSING",
+      "expected_directory": "assets/resources/maps/MAP_MAIN_001/walkable",
+      "files": [],
+      "source_chapter": "GDD 4.10 / 18.3",
+      "acceptance": "主地图walkable资源与地图版本一致"
+    },
+    {
+      "asset_id": "MAP_MAIN_001_SPAWN",
+      "category": "main_map",
+      "required": true,
+      "status": "MISSING",
+      "expected_directory": "assets/resources/maps/MAP_MAIN_001/spawn",
+      "files": [],
+      "source_chapter": "GDD 4.10 / 18.3",
+      "acceptance": "主地图spawn资源与地图版本一致"
+    },
+    {
+      "asset_id": "MAP_MAIN_001_ENTRANCES",
+      "category": "main_map",
+      "required": true,
+      "status": "MISSING",
+      "expected_directory": "assets/resources/maps/MAP_MAIN_001/entrances",
+      "files": [],
+      "source_chapter": "GDD 4.10 / 18.3",
+      "acceptance": "主地图entrances资源与地图版本一致"
+    },
+    {
+      "asset_id": "MAP_MAIN_001_CAMERA",
+      "category": "main_map",
+      "required": true,
+      "status": "MISSING",
+      "expected_directory": "assets/resources/maps/MAP_MAIN_001/camera",
+      "files": [],
+      "source_chapter": "GDD 4.10 / 18.3",
+      "acceptance": "主地图camera资源与地图版本一致"
+    },
+    {
+      "asset_id": "MAP_MAIN_001_CONFIG",
+      "category": "main_map",
+      "required": true,
+      "status": "MISSING",
+      "expected_directory": "assets/resources/maps/MAP_MAIN_001/config",
+      "files": [],
+      "source_chapter": "GDD 4.10 / 18.3",
+      "acceptance": "主地图config资源与地图版本一致"
+    },
+    {
+      "asset_id": "LV-ROOM-01_GEOMETRY",
+      "category": "level_geometry",
+      "required": true,
+      "status": "MISSING",
+      "expected_directory": "assets/resources/levels/LV-ROOM-01",
+      "files": [],
+      "source_chapter": "GDD 6 / 18.3",
+      "acceptance": "关卡逻辑尺寸、出生点、机关坐标和可行走区域完整"
+    },
+    {
+      "asset_id": "LV-ROOM-02_GEOMETRY",
+      "category": "level_geometry",
+      "required": true,
+      "status": "MISSING",
+      "expected_directory": "assets/resources/levels/LV-ROOM-02",
+      "files": [],
+      "source_chapter": "GDD 6 / 18.3",
+      "acceptance": "关卡逻辑尺寸、出生点、机关坐标和可行走区域完整"
+    },
+    {
+      "asset_id": "LV-ROOM-03_GEOMETRY",
+      "category": "level_geometry",
+      "required": true,
+      "status": "MISSING",
+      "expected_directory": "assets/resources/levels/LV-ROOM-03",
+      "files": [],
+      "source_chapter": "GDD 6 / 18.3",
+      "acceptance": "关卡逻辑尺寸、出生点、机关坐标和可行走区域完整"
+    },
+    {
+      "asset_id": "LV-ROOM-04_GEOMETRY",
+      "category": "level_geometry",
+      "required": true,
+      "status": "MISSING",
+      "expected_directory": "assets/resources/levels/LV-ROOM-04",
+      "files": [],
+      "source_chapter": "GDD 6 / 18.3",
+      "acceptance": "关卡逻辑尺寸、出生点、机关坐标和可行走区域完整"
+    },
+    {
+      "asset_id": "LV-ROOM-05_GEOMETRY",
+      "category": "level_geometry",
+      "required": true,
+      "status": "MISSING",
+      "expected_directory": "assets/resources/levels/LV-ROOM-05",
+      "files": [],
+      "source_chapter": "GDD 6 / 18.3",
+      "acceptance": "关卡逻辑尺寸、出生点、机关坐标和可行走区域完整"
+    },
+    {
+      "asset_id": "LV-HIDDEN-01_GEOMETRY",
+      "category": "level_geometry",
+      "required": true,
+      "status": "MISSING",
+      "expected_directory": "assets/resources/levels/LV-HIDDEN-01",
+      "files": [],
+      "source_chapter": "GDD 6 / 18.3",
+      "acceptance": "关卡逻辑尺寸、出生点、机关坐标和可行走区域完整"
+    },
+    {
+      "asset_id": "H01-END",
+      "category": "mechanism",
+      "required": true,
+      "status": "MISSING",
+      "expected_directory": "assets/resources/mechanisms/H01-END",
+      "files": [],
+      "source_chapter": "GDD 9 / 18.5",
+      "acceptance": "机关H01-END具备状态表现、触发动效和逻辑视觉分离"
+    },
+    {
+      "asset_id": "H01-GATE",
+      "category": "mechanism",
+      "required": true,
+      "status": "MISSING",
+      "expected_directory": "assets/resources/mechanisms/H01-GATE",
+      "files": [],
+      "source_chapter": "GDD 9 / 18.5",
+      "acceptance": "机关H01-GATE具备状态表现、触发动效和逻辑视觉分离"
+    },
+    {
+      "asset_id": "M01-EXIT-01",
+      "category": "mechanism",
+      "required": true,
+      "status": "MISSING",
+      "expected_directory": "assets/resources/mechanisms/M01-EXIT-01",
+      "files": [],
+      "source_chapter": "GDD 9 / 18.5",
+      "acceptance": "机关M01-EXIT-01具备状态表现、触发动效和逻辑视觉分离"
+    },
+    {
+      "asset_id": "M01-HIDEABLE-01",
+      "category": "mechanism",
+      "required": true,
+      "status": "MISSING",
+      "expected_directory": "assets/resources/mechanisms/M01-HIDEABLE-01",
+      "files": [],
+      "source_chapter": "GDD 9 / 18.5",
+      "acceptance": "机关M01-HIDEABLE-01具备状态表现、触发动效和逻辑视觉分离"
+    },
+    {
+      "asset_id": "M01-LIGHT-01",
+      "category": "mechanism",
+      "required": true,
+      "status": "MISSING",
+      "expected_directory": "assets/resources/mechanisms/M01-LIGHT-01",
+      "files": [],
+      "source_chapter": "GDD 9 / 18.5",
+      "acceptance": "机关M01-LIGHT-01具备状态表现、触发动效和逻辑视觉分离"
+    },
+    {
+      "asset_id": "M02-BRIDGE-01",
+      "category": "mechanism",
+      "required": true,
+      "status": "MISSING",
+      "expected_directory": "assets/resources/mechanisms/M02-BRIDGE-01",
+      "files": [],
+      "source_chapter": "GDD 9 / 18.5",
+      "acceptance": "机关M02-BRIDGE-01具备状态表现、触发动效和逻辑视觉分离"
+    },
+    {
+      "asset_id": "M03-DOOR-01",
+      "category": "mechanism",
+      "required": true,
+      "status": "MISSING",
+      "expected_directory": "assets/resources/mechanisms/M03-DOOR-01",
+      "files": [],
+      "source_chapter": "GDD 9 / 18.5",
+      "acceptance": "机关M03-DOOR-01具备状态表现、触发动效和逻辑视觉分离"
+    },
+    {
+      "asset_id": "M03-ENERGY-01",
+      "category": "mechanism",
+      "required": true,
+      "status": "MISSING",
+      "expected_directory": "assets/resources/mechanisms/M03-ENERGY-01",
+      "files": [],
+      "source_chapter": "GDD 9 / 18.5",
+      "acceptance": "机关M03-ENERGY-01具备状态表现、触发动效和逻辑视觉分离"
+    },
+    {
+      "asset_id": "M04-PLATFORM-01",
+      "category": "mechanism",
+      "required": true,
+      "status": "MISSING",
+      "expected_directory": "assets/resources/mechanisms/M04-PLATFORM-01",
+      "files": [],
+      "source_chapter": "GDD 9 / 18.5",
+      "acceptance": "机关M04-PLATFORM-01具备状态表现、触发动效和逻辑视觉分离"
+    },
+    {
+      "asset_id": "M04-PLATFORM-02",
+      "category": "mechanism",
+      "required": true,
+      "status": "MISSING",
+      "expected_directory": "assets/resources/mechanisms/M04-PLATFORM-02",
+      "files": [],
+      "source_chapter": "GDD 9 / 18.5",
+      "acceptance": "机关M04-PLATFORM-02具备状态表现、触发动效和逻辑视觉分离"
+    },
+    {
+      "asset_id": "M05-BRIDGE-01",
+      "category": "mechanism",
+      "required": true,
+      "status": "MISSING",
+      "expected_directory": "assets/resources/mechanisms/M05-BRIDGE-01",
+      "files": [],
+      "source_chapter": "GDD 9 / 18.5",
+      "acceptance": "机关M05-BRIDGE-01具备状态表现、触发动效和逻辑视觉分离"
+    },
+    {
+      "asset_id": "M05-ENERGY-01",
+      "category": "mechanism",
+      "required": true,
+      "status": "MISSING",
+      "expected_directory": "assets/resources/mechanisms/M05-ENERGY-01",
+      "files": [],
+      "source_chapter": "GDD 9 / 18.5",
+      "acceptance": "机关M05-ENERGY-01具备状态表现、触发动效和逻辑视觉分离"
+    },
+    {
+      "asset_id": "M05-HIDDEN-GATE",
+      "category": "mechanism",
+      "required": true,
+      "status": "MISSING",
+      "expected_directory": "assets/resources/mechanisms/M05-HIDDEN-GATE",
+      "files": [],
+      "source_chapter": "GDD 9 / 18.5",
+      "acceptance": "机关M05-HIDDEN-GATE具备状态表现、触发动效和逻辑视觉分离"
+    },
+    {
+      "asset_id": "M05-REVERSE-01",
+      "category": "mechanism",
+      "required": true,
+      "status": "MISSING",
+      "expected_directory": "assets/resources/mechanisms/M05-REVERSE-01",
+      "files": [],
+      "source_chapter": "GDD 9 / 18.5",
+      "acceptance": "机关M05-REVERSE-01具备状态表现、触发动效和逻辑视觉分离"
+    },
+    {
+      "asset_id": "FX_ECHO_PULSE_01",
+      "category": "effect",
+      "required": true,
+      "status": "MISSING",
+      "expected_directory": "assets/resources/effects",
+      "files": [],
+      "source_chapter": "GDD 7 / 18.6",
+      "acceptance": "特效可独立播放，不承担逻辑判定"
+    },
+    {
+      "asset_id": "FX_GAZE_BEAM_01",
+      "category": "effect",
+      "required": true,
+      "status": "MISSING",
+      "expected_directory": "assets/resources/effects",
+      "files": [],
+      "source_chapter": "GDD 7 / 18.6",
+      "acceptance": "特效可独立播放，不承担逻辑判定"
+    },
+    {
+      "asset_id": "FX_REVERSE_FLOW_01",
+      "category": "effect",
+      "required": true,
+      "status": "MISSING",
+      "expected_directory": "assets/resources/effects",
+      "files": [],
+      "source_chapter": "GDD 7 / 18.6",
+      "acceptance": "特效可独立播放，不承担逻辑判定"
+    },
+    {
+      "asset_id": "FX_ROOM_CLEAR_01",
+      "category": "effect",
+      "required": true,
+      "status": "MISSING",
+      "expected_directory": "assets/resources/effects",
+      "files": [],
+      "source_chapter": "GDD 7 / 18.6",
+      "acceptance": "特效可独立播放，不承担逻辑判定"
+    },
+    {
+      "asset_id": "FX_ROOM_CLEAR_02",
+      "category": "effect",
+      "required": true,
+      "status": "MISSING",
+      "expected_directory": "assets/resources/effects",
+      "files": [],
+      "source_chapter": "GDD 7 / 18.6",
+      "acceptance": "特效可独立播放，不承担逻辑判定"
+    },
+    {
+      "asset_id": "FX_ROOM_CLEAR_03",
+      "category": "effect",
+      "required": true,
+      "status": "MISSING",
+      "expected_directory": "assets/resources/effects",
+      "files": [],
+      "source_chapter": "GDD 7 / 18.6",
+      "acceptance": "特效可独立播放，不承担逻辑判定"
+    },
+    {
+      "asset_id": "FX_ROOM_CLEAR_04",
+      "category": "effect",
+      "required": true,
+      "status": "MISSING",
+      "expected_directory": "assets/resources/effects",
+      "files": [],
+      "source_chapter": "GDD 7 / 18.6",
+      "acceptance": "特效可独立播放，不承担逻辑判定"
+    },
+    {
+      "asset_id": "FX_ROOM_CLEAR_05",
+      "category": "effect",
+      "required": true,
+      "status": "MISSING",
+      "expected_directory": "assets/resources/effects",
+      "files": [],
+      "source_chapter": "GDD 7 / 18.6",
+      "acceptance": "特效可独立播放，不承担逻辑判定"
+    },
+    {
+      "asset_id": "FX_HIDDEN_ENDING",
+      "category": "effect",
+      "required": true,
+      "status": "MISSING",
+      "expected_directory": "assets/resources/effects",
+      "files": [],
+      "source_chapter": "GDD 7 / 18.6",
+      "acceptance": "特效可独立播放，不承担逻辑判定"
+    },
+    {
+      "asset_id": "UI_LOGIN",
+      "category": "ui",
+      "required": true,
+      "status": "MISSING",
+      "expected_directory": "assets/resources/ui",
+      "files": [],
+      "source_chapter": "GDD 16 / 18.7",
+      "acceptance": "UI_LOGIN具备安全区适配、加载态和缺失降级"
+    },
+    {
+      "asset_id": "UI_CHARACTER_SELECT",
+      "category": "ui",
+      "required": true,
+      "status": "MISSING",
+      "expected_directory": "assets/resources/ui",
+      "files": [],
+      "source_chapter": "GDD 16 / 18.7",
+      "acceptance": "UI_CHARACTER_SELECT具备安全区适配、加载态和缺失降级"
+    },
+    {
+      "asset_id": "UI_MAIN_MAP_HUD",
+      "category": "ui",
+      "required": true,
+      "status": "MISSING",
+      "expected_directory": "assets/resources/ui",
+      "files": [],
+      "source_chapter": "GDD 16 / 18.7",
+      "acceptance": "UI_MAIN_MAP_HUD具备安全区适配、加载态和缺失降级"
+    },
+    {
+      "asset_id": "UI_INTERACTION",
+      "category": "ui",
+      "required": true,
+      "status": "MISSING",
+      "expected_directory": "assets/resources/ui",
+      "files": [],
+      "source_chapter": "GDD 16 / 18.7",
+      "acceptance": "UI_INTERACTION具备安全区适配、加载态和缺失降级"
+    },
+    {
+      "asset_id": "UI_LAW_BAR",
+      "category": "ui",
+      "required": true,
+      "status": "MISSING",
+      "expected_directory": "assets/resources/ui",
+      "files": [],
+      "source_chapter": "GDD 16 / 18.7",
+      "acceptance": "UI_LAW_BAR具备安全区适配、加载态和缺失降级"
+    },
+    {
+      "asset_id": "UI_DISCOVERY",
+      "category": "ui",
+      "required": true,
+      "status": "MISSING",
+      "expected_directory": "assets/resources/ui",
+      "files": [],
+      "source_chapter": "GDD 16 / 18.7",
+      "acceptance": "UI_DISCOVERY具备安全区适配、加载态和缺失降级"
+    },
+    {
+      "asset_id": "UI_SETTLEMENT",
+      "category": "ui",
+      "required": true,
+      "status": "MISSING",
+      "expected_directory": "assets/resources/ui",
+      "files": [],
+      "source_chapter": "GDD 16 / 18.7",
+      "acceptance": "UI_SETTLEMENT具备安全区适配、加载态和缺失降级"
+    },
+    {
+      "asset_id": "UI_LEADERBOARD",
+      "category": "ui",
+      "required": true,
+      "status": "MISSING",
+      "expected_directory": "assets/resources/ui",
+      "files": [],
+      "source_chapter": "GDD 16 / 18.7",
+      "acceptance": "UI_LEADERBOARD具备安全区适配、加载态和缺失降级"
+    },
+    {
+      "asset_id": "UI_COLLECTION",
+      "category": "ui",
+      "required": true,
+      "status": "MISSING",
+      "expected_directory": "assets/resources/ui",
+      "files": [],
+      "source_chapter": "GDD 16 / 18.7",
+      "acceptance": "UI_COLLECTION具备安全区适配、加载态和缺失降级"
+    },
+    {
+      "asset_id": "UI_REWARD",
+      "category": "ui",
+      "required": true,
+      "status": "MISSING",
+      "expected_directory": "assets/resources/ui",
+      "files": [],
+      "source_chapter": "GDD 16 / 18.7",
+      "acceptance": "UI_REWARD具备安全区适配、加载态和缺失降级"
+    },
+    {
+      "asset_id": "UI_PROFILE",
+      "category": "ui",
+      "required": true,
+      "status": "MISSING",
+      "expected_directory": "assets/resources/ui",
+      "files": [],
+      "source_chapter": "GDD 16 / 18.7",
+      "acceptance": "UI_PROFILE具备安全区适配、加载态和缺失降级"
+    },
+    {
+      "asset_id": "UI_NETWORK_STATE",
+      "category": "ui",
+      "required": true,
+      "status": "MISSING",
+      "expected_directory": "assets/resources/ui",
+      "files": [],
+      "source_chapter": "GDD 16 / 18.7",
+      "acceptance": "UI_NETWORK_STATE具备安全区适配、加载态和缺失降级"
+    },
+    {
+      "asset_id": "AUD_UI_CLICK",
+      "category": "audio",
+      "required": true,
+      "status": "MISSING",
+      "expected_directory": "assets/resources/audio",
+      "files": [],
+      "source_chapter": "GDD 18.8",
+      "acceptance": "AUD_UI_CLICK触发点、音量、循环/优先级符合音频规范"
+    },
+    {
+      "asset_id": "AUD_INTERACTION",
+      "category": "audio",
+      "required": true,
+      "status": "MISSING",
+      "expected_directory": "assets/resources/audio",
+      "files": [],
+      "source_chapter": "GDD 18.8",
+      "acceptance": "AUD_INTERACTION触发点、音量、循环/优先级符合音频规范"
+    },
+    {
+      "asset_id": "AUD_ECHO",
+      "category": "audio",
+      "required": true,
+      "status": "MISSING",
+      "expected_directory": "assets/resources/audio",
+      "files": [],
+      "source_chapter": "GDD 18.8",
+      "acceptance": "AUD_ECHO触发点、音量、循环/优先级符合音频规范"
+    },
+    {
+      "asset_id": "AUD_GAZE",
+      "category": "audio",
+      "required": true,
+      "status": "MISSING",
+      "expected_directory": "assets/resources/audio",
+      "files": [],
+      "source_chapter": "GDD 18.8",
+      "acceptance": "AUD_GAZE触发点、音量、循环/优先级符合音频规范"
+    },
+    {
+      "asset_id": "AUD_REVERSE",
+      "category": "audio",
+      "required": true,
+      "status": "MISSING",
+      "expected_directory": "assets/resources/audio",
+      "files": [],
+      "source_chapter": "GDD 18.8",
+      "acceptance": "AUD_REVERSE触发点、音量、循环/优先级符合音频规范"
+    },
+    {
+      "asset_id": "AUD_DISCOVERY",
+      "category": "audio",
+      "required": true,
+      "status": "MISSING",
+      "expected_directory": "assets/resources/audio",
+      "files": [],
+      "source_chapter": "GDD 18.8",
+      "acceptance": "AUD_DISCOVERY触发点、音量、循环/优先级符合音频规范"
+    },
+    {
+      "asset_id": "AUD_SETTLEMENT_CLEAR",
+      "category": "audio",
+      "required": true,
+      "status": "MISSING",
+      "expected_directory": "assets/resources/audio",
+      "files": [],
+      "source_chapter": "GDD 18.8",
+      "acceptance": "AUD_SETTLEMENT_CLEAR触发点、音量、循环/优先级符合音频规范"
+    },
+    {
+      "asset_id": "AUD_SETTLEMENT_FAIL",
+      "category": "audio",
+      "required": true,
+      "status": "MISSING",
+      "expected_directory": "assets/resources/audio",
+      "files": [],
+      "source_chapter": "GDD 18.8",
+      "acceptance": "AUD_SETTLEMENT_FAIL触发点、音量、循环/优先级符合音频规范"
+    },
+    {
+      "asset_id": "AUD_SOCIAL_ACTION",
+      "category": "audio",
+      "required": true,
+      "status": "MISSING",
+      "expected_directory": "assets/resources/audio",
+      "files": [],
+      "source_chapter": "GDD 18.8",
+      "acceptance": "AUD_SOCIAL_ACTION触发点、音量、循环/优先级符合音频规范"
+    },
+    {
+      "asset_id": "AUD_NETWORK_DISCONNECT",
+      "category": "audio",
+      "required": true,
+      "status": "MISSING",
+      "expected_directory": "assets/resources/audio",
+      "files": [],
+      "source_chapter": "GDD 18.8",
+      "acceptance": "AUD_NETWORK_DISCONNECT触发点、音量、循环/优先级符合音频规范"
+    },
+    {
+      "asset_id": "AUD_NETWORK_RECONNECT",
+      "category": "audio",
+      "required": true,
+      "status": "MISSING",
+      "expected_directory": "assets/resources/audio",
+      "files": [],
+      "source_chapter": "GDD 18.8",
+      "acceptance": "AUD_NETWORK_RECONNECT触发点、音量、循环/优先级符合音频规范"
+    },
+    {
+      "asset_id": "AUD_BGM_MAIN_MAP",
+      "category": "audio",
+      "required": true,
+      "status": "MISSING",
+      "expected_directory": "assets/resources/audio",
+      "files": [],
+      "source_chapter": "GDD 18.8",
+      "acceptance": "AUD_BGM_MAIN_MAP触发点、音量、循环/优先级符合音频规范"
+    },
+    {
+      "asset_id": "AUD_BGM_ROOM",
+      "category": "audio",
+      "required": true,
+      "status": "MISSING",
+      "expected_directory": "assets/resources/audio",
+      "files": [],
+      "source_chapter": "GDD 18.8",
+      "acceptance": "AUD_BGM_ROOM触发点、音量、循环/优先级符合音频规范"
+    },
+    {
+      "asset_id": "AUD_BGM_SETTLEMENT",
+      "category": "audio",
+      "required": true,
+      "status": "MISSING",
+      "expected_directory": "assets/resources/audio",
+      "files": [],
+      "source_chapter": "GDD 18.8",
+      "acceptance": "AUD_BGM_SETTLEMENT触发点、音量、循环/优先级符合音频规范"
+    }
+  ]
+}

@@ -30,6 +30,8 @@ jobs:
         run: npm run validate:project
       - name: Validate level content and hidden-route references
         run: npm run validate:content
+      - name: Validate asset manifest and required resource inventory
+        run: npm run validate:assets
       - name: TypeScript typecheck
         run: npm run typecheck
       - name: Unit tests

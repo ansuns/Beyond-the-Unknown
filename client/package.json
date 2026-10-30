@@ -7,7 +7,9 @@
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
     "validate:project": "node scripts/validate-cocos-project.mjs",
-    "validate:content": "node scripts/validate-level-content.mjs"
+    "validate:content": "node scripts/validate-level-content.mjs",
+    "validate:assets": "node scripts/validate-asset-manifest.mjs",
+    "validate:release-assets": "node scripts/validate-asset-manifest.mjs --strict"
   },
   "devDependencies": {
     "typescript": "^5.7.3",
