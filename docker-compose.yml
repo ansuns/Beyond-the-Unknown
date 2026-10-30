@@ -36,6 +36,12 @@ services:
       WECHAT_APP_SECRET: ${WECHAT_APP_SECRET:-}
       JWT_SECRET: ${JWT_SECRET:-local-development-jwt-secret-change-before-deploy}
       OPENID_HMAC_SECRET: ${OPENID_HMAC_SECRET:-local-development-openid-hmac-change-before-deploy}
+      MAP_INSTANCE_MAX_PLAYERS: ${MAP_INSTANCE_MAX_PLAYERS:-20}
+      MAP_RECONNECT_GRACE_SECONDS: ${MAP_RECONNECT_GRACE_SECONDS:-60}
+      MAP_MAX_SPEED: ${MAP_MAX_SPEED:-160}
+      MAP_MOVE_RATE_HZ: ${MAP_MOVE_RATE_HZ:-10}
+      MAP_ACTION_RATE_LIMIT: ${MAP_ACTION_RATE_LIMIT:-5}
+      MAP_ACTION_WINDOW_SECONDS: ${MAP_ACTION_WINDOW_SECONDS:-10}
     command: ["uv", "run", "--no-sync", "uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000"]
     ports: ["8000:8000"]
     depends_on:

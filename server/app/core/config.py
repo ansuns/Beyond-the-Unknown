@@ -20,6 +20,12 @@ class Settings(BaseSettings):
     jwt_secret: str = _LOCAL_JWT_SECRET
     jwt_access_token_seconds: int = 3600
     openid_hmac_secret: str = _LOCAL_OPENID_SECRET
+    map_instance_max_players: int = 20
+    map_reconnect_grace_seconds: int = 60
+    map_max_speed: float = 160.0
+    map_move_rate_hz: float = 10.0
+    map_action_rate_limit: int = 5
+    map_action_window_seconds: int = 10
 
     model_config = SettingsConfigDict(env_file=".env", extra="ignore")
 
