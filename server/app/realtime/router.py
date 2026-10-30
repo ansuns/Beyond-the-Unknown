@@ -28,7 +28,10 @@ ACTION_IDS = {"ACT_001", "ACT_002", "ACT_003", "ACT_004"}
 
 
 async def _send(websocket: WebSocket, command: str, payload: dict) -> None:
-    await websocket.send_json(map_connections.message(command, payload))
+    state = websocket.scope.setdefault("state", {})
+    seq = state.get("server_seq", 0) + 1
+    state["server_seq"] = seq
+    await websocket.send_json(map_connections.message(command, payload, seq))
 
 
 async def _expire_after_grace(
@@ -69,6 +72,7 @@ async def map_websocket(websocket: WebSocket) -> None:
             not isinstance(auth_message, dict)
             or auth_message.get("v") != 1
             or auth_message.get("cmd") != "AUTH"
+            or auth_message.get("seq") != 0
             or not isinstance(auth_payload, dict)
         ):
             await _send(websocket, "AUTH_FAIL", {"reason": "AUTH must be the first message"})
@@ -103,6 +107,9 @@ async def map_websocket(websocket: WebSocket) -> None:
             not isinstance(enter_message, dict)
             or enter_message.get("v") != 1
             or enter_message.get("cmd") not in {"ENTER", "RECONNECT"}
+            or not isinstance(enter_message.get("seq"), int)
+            or isinstance(enter_message.get("seq"), bool)
+            or enter_message.get("seq") <= 0
             or not isinstance(enter_payload, dict)
         ):
             await _send(websocket, "ERROR", {"code": "ENTER_REQUIRED"})
@@ -179,6 +186,7 @@ async def map_websocket(websocket: WebSocket) -> None:
                     if (
                         not isinstance(payload["client_tick"], int)
                         or isinstance(payload["client_tick"], bool)
+                        or payload["client_tick"] < 0
                     ):
                         raise ValueError
                     if isinstance(payload["x"], bool) or isinstance(payload["y"], bool):
