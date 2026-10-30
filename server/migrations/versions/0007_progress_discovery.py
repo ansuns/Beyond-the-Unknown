@@ -1,5 +1,5 @@
-import sqlalchemy as sa
 from alembic import op
+import sqlalchemy as sa
 from sqlalchemy.dialects.postgresql import ENUM, JSONB
 
 
@@ -71,10 +71,20 @@ def upgrade() -> None:
         "hidden_routes",
         sa.Column("hidden_route_id", sa.String(64), primary_key=True),
         sa.Column("prerequisite_levels", JSONB(), nullable=False),
-        sa.Column("trigger_level_id", sa.String(64), sa.ForeignKey("levels.level_id"), nullable=False),
+        sa.Column(
+            "trigger_level_id",
+            sa.String(64),
+            sa.ForeignKey("levels.level_id"),
+            nullable=False,
+        ),
         sa.Column("trigger_combo_sequence", JSONB(), nullable=False),
         sa.Column("trigger_mechanism_sequence", JSONB(), nullable=False),
-        sa.Column("result_level_id", sa.String(64), sa.ForeignKey("levels.level_id"), nullable=False),
+        sa.Column(
+            "result_level_id",
+            sa.String(64),
+            sa.ForeignKey("levels.level_id"),
+            nullable=False,
+        ),
         sa.Column("is_enabled", sa.Boolean(), nullable=False, server_default=sa.false()),
         sa.Column(
             "config_status",
@@ -106,7 +116,12 @@ def upgrade() -> None:
             primary_key=True,
         ),
         sa.Column("source_run_id", sa.Uuid(), nullable=True),
-        sa.Column("unlocked_at", sa.DateTime(timezone=True), nullable=False, server_default=sa.func.now()),
+        sa.Column(
+            "unlocked_at",
+            sa.DateTime(timezone=True),
+            nullable=False,
+            server_default=sa.func.now(),
+        ),
         sa.ForeignKeyConstraint(
             ["source_run_id", "player_id"],
             ["level_runs.run_id", "level_runs.player_id"],
@@ -116,7 +131,11 @@ def upgrade() -> None:
     op.create_table(
         "score_rule_config",
         sa.Column("reason", sa.String(32), primary_key=True),
-        sa.Column("board_type", ENUM("EXPLORE", "CLEAR", "COLLECT", name="board_type", create_type=False), nullable=False),
+        sa.Column(
+            "board_type",
+            ENUM("EXPLORE", "CLEAR", "COLLECT", name="board_type", create_type=False),
+            nullable=False,
+        ),
         sa.Column("delta", sa.BigInteger(), nullable=True),
         sa.Column(
             "config_status",
@@ -136,7 +155,12 @@ def upgrade() -> None:
         sa.Column("condition_id", sa.String(160), primary_key=True),
         sa.Column("trigger_type", sa.String(32), nullable=False),
         sa.Column("condition_config", JSONB(), nullable=False, server_default="{}"),
-        sa.Column("reward_id", sa.String(100), sa.ForeignKey("rewards.reward_id", deferrable=True, initially="DEFERRED"), nullable=False),
+        sa.Column(
+            "reward_id",
+            sa.String(100),
+            sa.ForeignKey("rewards.reward_id", deferrable=True, initially="DEFERRED"),
+            nullable=False,
+        ),
         sa.Column("is_enabled", sa.Boolean(), nullable=False, server_default=sa.true()),
         sa.Column(
             "config_status",
@@ -145,7 +169,10 @@ def upgrade() -> None:
             server_default="CONTENT_PENDING",
         ),
         sa.CheckConstraint(
-            "trigger_type IN ('SCORE','COLLECTION','DISCOVERY','COMPOSITE','SEASON_RANK','SETTLEMENT')",
+            (
+                "trigger_type IN ('SCORE','COLLECTION','DISCOVERY','COMPOSITE',"
+                "'SEASON_RANK','SETTLEMENT')"
+            ),
             name="ck_reward_condition_trigger_type",
         ),
     )
@@ -198,10 +225,16 @@ def upgrade() -> None:
              jsonb_build_object('config_status', 'PENDING_POSITION_AND_ART'), true),
             ('LV-ROOM-05', 'MECH_BRIDGE', 'PLATFORM_BRIDGE', 'MECHANISM',
              'INACTIVE', 'TRIGGERED', '["RULE_EFFECT","COMBO_EFFECT"]'::jsonb,
-             jsonb_build_object('config_status', 'PENDING_POSITION_AND_ART', 'visible_by_default', false), true),
+             jsonb_build_object(
+                 'config_status', 'PENDING_POSITION_AND_ART',
+                 'visible_by_default', false
+             ), true),
             ('LV-ROOM-05', 'MECH_ENERGY_GATE', 'ENERGY_NODE', 'MECHANISM',
              'INACTIVE', 'TRIGGERED', '["RULE_EFFECT","COMBO_EFFECT"]'::jsonb,
-             jsonb_build_object('config_status', 'PENDING_POSITION_AND_ART', 'initial_direction', 1), true),
+             jsonb_build_object(
+                 'config_status', 'PENDING_POSITION_AND_ART',
+                 'initial_direction', 1
+             ), true),
             ('LV-ROOM-05', 'MECH_MOVING_PLATFORM', 'MOVING_OBJECT', 'MECHANISM',
              'INACTIVE', 'TRIGGERED', '["RULE_EFFECT","COMBO_EFFECT"]'::jsonb,
              jsonb_build_object('config_status', 'PENDING_POSITION_AND_ART', 'initial_direction', 1), true),
@@ -316,7 +349,10 @@ def upgrade() -> None:
             ('DISC-HIDDEN-OBJ-ROOM01', 'DIS_HIDDEN_OBJ', 'LV-ROOM-01',
              jsonb_build_object('level_id', 'LV-ROOM-01'), NULL,
              '遗忘森林中的隐藏物体', true,
-             jsonb_build_object('event_type', 'MECHANISM_VISIBLE', 'mechanism_id', 'MECH-ROOM01-HIDDEN-01'),
+             jsonb_build_object(
+                 'event_type', 'MECHANISM_VISIBLE',
+                 'mechanism_id', 'MECH-ROOM01-HIDDEN-01'
+             ),
              'READY', 'EXP_DISCOVER'),
             ('DISC-HIDDEN-ROUTE-01', 'DIS_HIDDEN_AREA', 'LV-ROOM-05',
              jsonb_build_object('level_id', 'LV-ROOM-05'), NULL,
@@ -362,15 +398,24 @@ def upgrade() -> None:
             (collection_id, codex_category, source_discovery_id, display_name,
              description, sort_order, is_enabled)
         VALUES
-            ('COLL-RULE-ECHO', 'CAT_RULE', 'DISC-RULE-ECHO', '回声法则', '已发现回声法则。', 10, true),
-            ('COLL-RULE-GAZE', 'CAT_RULE', 'DISC-RULE-GAZE', '注视法则', '已发现注视法则。', 20, true),
-            ('COLL-RULE-REVERSE', 'CAT_RULE', 'DISC-RULE-REVERSE', '逆流法则', '已发现逆流法则。', 30, true),
-            ('COLL-COMBO-001', 'CAT_RULE', 'DISC-COMBO-001', '回声·注视', '已发现预设组合。', 40, true),
-            ('COLL-COMBO-002', 'CAT_RULE', 'DISC-COMBO-002', '回声·逆流', '已发现预设组合。', 50, true),
-            ('COLL-COMBO-003', 'CAT_RULE', 'DISC-COMBO-003', '注视·逆流', '已发现预设组合。', 60, true),
-            ('COLL-HIDDEN-OBJ-ROOM01', 'CAT_RELIC', 'DISC-HIDDEN-OBJ-ROOM01', '遗忘森林隐藏物体', '已发现隐藏物体。', 10, true),
-            ('COLL-HIDDEN-ROUTE-01', 'CAT_AREA', 'DISC-HIDDEN-ROUTE-01', '隐藏路线', '已开启隐藏路线。', 10, true),
-            ('COLL-ENDING-01', 'CAT_ENDING', 'DISC-ENDING-01', '隐藏结局', '已达成首期隐藏结局。', 10, true)
+            ('COLL-RULE-ECHO', 'CAT_RULE', 'DISC-RULE-ECHO',
+             '回声法则', '已发现回声法则。', 10, true),
+            ('COLL-RULE-GAZE', 'CAT_RULE', 'DISC-RULE-GAZE',
+             '注视法则', '已发现注视法则。', 20, true),
+            ('COLL-RULE-REVERSE', 'CAT_RULE', 'DISC-RULE-REVERSE',
+             '逆流法则', '已发现逆流法则。', 30, true),
+            ('COLL-COMBO-001', 'CAT_RULE', 'DISC-COMBO-001',
+             '回声·注视', '已发现预设组合。', 40, true),
+            ('COLL-COMBO-002', 'CAT_RULE', 'DISC-COMBO-002',
+             '回声·逆流', '已发现预设组合。', 50, true),
+            ('COLL-COMBO-003', 'CAT_RULE', 'DISC-COMBO-003',
+             '注视·逆流', '已发现预设组合。', 60, true),
+            ('COLL-HIDDEN-OBJ-ROOM01', 'CAT_RELIC', 'DISC-HIDDEN-OBJ-ROOM01',
+             '遗忘森林隐藏物体', '已发现隐藏物体。', 10, true),
+            ('COLL-HIDDEN-ROUTE-01', 'CAT_AREA', 'DISC-HIDDEN-ROUTE-01',
+             '隐藏路线', '已开启隐藏路线。', 10, true),
+            ('COLL-ENDING-01', 'CAT_ENDING', 'DISC-ENDING-01',
+             '隐藏结局', '已达成首期隐藏结局。', 10, true)
         ON CONFLICT (collection_id) DO NOTHING
         """
     )
