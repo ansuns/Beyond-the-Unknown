@@ -1,11 +1,11 @@
 from typing import Annotated
-from uuid import UUID
 
 from fastapi import APIRouter, Depends, Header, HTTPException, Query, Request, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.authentication import get_current_player_id
 from app.core.database import get_session
+from app.modules.progression.schemas import ClaimRewardRequest, SettleLevelRequest
 from app.modules.progression.repository import (
     ObjectivesIncomplete,
     ProgressionRunNotActive,
