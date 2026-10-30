@@ -140,7 +140,7 @@ async def map_websocket(websocket: WebSocket) -> None:
                 return
 
         joined = True
-        await map_connections.attach(
+        lease_token = await map_connections.attach(
             websocket,
             str(instance_id),
             str(player_id),
@@ -160,6 +160,13 @@ async def map_websocket(websocket: WebSocket) -> None:
 
         while True:
             message = await websocket.receive_json()
+            if not await map_connections.is_owner(
+                str(instance_id), str(player_id), lease_token
+            ):
+                await map_connections.detach(websocket, str(instance_id), str(player_id))
+                joined = False
+                await websocket.close(code=4001, reason="Connection superseded")
+                break
             if not isinstance(message, dict) or message.get("v") != 1:
                 await _send(websocket, "ERROR", {"code": "INVALID_MESSAGE"})
                 continue
@@ -176,6 +183,13 @@ async def map_websocket(websocket: WebSocket) -> None:
             if command == "PING":
                 async with SessionFactory() as session:
                     await touch_membership(session, player_id, session_id)
+                if not await map_connections.touch_presence(
+                    str(instance_id), str(player_id)
+                ):
+                    await map_connections.detach(websocket, str(instance_id), str(player_id))
+                    joined = False
+                    await websocket.close(code=4001, reason="Connection lease expired")
+                    break
                 await _send(
                     websocket,
                     "PONG",
