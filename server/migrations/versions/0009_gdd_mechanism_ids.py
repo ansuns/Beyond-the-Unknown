@@ -9,12 +9,11 @@ branch_labels = None
 depends_on = None
 
 
-def _update_ids(table: str, old_id: str, new_id: str) -> None:
-    # Table names are fixed internal constants at the call sites below.
+def _update_ids(table: str, old_id: str, new_id: str, column: str = "mechanism_config_id") -> None:
+    # Table and column names are fixed constants at the call sites below.
     op.get_bind().execute(
         sa.text(
-            f"UPDATE {table} SET mechanism_config_id = :new_id "
-            "WHERE mechanism_config_id = :old_id"
+            f"UPDATE {table} SET {column} = :new_id WHERE {column} = :old_id"
         ),
         {"old_id": old_id, "new_id": new_id},
     )
@@ -28,7 +27,6 @@ def upgrade() -> None:
         "MECH_ENERGY_GATE": "M03-ENERGY-01",
         "MECH_MOVING_PLATFORM": "M04-PLATFORM-01",
     }
-    # Temporarily remove the composite FK while both sides are renamed.
     op.drop_constraint(
         "fk_level_objective_mechanism", "level_objectives", type_="foreignkey"
     )
@@ -36,6 +34,7 @@ def upgrade() -> None:
         _update_ids("level_objectives", old_id, new_id)
         _update_ids("mechanism_states", old_id, new_id)
         _update_ids("level_mechanism_catalog", old_id, new_id)
+        _update_ids("combo_catalog", old_id, new_id, "target_mechanism_id")
     op.create_foreign_key(
         "fk_level_objective_mechanism",
         "level_objectives",
@@ -96,6 +95,7 @@ def downgrade() -> None:
         _update_ids("level_objectives", new_id, old_id)
         _update_ids("mechanism_states", new_id, old_id)
         _update_ids("level_mechanism_catalog", new_id, old_id)
+        _update_ids("combo_catalog", new_id, old_id, "target_mechanism_id")
     op.create_foreign_key(
         "fk_level_objective_mechanism",
         "level_objectives",
