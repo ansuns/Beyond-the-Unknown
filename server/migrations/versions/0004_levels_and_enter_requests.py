@@ -1,5 +1,5 @@
-import sqlalchemy as sa
 from alembic import op
+import sqlalchemy as sa
 from sqlalchemy.dialects.postgresql import JSONB
 
 revision = "0004_levels_and_enter_requests"
