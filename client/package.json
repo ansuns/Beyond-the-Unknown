@@ -5,7 +5,8 @@
   "type": "module",
   "scripts": {
     "typecheck": "tsc --noEmit",
-    "test": "vitest run"
+    "test": "vitest run",
+    "validate:project": "node scripts/validate-cocos-project.mjs"
   },
   "devDependencies": {
     "typescript": "^5.7.3",

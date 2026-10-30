@@ -26,6 +26,8 @@ jobs:
           cache-dependency-path: client/package.json
       - name: Install dependencies
         run: npm install
+      - name: Validate Cocos Creator project structure and Boot scene references
+        run: npm run validate:project
       - name: TypeScript typecheck
         run: npm run typecheck
       - name: Unit tests
