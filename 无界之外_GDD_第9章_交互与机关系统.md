@@ -28,7 +28,7 @@
 **设计基线：**
 
 1.  机关触发来源三类：靠近+交互按钮、法则作用、组合法则作用（组合见第8章）。
-2.  机关拥有明确状态机，状态包括 INACTIVE / ACTIVE / LOCKED / TRIGGERED / COOLDOWN。
+2.  机关拥有明确状态机，状态包括 INACTIVE / ACTIVE / LOCKED / TRIGGERED / COOLDOWN。关卡配置中的 `mechanism_id` 在数据层映射为 `mechanism_config_id`；玩家运行时状态由 `mechanism_state_id` 标识，唯一键为 `(run_id, mechanism_config_id)`（第17章17.3）。
 3.  机关状态在"玩家个人关卡运行实例"内保存（见第6章），不影响他人（G-002）。
 4.  客户端播放动画，服务端逻辑为权威；状态同步到该玩家本人（见第5章位置同步/广播、第3章 3.4 状态机）。
 5.  所有状态转移时间、触发半径等数值待联调确定，汇总至本章 Open Questions。
