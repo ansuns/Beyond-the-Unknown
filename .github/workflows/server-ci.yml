@@ -95,7 +95,7 @@ jobs:
           exit 1
       - name: Verify transactional outbox reaches RabbitMQ worker
         run: |
-          task_id=$(docker compose exec -T postgres psql -U beyond -d beyond -tA -c "
+          task_id=$(docker compose exec -T postgres psql -q -T -A -U beyond -d beyond -c "
             INSERT INTO task_outbox
               (task_type, schema_version, payload, idempotency_key)
             VALUES
