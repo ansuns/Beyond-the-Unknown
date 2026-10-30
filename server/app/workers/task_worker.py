@@ -34,6 +34,12 @@ async def handle_ping(envelope: dict[str, Any]) -> None:
 
 
 async def handle_level_settled(envelope: dict[str, Any]) -> None:
+    payload = envelope["payload"]
+    required = {"result_id", "run_id", "player_id", "level_id", "result_status"}
+    if required.difference(payload):
+        raise PermanentTaskError("game.level.settled payload is incomplete")
+    if payload["result_status"] not in {"COMPLETED", "FAILED"}:
+        raise PermanentTaskError("game.level.settled result_status is invalid")
     async with SessionFactory() as session:
         await session.execute(
             text("""
