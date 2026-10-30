@@ -484,6 +484,35 @@ async def cast_rule(
                 run_id,
             )
         )
+    if run["level_id"] == "LV-ROOM-05" and combo_result:
+        objectives = (
+            await session.execute(
+                text("SELECT necessary_objectives FROM levels WHERE level_id = :level_id"),
+                {"level_id": run["level_id"]},
+            )
+        ).scalar_one()
+        current_states = (
+            await session.execute(
+                text("""
+                    SELECT mechanism_config_id, state
+                    FROM mechanism_states
+                    WHERE run_id = :run_id AND player_id = :player_id
+                """),
+                {"run_id": run_id, "player_id": player_id},
+            )
+        ).mappings().all()
+        state_by_id = {row["mechanism_config_id"]: row["state"] for row in current_states}
+        all_objectives_met = bool(objectives) and all(
+            state_by_id.get(objective["mechanism_id"], {}).get("status")
+            == objective["target_state"]
+            for objective in objectives
+        )
+        if all_objectives_met:
+            discovery_events.append(
+                await record_discovery(
+                    session, player_id, "DIS_HIDDEN_ROUTE_CLUE", run_id
+                )
+            )
 
     cooldown_until = now + timedelta(milliseconds=rule["cooldown_ms"])
     active_target = (
