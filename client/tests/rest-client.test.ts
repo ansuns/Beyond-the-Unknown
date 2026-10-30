@@ -53,4 +53,74 @@ describe("RestClient", () => {
     const api = new RestClient({ baseUrl: "https://example.test/api/v1", fetchImpl });
     await expect(api.enterMap()).rejects.toBeInstanceOf(ApiError);
   });
+
+
+  it("sends personal law actions with bearer auth and an idempotency key", async () => {
+    const fetchImpl = vi.fn<typeof fetch>().mockResolvedValue(new Response(JSON.stringify({
+      code: 0,
+      message: "ok",
+      request_id: "server-id",
+      data: {
+        run_id: "run-1",
+        mechanism_id: "M02-BRIDGE-01",
+        rule_id: "RULE_GAZE",
+        action: "APPLY",
+        state: { state: "OPEN", combo_completed: true },
+        combo_id: "COMBO-001",
+        idempotent_replay: false
+      }
+    }), { status: 200 }));
+    const api = new RestClient({
+      baseUrl: "https://example.test/api/v1",
+      token: () => "jwt-token",
+      fetchImpl,
+      requestId: () => "law-request"
+    });
+
+    const result = await api.applyLawAction(
+      "run-1",
+      "RULE_GAZE",
+      "M02-BRIDGE-01",
+      "APPLY",
+      "law-action-0001"
+    );
+    expect(result.combo_id).toBe("COMBO-001");
+    const [url, init] = fetchImpl.mock.calls[0];
+    expect(url).toBe("https://example.test/api/v1/level/law/action");
+    const headers = init?.headers as Record<string, string>;
+    expect(headers.Authorization).toBe("Bearer jwt-token");
+    expect(headers["Idempotency-Key"]).toBe("law-action-0001");
+    expect(JSON.parse(String(init?.body))).toEqual({
+      run_id: "run-1",
+      rule_id: "RULE_GAZE",
+      mechanism_id: "M02-BRIDGE-01",
+      action: "APPLY"
+    });
+  });
+
+  it("reads only the requested personal run mechanism endpoint", async () => {
+    const fetchImpl = vi.fn<typeof fetch>().mockResolvedValue(new Response(JSON.stringify({
+      code: 0,
+      message: "ok",
+      request_id: "server-id",
+      data: {
+        run_id: "run-1",
+        level_id: "LV-ROOM-01",
+        status: "RUNNING",
+        mechanisms: []
+      }
+    }), { status: 200 }));
+    const api = new RestClient({
+      baseUrl: "https://example.test/api/v1",
+      token: () => "jwt-token",
+      fetchImpl
+    });
+
+    const result = await api.getRunMechanisms("run-1");
+    expect(result.run_id).toBe("run-1");
+    expect(fetchImpl.mock.calls[0][0]).toBe(
+      "https://example.test/api/v1/level/runs/run-1/mechanisms"
+    );
+  });
+
 });

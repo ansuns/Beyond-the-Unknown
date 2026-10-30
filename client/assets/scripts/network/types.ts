@@ -35,3 +35,56 @@ export interface WsEnvelope<T = Record<string, unknown>> {
 }
 
 export type MapServerEvent = WsEnvelope<Record<string, unknown>>;
+
+
+export type LawRuleId = "RULE_ECHO" | "RULE_GAZE" | "RULE_REVERSE";
+export type LawActionKind = "APPLY" | "RELEASE";
+
+export interface LevelCatalogItem {
+  level_id: string;
+  level_name: string;
+  entrance_id: string;
+  room_index: number | null;
+  target_duration_min: number;
+  target_duration_max: number;
+  required_laws: string[];
+  necessary_objectives: string[];
+  is_hidden: boolean;
+  is_unlocked: boolean;
+  config: Record<string, unknown>;
+}
+
+export interface LevelCatalogData {
+  levels: LevelCatalogItem[];
+}
+
+export interface LevelRunData {
+  run_id: string;
+  level_id: string;
+  status: "CREATED" | "RUNNING" | "COMPLETED" | "FAILED" | "ABANDONED";
+  started_at?: string | null;
+}
+
+export interface PersonalMechanismState {
+  mechanism_id: string;
+  mechanism_type: string;
+  state: Record<string, unknown>;
+  updated_at: string;
+}
+
+export interface PersonalMechanismList {
+  run_id: string;
+  level_id: string;
+  status: string;
+  mechanisms: PersonalMechanismState[];
+}
+
+export interface LawActionData {
+  run_id: string;
+  mechanism_id: string;
+  rule_id: LawRuleId;
+  action: LawActionKind;
+  state: Record<string, unknown>;
+  combo_id: string | null;
+  idempotent_replay: boolean;
+}
