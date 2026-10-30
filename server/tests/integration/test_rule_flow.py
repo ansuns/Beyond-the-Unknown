@@ -72,7 +72,7 @@ def _set_rule_tuning(ready: bool) -> None:
     if ready:
         _db_update("""
             UPDATE rule_catalog
-            SET cooldown_ms = 5000, radius = 2.0, duration_ms = 120,
+            SET cooldown_ms = 5000, radius = 2.0, duration_ms = 1000,
                 lease_timeout_ms = 5000, config_status = 'READY'
         """)
         _db_update("""
