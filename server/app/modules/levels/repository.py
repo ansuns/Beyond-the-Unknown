@@ -1,5 +1,7 @@
 import hashlib
 import json
+from datetime import UTC, datetime
+import math
 from typing import Any
 from uuid import UUID
 
@@ -382,14 +384,41 @@ async def update_level_position(
         and bounds["min_y"] <= y <= bounds["max_y"]
     ):
         raise InvalidLevelPosition
+    previous = (
+        await session.execute(
+            text("""
+                SELECT x, y, updated_at
+                FROM level_run_positions
+                WHERE run_id = :run_id AND player_id = :player_id
+                FOR UPDATE
+            """),
+            {"run_id": run_id, "player_id": player_id},
+        )
+    ).mappings().one_or_none()
+    now = datetime.now(UTC)
+    if previous is None:
+        previous_x, previous_y = 1.0, 4.0
+        elapsed_seconds = 0.25
+    else:
+        previous_x, previous_y = previous["x"], previous["y"]
+        elapsed_seconds = max(
+            0.05, (now - previous["updated_at"]).total_seconds()
+        )
+    # Server-authoritative movement cap with a small network-jitter allowance.
+    max_distance = 4.0 * elapsed_seconds + 0.75
+    if math.hypot(x - previous_x, y - previous_y) > max_distance:
+        raise InvalidLevelPosition
     await session.execute(
         text("""
-            INSERT INTO level_run_positions (run_id, player_id, x, y)
-            VALUES (:run_id, :player_id, :x, :y)
+            INSERT INTO level_run_positions (run_id, player_id, x, y, updated_at)
+            VALUES (:run_id, :player_id, :x, :y, :now)
             ON CONFLICT (run_id, player_id)
-            DO UPDATE SET x = EXCLUDED.x, y = EXCLUDED.y, updated_at = now()
+            DO UPDATE SET
+                x = EXCLUDED.x,
+                y = EXCLUDED.y,
+                updated_at = EXCLUDED.updated_at
         """),
-        {"run_id": run_id, "player_id": player_id, "x": x, "y": y},
+        {"run_id": run_id, "player_id": player_id, "x": x, "y": y, "now": now},
     )
     await session.commit()
     return {"run_id": str(run_id), "x": x, "y": y}
