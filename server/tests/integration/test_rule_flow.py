@@ -70,6 +70,20 @@ def _enter_level(client: TestClient, headers: dict, level_id: str, entrance_id: 
     return run_id
 
 
+def _set_run_position(run_id: str, x: float, y: float) -> None:
+    _db_update(
+        """
+        INSERT INTO level_run_positions (run_id, player_id, x, y, updated_at)
+        SELECT run_id, player_id, :x, :y, now() - interval '10 seconds'
+        FROM level_runs
+        WHERE run_id = :run_id
+        ON CONFLICT (run_id, player_id) DO UPDATE
+        SET x = EXCLUDED.x, y = EXCLUDED.y, updated_at = EXCLUDED.updated_at
+        """,
+        {"run_id": run_id, "x": x, "y": y},
+    )
+
+
 def _set_rule_tuning(ready: bool) -> None:
     if ready:
         _db_update("""
@@ -515,6 +529,180 @@ def test_room_five_supports_all_three_preset_combos() -> None:
     finally:
         _set_rule_tuning(False)
         app.dependency_overrides.clear()
+
+
+
+def test_hidden_route_unlocks_after_all_rooms_and_combos_then_completes_ending() -> None:
+    app.dependency_overrides[get_wechat_code_provider] = lambda: FakeWeChatProvider()
+    try:
+        with TestClient(app) as client:
+            player = _login_and_enter_map(client)
+            headers = player["headers"]
+            _set_rule_tuning(True)
+            _db_update("UPDATE rule_catalog SET cooldown_ms = 1")
+
+            needs_map_reentry = False
+
+            def enter(level_id: str, entrance_id: str) -> str:
+                nonlocal needs_map_reentry
+                if needs_map_reentry:
+                    map_entry = client.post("/api/v1/map/enter", headers=headers)
+                    assert map_entry.status_code == 200, map_entry.text
+                    needs_map_reentry = False
+                return _enter_level(client, headers, level_id, entrance_id)
+
+            def cast(
+                run_id: str,
+                rule_id: str,
+                target_id: str,
+                key: str,
+                point: dict | None = None,
+            ):
+                payload = {"run_id": run_id, "rule_id": rule_id, "target_id": target_id}
+                if point is not None:
+                    payload["target_point"] = point
+                return client.post(
+                    "/api/v1/level/rule/cast",
+                    headers={**headers, "Idempotency-Key": key},
+                    json=payload,
+                )
+
+            def stop_gaze(run_id: str):
+                return client.post(
+                    "/api/v1/level/rule/stop",
+                    headers=headers,
+                    json={"run_id": run_id},
+                )
+
+            def maintain_gaze(run_id: str, target_id: str):
+                return client.post(
+                    "/api/v1/level/rule/maintain",
+                    headers=headers,
+                    json={"run_id": run_id, "target_id": target_id},
+                )
+
+            def settle(run_id: str, key: str):
+                nonlocal needs_map_reentry
+                response = client.post(
+                    "/api/v1/level/settle",
+                    headers={**headers, "Idempotency-Key": key},
+                    json={"run_id": run_id},
+                )
+                if response.status_code == 200:
+                    needs_map_reentry = True
+                return response
+
+            # ROOM-01: reveal the hidden target, then activate the exit.
+            room1 = enter("LV-ROOM-01", "ENT-ROOM-01")
+            _set_run_position(room1, 5.0, 4.0)
+            echo1 = cast(
+                room1, "RULE_ECHO", "M01-HIDEABLE-01", "route-r1-echo",
+                {"x": 5.0, "y": 4.0},
+            )
+            assert echo1.status_code == 200, echo1.text
+            _set_run_position(room1, 10.5, 4.0)
+            exit1 = client.post(
+                "/api/v1/level/mechanism/interact",
+                headers={**headers, "Idempotency-Key": "route-r1-exit"},
+                json={"run_id": room1, "mechanism_id": "M01-EXIT-01"},
+            )
+            assert exit1.status_code == 200, exit1.text
+            assert settle(room1, "route-r1-settle").status_code == 200
+
+            # ROOM-02: COMBO-001.
+            room2 = enter("LV-ROOM-02", "ENT-ROOM-02")
+            _set_run_position(room2, 6.0, 4.0)
+            assert cast(
+                room2, "RULE_ECHO", "M02-BRIDGE-01", "route-r2-echo",
+                {"x": 6.0, "y": 4.0},
+            ).status_code == 200
+            combo1 = cast(room2, "RULE_GAZE", "M02-BRIDGE-01", "route-r2-gaze")
+            assert combo1.status_code == 200, combo1.text
+            assert combo1.json()["data"]["combo"]["combo_id"] == "COMBO-001"
+            assert stop_gaze(room2).status_code == 200
+            assert settle(room2, "route-r2-settle").status_code == 200
+
+            # ROOM-03: COMBO-002 also activates its linked door objective.
+            room3 = enter("LV-ROOM-03", "ENT-ROOM-03")
+            _set_run_position(room3, 4.0, 4.0)
+            assert cast(
+                room3, "RULE_ECHO", "M03-ENERGY-01", "route-r3-echo",
+                {"x": 4.0, "y": 4.0},
+            ).status_code == 200
+            combo2 = cast(room3, "RULE_REVERSE", "M03-ENERGY-01", "route-r3-reverse")
+            assert combo2.status_code == 200, combo2.text
+            assert combo2.json()["data"]["combo"]["combo_id"] == "COMBO-002"
+            assert settle(room3, "route-r3-settle").status_code == 200
+
+            # ROOM-04: COMBO-003 requires a sustained GAZE lease.
+            room4 = enter("LV-ROOM-04", "ENT-ROOM-04")
+            _set_run_position(room4, 4.0, 4.0)
+            gaze4 = cast(room4, "RULE_GAZE", "M04-PLATFORM-01", "route-r4-gaze")
+            assert gaze4.status_code == 200, gaze4.text
+            combo3 = cast(room4, "RULE_REVERSE", "M04-PLATFORM-01", "route-r4-reverse")
+            assert combo3.status_code == 200, combo3.text
+            assert combo3.json()["data"]["combo"]["combo_id"] == "COMBO-003"
+            assert maintain_gaze(room4, "M04-PLATFORM-01").status_code == 200
+            assert settle(room4, "route-r4-settle").status_code == 200
+
+            # ROOM-05: execute all three combo/target pairs in the configured order.
+            room5 = enter("LV-ROOM-05", "ENT-ROOM-05")
+            _set_run_position(room5, 3.0, 4.0)
+            assert cast(
+                room5, "RULE_ECHO", "M05-BRIDGE-01", "route-r5-echo-bridge",
+                {"x": 3.0, "y": 4.0},
+            ).status_code == 200
+            bridge_combo = cast(room5, "RULE_GAZE", "M05-BRIDGE-01", "route-r5-gaze-bridge")
+            assert bridge_combo.status_code == 200, bridge_combo.text
+            assert bridge_combo.json()["data"]["combo"]["combo_id"] == "COMBO-001"
+            assert stop_gaze(room5).status_code == 200
+
+            _set_run_position(room5, 6.0, 4.0)
+            assert cast(
+                room5, "RULE_ECHO", "M05-ENERGY-01", "route-r5-echo-energy",
+                {"x": 6.0, "y": 4.0},
+            ).status_code == 200
+            energy_combo = cast(room5, "RULE_REVERSE", "M05-ENERGY-01", "route-r5-reverse-energy")
+            assert energy_combo.status_code == 200, energy_combo.text
+            assert energy_combo.json()["data"]["combo"]["combo_id"] == "COMBO-002"
+            time.sleep(1.1)
+
+            _set_run_position(room5, 9.0, 4.0)
+            gaze5 = cast(room5, "RULE_GAZE", "M05-REVERSE-01", "route-r5-gaze-platform")
+            assert gaze5.status_code == 200, gaze5.text
+            reverse5 = cast(room5, "RULE_REVERSE", "M05-REVERSE-01", "route-r5-reverse-platform")
+            assert reverse5.status_code == 200, reverse5.text
+            assert reverse5.json()["data"]["combo"]["combo_id"] == "COMBO-003"
+            assert maintain_gaze(room5, "M05-REVERSE-01").status_code == 200
+
+            completed5 = settle(room5, "route-r5-settle")
+            assert completed5.status_code == 200, completed5.text
+            assert completed5.json()["data"]["unlocked_hidden_level_id"] == "LV-HIDDEN-01"
+
+            # The route unlock is persisted and the hidden ending is a separate run.
+            hidden_run = enter("LV-HIDDEN-01", "ENT-HIDDEN-01")
+            _set_run_position(hidden_run, 9.0, 4.0)
+            ending = client.post(
+                "/api/v1/level/mechanism/interact",
+                headers={**headers, "Idempotency-Key": "route-hidden-ending"},
+                json={"run_id": hidden_run, "mechanism_id": "H01-END"},
+            )
+            assert ending.status_code == 200, ending.text
+            assert ending.json()["data"]["state"]["status"] == "TRIGGERED"
+            ending_settlement = settle(hidden_run, "route-hidden-settle")
+            assert ending_settlement.status_code == 200, ending_settlement.text
+            assert ending_settlement.json()["data"]["result_status"] == "COMPLETED"
+
+            progress = client.get("/api/v1/player/progress", headers=headers)
+            assert {
+                "LV-ROOM-01", "LV-ROOM-02", "LV-ROOM-03",
+                "LV-ROOM-04", "LV-ROOM-05", "LV-HIDDEN-01",
+            } <= set(progress.json()["data"]["completed_level_ids"])
+    finally:
+        _set_rule_tuning(False)
+        app.dependency_overrides.clear()
+
+
 
 
 
