@@ -104,9 +104,18 @@ describe("WorldPlaySession", () => {
       "ENT-ROOM-01",
       "room-enter-0001"
     );
+    expect(map.leave).toHaveBeenCalledOnce();
     expect(laws.refreshCatalog).toHaveBeenCalledOnce();
     expect(laws.refreshState).toHaveBeenCalledOnce();
     expect(result.run.status).toBe("RUNNING");
+  });
+
+  it("leaves the map when room startup fails after a run was created", async () => {
+    const { session, map, level } = makeWorldPlaySession();
+    level.activeRun = vi.fn().mockReturnValue("run-1");
+    level.enterAndStart.mockRejectedValue(new Error("start failed"));
+    await expect(session.enterRoom("LV-ROOM-01", "ENT-ROOM-01")).rejects.toThrow("start failed");
+    expect(map.leave).toHaveBeenCalledOnce();
   });
 
   it("stops active gaze before abandoning a personal room", async () => {
