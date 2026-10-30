@@ -1,5 +1,5 @@
 import type {
-  ApiEnvelope,
+  ApiEnvelope,\n  CharacterCatalogData,\n  CharacterSelectionData,
   GazeMaintainData,
   GazeStopData,
   LawRuleId,
@@ -8,7 +8,7 @@ import type {
   LevelRunData,
   LoginData,
   MapEnterData,
-  PersonalLevelState,
+  PersonalLevelState,\n  PlayerProfile,
   RuleCastData,
   RuleCatalogData,
   RulePoint
@@ -72,7 +72,7 @@ export class RestClient {
     });
   }
 
-  async enterMap(): Promise<MapEnterData> {
+  async getPlayerProfile(): Promise<PlayerProfile> {\n    return this.request<PlayerProfile>("/player/me", { method: "GET" });\n  }\n\n  async listCharacters(): Promise<CharacterCatalogData> {\n    return this.request<CharacterCatalogData>("/player/characters", { method: "GET" });\n  }\n\n  async selectCharacter(characterId: string): Promise<CharacterSelectionData> {\n    return this.request<CharacterSelectionData>("/player/character", {\n      method: "PUT",\n      body: JSON.stringify({ character_id: characterId })\n    });\n  }\n\n  async enterMap(): Promise<MapEnterData> {
     return this.request<MapEnterData>("/map/enter", { method: "POST" });
   }
 
