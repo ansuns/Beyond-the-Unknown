@@ -184,7 +184,7 @@
   ------------- ---------------- ----------------------------- ----------------- -------------------------------------- ------------------
   COMBO-001     回声·注视         [RULE_ECHO, RULE_GAZE]        是                显形并维持桥梁显形态直至解谜完成        MECH_BRIDGE             false
   COMBO-002     回声·逆流         [RULE_ECHO, RULE_REVERSE]     否                显形能量节点并反转其流向开启通路        MECH_ENERGY_GATE        false
-  COMBO-003     注视·逆流         [RULE_GAZE, RULE_REVERSE]      是                维持平台存在并反转其移动方向抵达终点    MECH_MOVING_PLATFORM     false
+  COMBO-003     注视·逆流         [RULE_GAZE, RULE_REVERSE]     是                维持平台存在并反转其移动方向抵达终点    MECH_MOVING_PLATFORM     false
 
 规则：
 
@@ -313,7 +313,7 @@
 | result | LV-HIDDEN-01 |
 | is_enabled | true |
 
-额外隐藏路线可继续使用以下通用配置字段：**
+额外隐藏路线可继续使用以下通用配置字段：
 
   字段             类型          说明
   ---------------- ------------ ------------------------------------
