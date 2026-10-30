@@ -74,3 +74,16 @@ The map instance capacity and movement/reconnect limits are configurable through
 - At most one `CREATED` or `RUNNING` run may exist per player. The database partial unique index is the final concurrency guard.
 - The five room catalog entries and the hidden ending use stable IDs from GDD V0.2. Spatial layout, art, exact mechanism instances and hidden-route unlock conditions remain configuration/content work.
 - Settlement, score/discovery/reward writes and permanent progress are not implemented in VS-3; they belong to the later authoritative gameplay/settlement slices.
+
+
+## VS-4 authoritative laws and personal mechanisms (prototype)
+
+- On first transition of a personal run to `RUNNING`, the server initializes its mechanism state rows from the versioned `app/modules/gameplay/levels.v1.json` content catalog. State is keyed by `(run_id, mechanism_config_id)` and owned by `player_id`.
+- `POST /api/v1/level/law/action` accepts `run_id`, one of `RULE_ECHO`, `RULE_GAZE`, `RULE_REVERSE`, a catalogued `mechanism_id`, and `APPLY` / `RELEASE`. Every write requires `Idempotency-Key`.
+- `GET /api/v1/level/runs/{run_id}/mechanisms` returns only the authenticated player's mechanism states.
+- Law effects and mechanism transitions are server-authoritative. The client cannot submit a resulting mechanism state or a combo ID.
+- Preset combo matching is limited to the configured level's `required_combos`: COMBO-001 is ordered ECHO → GAZE; COMBO-002 accepts either ECHO/REVERSE order; COMBO-003 is ordered GAZE → REVERSE. A match requires both actions to target the same mechanism and arrive within `LAW_COMBO_WINDOW_MS`.
+- COMBO-001 opens a bridge, COMBO-002 reverses an energy node and opens a linked door, and COMBO-003 locks a moving object at its endpoint. The level catalog controls which combo IDs are valid for each level.
+- `LAW_COMBO_WINDOW_MS` defaults to a 5-second prototype value and is not a final balance decision. `LAW_COOLDOWN_MS` defaults to 0 (disabled) until the GDD cooldown tuning is approved. Set these only through deployment environment variables; no production balance values are claimed.
+- Gaze and reverse can be explicitly released with `action: RELEASE`; timed expiry, continuous line-of-sight validation, geometry/radius checks, and real-time push delivery are not yet implemented. This slice is a server-side state/combination prototype, not a completed real-time puzzle client.
+- `law_action_events` persists idempotency, source law action, combo result and response snapshot. PostgreSQL remains authoritative.
