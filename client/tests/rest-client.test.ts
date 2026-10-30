@@ -173,3 +173,14 @@ describe("RestClient", () => {
     }
   });
 });
+
+
+import { PersonalLevelSession } from "../assets/scripts/world/personal-level-session";
+
+describe("PersonalLevelSession", () => {
+  it("requires an active run before issuing gameplay calls", () => {
+    const session = new PersonalLevelSession({} as never);
+    expect(session.activeRun()).toBeUndefined();
+    expect(() => session.refreshState()).toThrow("No active personal level run");
+  });
+});
