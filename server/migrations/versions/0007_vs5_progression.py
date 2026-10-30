@@ -77,7 +77,7 @@ def upgrade() -> None:
         ],
     }
     for level_id, required in objectives.items():
-        op.execute(
+        op.get_bind().execute(
             sa.text("""
                 UPDATE levels
                 SET necessary_objectives = CAST(:objectives AS jsonb)
@@ -239,7 +239,7 @@ def downgrade() -> None:
         ("LV-ROOM-03", "MECH_ENERGY_GATE", "M03-ENERGY-01"),
         ("LV-ROOM-04", "MECH_MOVING_PLATFORM", "M04-PLATFORM-01"),
     ):
-        op.execute(
+        op.get_bind().execute(
             sa.text("""
                 UPDATE level_mechanism_catalog
                 SET mechanism_config_id = :old_id
@@ -247,7 +247,7 @@ def downgrade() -> None:
             """),
             {"level_id": level_id, "old_id": old_id, "new_id": new_id},
         )
-        op.execute(
+        op.get_bind().execute(
             sa.text("""
                 UPDATE mechanism_states AS s
                 SET mechanism_config_id = :old_id
