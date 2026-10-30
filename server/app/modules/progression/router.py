@@ -13,6 +13,7 @@ from app.modules.progression.repository import (
     RewardNotClaimable,
     RewardNotFound,
     get_leaderboard,
+    get_current_seasons,
     get_player_collections,
     get_player_discoveries,
     get_world_archive,
@@ -52,6 +53,7 @@ async def post_level_settle(
 
 
 
+@router.get("/discovery")
 @router.get("/discovery/me")
 async def get_my_discoveries(
     request: Request,
@@ -62,6 +64,7 @@ async def get_my_discoveries(
     return success_envelope({"discoveries": data}, request.state.request_id)
 
 
+@router.get("/collection")
 @router.get("/collection/me")
 async def get_my_collections(
     request: Request,
@@ -72,6 +75,7 @@ async def get_my_collections(
     return success_envelope({"collections": data}, request.state.request_id)
 
 
+@router.get("/world-archive")
 @router.get("/archive")
 async def get_world_archive_endpoint(
     request: Request,
@@ -93,6 +97,17 @@ async def get_my_progress(
     return success_envelope(data, request.state.request_id)
 
 
+@router.get("/season")
+async def get_current_seasons_endpoint(
+    request: Request,
+    player_id=Depends(get_current_player_id),
+    session: AsyncSession = Depends(get_session),
+) -> dict:
+    data = await get_current_seasons(session)
+    await session.commit()
+    return success_envelope({"seasons": data}, request.state.request_id)
+
+
 @router.get("/leaderboard")
 async def get_leaderboard_endpoint(
     request: Request,
@@ -107,6 +122,7 @@ async def get_leaderboard_endpoint(
     return success_envelope(data, request.state.request_id)
 
 
+@router.get("/reward")
 @router.get("/reward/me")
 async def get_my_rewards(
     request: Request,
