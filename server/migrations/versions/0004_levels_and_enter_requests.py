@@ -27,12 +27,12 @@ def upgrade() -> None:
         sa.Column("required_laws", JSONB(), nullable=False, server_default="[]"),
         sa.Column(
             "necessary_objectives",
-            sa.dialects.postgresql.JSONB(),
+            JSONB(),
             nullable=False,
             server_default="[]",
         ),
         sa.Column("is_enabled", sa.Boolean(), nullable=False, server_default=sa.true()),
-        sa.Column("config", sa.dialects.postgresql.JSONB(), nullable=False, server_default="{}"),
+        sa.Column("config", JSONB(), nullable=False, server_default="{}"),
         sa.CheckConstraint(
             "room_index IS NULL OR room_index BETWEEN 1 AND 5",
             name="ck_levels_room_index",
