@@ -130,7 +130,7 @@ flowchart TD
 
 ### 【功能说明】
 
-定义玩家如何解锁（即获得使用权限）首期法则。首期采用"预设拥有 + 首关引导"方案，确保玩家无需随机掉落即可使用全部3条法则。
+定义玩家如何解锁（即获得使用权限）首期法则。首期采用"预设拥有 + 首关教学"方案，确保玩家无需随机掉落即可使用全部3条法则。
 
 ### 【触发条件】
 
@@ -141,7 +141,7 @@ flowchart TD
 ### 【玩家输入】
 
 -   进入关卡（自动获得预设法则）。
--   在首关引导中按提示使用法则（引导式解锁）。
+-   在首关教学中按提示观察并使用法则（不改变权限）。
 
 ### 【计算/规则】
 
@@ -157,9 +157,9 @@ flowchart TD
   字段              类型       说明
   ----------------- ---------- -----------------------------------
   rule_id           string     法则唯一ID
-  unlock_type       enum       DEFAULT / GUIDE / CONDITION / EVENT
+  unlock_type       enum       首期固定DEFAULT；后续扩展可用CONDITION/EVENT
   unlock_condition  string/null 解锁条件参数；首期为 null
-  unlock_order      integer    引导解锁顺序；预设拥有时为0
+  unlock_order      integer    教学展示顺序；不代表权限解锁顺序
 
 ### 【反馈（动画、音效、UI、屏幕表现）】
 
