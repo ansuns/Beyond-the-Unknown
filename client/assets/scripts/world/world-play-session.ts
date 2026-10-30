@@ -10,7 +10,8 @@ import type {
   PersonalLevelState,
   PlayerProfile,
   RuleCatalogData,
-  RulePoint
+  RulePoint,
+  SettlementData
 } from "../network/types";
 import type { MapEventHandler } from "../network/map-socket";
 import type { LawController } from "./law-controller";
@@ -94,6 +95,11 @@ export class WorldPlaySession {
 
   refreshRoomState(): Promise<PersonalLevelState> {
     return this.laws.refreshState();
+  }
+
+  async settleRoom(): Promise<SettlementData> {
+    if (this.laws.hasActiveGaze()) await this.laws.stopGaze();
+    return this.level.settle(this.createIdempotencyKey());
   }
 
   async abandonRoom(): Promise<LevelRunData> {
