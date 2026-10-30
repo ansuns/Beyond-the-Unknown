@@ -82,12 +82,12 @@ def _set_rule_tuning(ready: bool) -> None:
         _db_update("""
             UPDATE level_mechanism_catalog
             SET position_x = 0, position_y = 0
-            WHERE level_id = 'LV-ROOM-02' AND mechanism_config_id = 'MECH_BRIDGE'
+            WHERE level_id = 'LV-ROOM-02' AND mechanism_config_id = 'M02-BRIDGE-01'
         """)
         _db_update("""
             UPDATE level_mechanism_catalog
             SET position_x = 1, position_y = 1
-            WHERE level_id = 'LV-ROOM-03' AND mechanism_config_id = 'MECH_ENERGY_GATE'
+            WHERE level_id = 'LV-ROOM-03' AND mechanism_config_id = 'M03-ENERGY-01'
         """)
         _db_update("""
             UPDATE level_mechanism_catalog
@@ -149,7 +149,7 @@ def test_authoritative_laws_combos_cooldowns_and_personal_isolation() -> None:
                 json={
                     "run_id": first_run,
                     "rule_id": "RULE_ECHO",
-                    "target_id": "MECH_BRIDGE",
+                    "target_id": "M02-BRIDGE-01",
                     "target_point": {"x": 0, "y": 0},
                 },
             )
@@ -163,7 +163,7 @@ def test_authoritative_laws_combos_cooldowns_and_personal_isolation() -> None:
             echo_payload = {
                 "run_id": first_run,
                 "rule_id": "RULE_ECHO",
-                "target_id": "MECH_BRIDGE",
+                "target_id": "M02-BRIDGE-01",
                 "target_point": {"x": 0, "y": 0},
             }
             echo = client.post(
@@ -172,7 +172,7 @@ def test_authoritative_laws_combos_cooldowns_and_personal_isolation() -> None:
                 json=echo_payload,
             )
             assert echo.status_code == 200, echo.text
-            assert echo.json()["data"]["effects"][0]["mechanism_id"] == "MECH_BRIDGE"
+            assert echo.json()["data"]["effects"][0]["mechanism_id"] == "M02-BRIDGE-01"
 
             replay = client.post(
                 "/api/v1/level/rule/cast",
@@ -191,7 +191,7 @@ def test_authoritative_laws_combos_cooldowns_and_personal_isolation() -> None:
                 json={
                     "run_id": first_run,
                     "rule_id": "RULE_GAZE",
-                    "target_id": "MECH_BRIDGE",
+                    "target_id": "M02-BRIDGE-01",
                 },
             )
             assert gaze.status_code == 200, gaze.text
@@ -211,7 +211,7 @@ def test_authoritative_laws_combos_cooldowns_and_personal_isolation() -> None:
             maintained = client.post(
                 "/api/v1/level/rule/maintain",
                 headers=first["headers"],
-                json={"run_id": first_run, "target_id": "MECH_BRIDGE"},
+                json={"run_id": first_run, "target_id": "M02-BRIDGE-01"},
             )
             assert maintained.status_code == 200
 
@@ -248,7 +248,7 @@ def test_authoritative_laws_combos_cooldowns_and_personal_isolation() -> None:
                 json={
                     "run_id": second_run,
                     "rule_id": "RULE_GAZE",
-                    "target_id": "MECH_BRIDGE",
+                    "target_id": "M02-BRIDGE-01",
                 },
             )
             assert wrong_order_gaze.status_code == 200
@@ -261,7 +261,7 @@ def test_authoritative_laws_combos_cooldowns_and_personal_isolation() -> None:
                 json={
                     "run_id": second_run,
                     "rule_id": "RULE_ECHO",
-                    "target_id": "MECH_BRIDGE",
+                    "target_id": "M02-BRIDGE-01",
                     "target_point": {"x": 0, "y": 0},
                 },
             )
@@ -287,7 +287,7 @@ def test_authoritative_laws_combos_cooldowns_and_personal_isolation() -> None:
                 json={
                     "run_id": third_run,
                     "rule_id": "RULE_REVERSE",
-                    "target_id": "MECH_ENERGY_GATE",
+                    "target_id": "M03-ENERGY-01",
                 },
             )
             assert reverse.status_code == 200, reverse.text
@@ -300,7 +300,7 @@ def test_authoritative_laws_combos_cooldowns_and_personal_isolation() -> None:
                 json={
                     "run_id": third_run,
                     "rule_id": "RULE_ECHO",
-                    "target_id": "MECH_ENERGY_GATE",
+                    "target_id": "M03-ENERGY-01",
                     "target_point": {"x": 1, "y": 1},
                 },
             )

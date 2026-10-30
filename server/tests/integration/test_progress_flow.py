@@ -69,7 +69,7 @@ def _set_test_content(ready: bool) -> None:
             ("""
                 UPDATE level_mechanism_catalog
                 SET position_x = 0, position_y = 0
-                WHERE level_id = 'LV-ROOM-02' AND mechanism_config_id = 'MECH_BRIDGE'
+                WHERE level_id = 'LV-ROOM-02' AND mechanism_config_id = 'M02-BRIDGE-01'
             """, None),
             ("""
                 UPDATE score_rule_config
@@ -174,7 +174,7 @@ def test_discovery_world_archive_rewards_settlement_and_leaderboard() -> None:
                 json={
                     "run_id": run_id,
                     "rule_id": "RULE_ECHO",
-                    "target_id": "MECH_BRIDGE",
+                    "target_id": "M02-BRIDGE-01",
                     "target_point": {"x": 0, "y": 0},
                 },
             )
@@ -185,7 +185,7 @@ def test_discovery_world_archive_rewards_settlement_and_leaderboard() -> None:
                 json={
                     "run_id": run_id,
                     "rule_id": "RULE_GAZE",
-                    "target_id": "MECH_BRIDGE",
+                    "target_id": "M02-BRIDGE-01",
                 },
             )
             assert gaze.status_code == 200, gaze.text
