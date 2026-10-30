@@ -1,12 +1,19 @@
-# 《无界之外》GDD V0.1
+# 《无界之外》GDD V0.2
 
 ## 第17章 技术架构与数据规范
 
--   **文档版本：** GDD V0.1
--   **章节版本：** 第17章 V0.1
+## 变更日志
+
+| 版本 | 日期 | 变更内容 |
+|---|---|---|
+| V0.1 | 2026-10-30 | 建立技术架构与数据规范初稿 |
+| V0.2 | 2026-10-30 | 统一个人发现/收藏/机关状态/奖励/成就/积分/进度数据字典；补齐业务接口映射 |
+
+-   **文档版本：** GDD V0.2
+-   **章节版本：** 第17章 V0.2
 -   **日期：** 2026-10-30
 -   **适用岗位：** 服务端程序、客户端程序、技术美术、DevOps、测试、系统策划
--   **章节状态：** 初稿
+-   **章节状态：** V0.2修订稿（待技术评审）
 -   **优先级标记：**【MVP必须】、【可选扩展】、【不在本期范围】
 
 ------------------------------------------------------------------------
@@ -118,232 +125,191 @@ flowchart LR
 
 ------------------------------------------------------------------------
 
-## 17.3 数据库表结构
+## 17.3 数据库表结构（V0.2统一数据字典）
 
 **优先级：【MVP必须】**
 
 ### 【功能说明】
 
-给出MVP主要数据表及关键字段建议。所有表以PostgreSQL为建议存储，字段类型与索引以最终技术评审为准；涉及容量的分库分表方案标注「待最终确认」。
+本节为跨章节唯一权威数据字典。第10–13章描述业务语义，本节定义落库字段、主键、唯一约束和索引；如旧段落或其他章节的示例字段与本节不一致，以本节为准。下列为逻辑模型，PostgreSQL物理类型可在技术评审后映射；所有时间字段统一使用timestamptz（UTC）。
 
-### 【players｜玩家账号】
+### 【核心关系与字段】
 
-  字段                类型            说明
-  ------------------- --------------- ----------------------------
-  player_id           string(PK)      游戏内部玩家ID
-  wx_openid           string(唯一)    微信平台标识
-  current_character_id string/null     当前角色ID
-  total_score         bigint          累计积分（汇总缓存）
-  progress_version    integer         进度版本
-  status              enum             NORMAL / BANNED
-  created_at          timestamp       创建时间
+#### players（玩家账号）
+- player_id uuid PK
+- wx_openid varchar UNIQUE；仅服务端保存，不下发客户端
+- current_character_id varchar nullable
+- progress_version bigint；进度版本号/乐观锁
+- status enum NORMAL/BANNED
+- created_at、updated_at timestamptz UTC
 
-### 【characters｜角色配置】
+不设置跨榜单的total_score权威字段。三榜分数分别按score_events.board_type + period_id汇总；展示缓存可重建，不得作为积分权威来源。
 
-  字段                类型            说明
-  ------------------- --------------- ----------------------------
-  character_id        string(PK)      角色唯一ID
-  character_name      string          角色名称
-  portrait_asset_id   string          头像资源ID
-  model_asset_id      string          模型资源ID
-  animation_set_id    string          动画组ID
-  preview_asset_id    string          预览资源ID
-  unlock_type         enum             DEFAULT/CONDITION/EVENT
-  unlock_value        string/null      解锁条件参数
-  sort_order          integer          排序
-  is_enabled          boolean         是否开放
+#### player_characters（玩家已解锁角色）
+- player_id uuid FK players
+- character_id varchar FK characters
+- unlocked_at timestamptz UTC
+- source varchar DEFAULT/REWARD/EVENT
+- PK(player_id, character_id)
 
-### 【player_characters｜玩家角色关系】
+#### level_runs（个人关卡运行）
+- run_id uuid PK
+- player_id uuid FK players
+- level_id varchar
+- instance_id uuid nullable
+- status enum CREATED/RUNNING/COMPLETED/FAILED/ABANDONED
+- started_at、ended_at timestamptz UTC
+- completion_time_ms bigint nullable
+- result_id uuid nullable
+- created_at timestamptz UTC
+- INDEX(player_id,status), INDEX(player_id,created_at)
 
-  字段           类型        说明
-  -------------- ----------- --------------------------
-  player_id      string(FK)  玩家ID
-  character_id   string(FK)  已解锁角色ID
-  unlocked_at    timestamp   解锁时间
-  source         string      DEFAULT/REWARD/EVENT
+同一玩家的历史运行记录不得覆盖。退出时永久保存已确认的发现、收藏、奖励、积分和已完成关卡；首期不承诺恢复尚未结算的机关/谜题临时状态，见第6章与第11章。
 
-### 【maps｜地图配置】
+#### mechanism_states（个人机关运行状态）
+- mechanism_state_id uuid PK
+- run_id uuid FK level_runs
+- player_id uuid FK players，必须与run归属一致
+- mechanism_config_id varchar
+- mechanism_type varchar
+- state jsonb
+- updated_at timestamptz UTC
+- UNIQUE(run_id, mechanism_config_id)
 
-  字段                类型            说明
-  ------------------- --------------- ----------------------------
-  map_id              string(PK)      地图唯一ID
-  map_name            string          地图名称
-  map_type            enum             MAIN/INSTANCE
-  scene_asset_id      string          场景资源ID
-  collision_data_id   string          碰撞数据ID
-  navigation_data_id  string/null      导航数据ID
-  map_width           integer         逻辑宽度
-  map_height          integer         逻辑高度
-  camera_config_id    string          摄像机配置ID
-  spawn_group_id      string          出生点组ID
-  instance_config_id  string          实例参数配置ID
-  version             integer         配置版本
-  is_enabled          boolean         是否开放
+不得以mechanism_config_id单独作为主键；相同机关配置在不同玩家run中必须分别保存。
 
-### 【map_instances｜地图实例】
+#### discovery_catalog（发现内容配置）
 
-  字段              类型            说明
-  ----------------- --------------- ----------------------------
-  instance_id       string(PK)      实例唯一ID
-  map_id            string(FK)      地图ID
-  status            enum             OPEN/FULL/CLOSING/CLOSED
-  current_players   integer         当前在线人数
-  max_players       integer         硬上限（压测后配置）
-  target_players    integer         目标人数（MVP=20）
-  created_at        timestamp       创建时间
-  last_active_at    timestamp       最近活跃时间
-  server_node_id    string          承载节点
+- discovery_id varchar PK；全服唯一发现ID
+- discovery_type varchar；DIS_HIDDEN_OBJ/DIS_HIDDEN_AREA/DIS_RULE_EFFECT/DIS_COMBO/DIS_PUZZLE/DIS_ENDING
+- level_id varchar nullable
+- location jsonb；地图/区域配置定位
+- related_rule varchar nullable
+- display_name varchar
+- is_enabled boolean
+- UNIQUE(discovery_id)
 
-### 【level_runs｜个人关卡运行】
+#### collection_catalog（图鉴藏品配置）
 
-  字段              类型            说明
-  ----------------- --------------- ----------------------------
-  run_id            string(PK)      关卡运行ID
-  player_id         string(FK)      玩家ID
-  level_id          string          关卡ID
-  instance_id       string/null     关联主地图实例
-  status            enum             CREATED/RUNNING/COMPLETED/FAILED/ABANDONED
-  start_time        timestamp       开始时间
-  completion_time   integer/null     通关耗时（秒）
-  score             integer/null     通关积分
-  created_at        timestamp       创建时间
+- collection_id varchar PK
+- codex_category varchar CAT_AREA/CAT_RULE/CAT_CREATURE/CAT_RELIC/CAT_ENDING
+- source_discovery_id varchar nullable FK discovery_catalog
+- display_name varchar
+- description text
+- asset_id varchar nullable
+- sort_order integer
+- is_enabled boolean
 
-### 【mechanisms｜机关状态（按关卡运行隔离）】
+#### player_discoveries（玩家个人发现）
+- player_id uuid FK players
+- discovery_id varchar；第10章全局发现配置ID
+- discovery_type varchar
+- level_id varchar nullable
+- run_id uuid nullable FK level_runs
+- location jsonb；地图/关卡/区域定位
+- related_rule varchar nullable
+- first_discovered_at timestamptz UTC
+- trigger_count integer DEFAULT 1
+- PK(player_id, discovery_id)
 
-  字段              类型            说明
-  ----------------- --------------- ----------------------------
-  mechanism_id      string(PK)      机关实例ID
-  run_id            string(FK)      所属个人关卡运行
-  owner_player_id   string(FK)      拥有者（个人独立 G-002）
-  mechanism_type    string          机关类型（第9章）
-  state             jsonb           机关状态数据
-  updated_at        timestamp       更新时间
+#### player_collections（玩家收藏）
+- player_id uuid FK players
+- collection_id varchar
+- codex_category varchar CAT_AREA/CAT_RULE/CAT_CREATURE/CAT_RELIC/CAT_ENDING
+- source varchar DISCOVERY/SETTLEMENT/REWARD
+- source_id varchar
+- obtained_at timestamptz UTC
+- PK(player_id, collection_id)
 
-说明：机关状态以 `run_id` 隔离，确保玩家之间不共享机关状态（G-002）。
+#### world_archive（世界传奇档案）
+- discovery_id varchar PK；全服每个发现仅一条
+- first_player_id uuid FK players
+- first_discovered_at timestamptz UTC
+- location jsonb NOT NULL；world/map/level/region定位
+- related_rule varchar nullable
+- created_at timestamptz UTC
 
-### 【discoveries｜玩家发现记录】
+全服首次采用数据库原子插入/唯一键冲突判定；并发事件只允许一名玩家成为首位。档案永久保留。首次发现只授予荣誉标记/展示，不增加任何排行榜积分。
 
-  字段              类型            说明
-  ----------------- --------------- ----------------------------
-  discovery_id      string(PK)      发现记录ID
-  player_id         string(FK)      玩家ID
-  discovery_key     string          发现物标识
-  discovery_type    string          发现类别
-  level_id          string/null     所属关卡
-  discovered_at     timestamp       发现时间
-  is_world_first    boolean         是否全服首次
+#### score_events（三榜积分不可变流水）
+- event_id uuid PK
+- player_id uuid FK players
+- board_type enum EXPLORE/CLEAR/COLLECT
+- period_id varchar；周榜或月赛季周期ID，同一上游事件在当前周榜与月赛季各写一条独立流水
+- delta bigint；正常业务非负，纠错使用反向追加流水
+- reason varchar；仅EXP_DISCOVER/CLEAR_STAGE/COLLECT_NEW，不含WORLD_FIRST
+- source_event_id varchar
+- run_id uuid nullable
+- idempotency_key varchar NOT NULL
+- created_at_utc timestamptz UTC
+- UNIQUE(board_type, period_id, idempotency_key)
+- INDEX(player_id, board_type, period_id, created_at_utc)
 
-### 【collections｜玩家收藏】
+流水仅追加，不更新/删除；重算以流水为唯一权威来源。广告、付费、全服首次荣誉事件不得写入积分流水。
 
-  字段              类型            说明
-  ----------------- --------------- ----------------------------
-  collection_id     string(PK)      收藏记录ID
-  player_id         string(FK)      玩家ID
-  item_id           string          藏品ID
-  item_type         string          藏品类别
-  obtained_at       timestamp       获得时间
-  source            string          来源
+#### seasons / leaderboard_snapshots（赛季与榜单快照）
+- seasons：season_id PK、season_type WEEKLY/MONTHLY、start_at_utc、end_at_utc、status、settlement_status、settled_at_utc
+- leaderboard_snapshots：season_id、board_type、player_id、score、rank、snapshot_at_utc；UNIQUE(season_id,board_type,player_id)
 
-### 【world_archive｜世界档案】
+#### rewards（奖励配置）
+- reward_id varchar PK
+- reward_type enum RT_APPEARANCE/RT_TITLE/RT_PET/RT_BADGE/RT_ACHIEVE
+- reward_name varchar
+- condition varchar；第11章condition_id引用
+- grant_mode enum AUTO/CLAIM
+- payload jsonb
+- is_paid boolean
+- is_enabled boolean
 
-  字段                类型            说明
-  ------------------- --------------- ----------------------------
-  archive_id          string(PK)      档案ID
-  discovery_key       string(唯一)    发现物标识
-  first_player_id     string/null     全服首次发现玩家
-  first_discovered_at timestamp/null   首次发现时间
-  description         string          描述
+#### player_rewards（玩家奖励持有/待领取）
+- player_reward_id uuid PK
+- player_id uuid FK players
+- reward_id varchar FK rewards
+- grant_mode enum AUTO/CLAIM
+- status enum OWNED/PENDING_CLAIM
+- source varchar；ACHIEVEMENT/SEASON/EVENT等
+- source_id varchar
+- idempotency_key varchar NOT NULL
+- granted_at timestamptz UTC
+- claimed_at timestamptz UTC nullable
+- UNIQUE(player_id,reward_id,source_id)
 
-说明：世界档案永久记录全服首次发现（G-017），不随玩家数据清理删除。
+#### achievements / player_achievements（成就配置与个人进度）
+- achievements：achievement_id PK、name、condition_ref、progress_rule jsonb、reward_id FK rewards、is_enabled
+- player_achievements：player_id FK、achievement_id FK、progress jsonb、status IN_PROGRESS/COMPLETED、completed_at timestamptz；PK(player_id,achievement_id)
 
-### 【score_events｜积分流水】
+#### player_tasks / progress_snapshots / settlements（任务、持久进度与结算）
+- player_tasks：player_id、task_id、status、progress jsonb、updated_at；PK(player_id,task_id)
+- progress_snapshots：snapshot_id PK、player_id、progress_version、completed_level_ids jsonb、permanent_progress jsonb、created_at；UNIQUE(player_id,progress_version)
+- settlements：result_id PK、run_id UNIQUE、player_id、level_id、result_status、completion_time_ms、score_payload jsonb、created_at、idempotency_key UNIQUE
 
-  字段              类型            说明
-  ----------------- --------------- ----------------------------
-  event_id          string(PK)      流水ID
-  player_id         string(FK)      玩家ID
-  event_type        string          事件类型（通关/发现/收藏）
-  score_delta       integer         积分变化
-  balance_after     bigint          变动后余额
-  run_id            string/null     关联关卡运行
-  level_id          string/null     关联关卡
-  created_at        timestamp       发生时间
+#### ad_reward_grants（广告独立奖励记录）
+- ad_grant_id uuid PK
+- player_id uuid FK players
+- placement_id varchar
+- reward_type enum APPEARANCE/HINT；REVIVE_TOKEN仅后续评审后开放
+- reward_value varchar
+- is_value_bearing boolean，必须false
+- provider_transaction_id varchar
+- granted_at timestamptz UTC
+- idempotency_key varchar UNIQUE
 
-说明：积分流水不可篡改，作为排行榜与审计依据（G-014、第13章）。
+广告奖励独立于player_rewards的成就/赛季发放路径；可在奖励历史并列展示来源，但不得写入score_events。
 
-### 【leaderboards｜排行榜】
+#### 其他配置与日志表
 
-  字段              类型            说明
-  ----------------- --------------- ----------------------------
-  board_id          string(PK)      榜单记录ID
-  board_type        enum             EXPLORE/CLEAR/COLLECT（三榜）
-  season_id         string(FK)      赛季ID
-  player_id         string(FK)      玩家ID
-  score             bigint          榜单积分
-  rank              integer/null    排名
-  updated_at        timestamp       更新时间
+characters、maps、map_instances、actions_log沿用本章原字段建议。地图实例目标人数20仅为压测目标；max_players由服务端配置，禁止把20写死为硬上限。
 
-### 【seasons｜赛季】
+### 【索引、约束与事务要求】
 
-  字段                类型            说明
-  ------------------- --------------- ----------------------------
-  season_id           string(PK)      赛季ID
-  season_type         enum             WEEKLY/MONTHLY（G-013）
-  start_time          timestamp       开始时间
-  end_time            timestamp       结束时间
-  status              enum             PENDING/ACTIVE/SETTLED
-  settlement_status   enum             UNSETTLED/SETTLED
-
-### 【rewards｜奖励配置】
-
-  字段                类型            说明
-  ------------------- --------------- ----------------------------
-  reward_id           string(PK)      奖励ID
-  reward_type         enum             APPEARANCE/TITLE/PET/BADGE
-  reward_name         string          奖励名称
-  condition_type      string          发放条件类型
-  condition_value     string          条件参数
-  asset_ref           string/null      资源引用
-  is_enabled          boolean         是否开放
-
-### 【player_rewards｜玩家奖励】
-
-  字段           类型        说明
-  -------------- ----------- --------------------------
-  id             string(PK)  记录ID
-  player_id      string(FK)  玩家ID
-  reward_id      string(FK)  奖励ID
-  granted_at     timestamp   发放时间
-  source         string      来源
-  status         enum        GRANTED/CONSIGNED
-
-### 【achievements｜成就配置】
-
-  字段                类型            说明
-  ------------------- --------------- ----------------------------
-  achievement_id      string(PK)      成就ID
-  name                string          成就名称
-  description         string          描述
-  condition_type      string          达成条件类型
-  condition_value     string          条件参数
-  icon_asset_id       string          图标资源ID
-
-### 【actions_log｜动作/表情日志】
-
-  字段              类型            说明
-  ----------------- --------------- ----------------------------
-  log_id            string(PK)      日志ID
-  player_id         string(FK)      发起玩家
-  instance_id       string(FK)      所在地图实例
-  action_type       enum             ACT_001/ACT_002/ACT_003/ACT_004
-  target_player_id  string/null      可选目标玩家
-  created_at        timestamp       发生时间
-
-### 【建表与扩展要求】
-
--   所有 `player_id`、`character_id`、`map_id`、`instance_id`、`run_id` 等关联键建立外键或等效校验。
--   高写入表（score_events、actions_log、leaderboards）的索引与分表方案待压测确定，标注为「待最终确认」。
--   表结构调整必须通过迁移脚本，禁止手工改线。
+1. 所有玩家归属数据必须校验player_id与run_id归属；客户端不得指定或覆盖内部玩家ID。
+2. 个人发现、个人收藏、玩家成就、玩家角色均使用复合唯一键保证幂等。
+3. 世界档案以discovery_id唯一键原子抢占；首次发现荣誉与档案写入在同一事务或可靠Outbox流程中完成。
+4. 结算、积分流水、奖励发放使用业务幂等键；重试不得产生重复副作用。
+5. score_events不可变；纠错通过追加反向/调整事件完成，并记录操作审计。
+6. 所有时间戳存UTC；赛季边界按服务器配置时区计算，再转换UTC存储。
+7. 高写入表索引、分区/分表、连接池和缓存策略待压测确定；首期不预先引入分库分表。
+8. 本节为逻辑模型，不是可直接执行的DDL；物理SQL迁移脚本须在技术评审后单独生成。
 
 ------------------------------------------------------------------------
 
@@ -356,8 +322,8 @@ flowchart LR
 -   **风格：** REST（建议，待最终确认）。
 -   **Base Path：** `/api/v1`。
 -   **认证：** JWT 或会话令牌（建议，待最终确认）；除登录外所有接口需携带有效令牌。
--   **通用响应：** 统一返回 `{ code, message, data, request_id }`。
--   **幂等：** 写接口建议携带 `request_id`，服务端据此去重（第5章/第11章）。
+-   **通用响应：** 统一返回 `{ code, message, data, request_id }`；request_id用于单次请求追踪与日志关联。
+-   **业务幂等：** 结算、积分入账、奖励发放、发现等有副作用的业务操作必须携带独立的 `idempotency_key`；同一业务事件重试必须复用该键。request_id每次网络重试可变化，不得单独作为业务去重依据。积分键唯一约束见17.3，第11章结算与奖励键也按17.3执行。
 -   **频率限制：** 关键写接口服务端限流，具体阈值待压测确定。
 
 ### 【主要接口示例】
@@ -370,10 +336,15 @@ flowchart LR
   地图实例进入              POST   /api/v1/map/enter               分配/恢复实例
   关卡进入                  POST   /api/v1/level/enter             创建个人关卡运行
   关卡结算                  POST   /api/v1/level/settle            提交通关结算
-  发现上报                  POST   /api/v1/discovery/report        上报隐藏发现
+  玩法事件/发现校验          内部   /internal/v1/discovery/event    服务端玩法事件触发；客户端不得直接写入发现
   排行榜查询                GET    /api/v1/leaderboard/{type}      三榜查询
   赛季查询                  GET    /api/v1/season                  周/月赛季信息
+  奖励列表                  GET    /api/v1/reward                 已拥有/待领取奖励
   奖励领取                  POST   /api/v1/reward/claim            领取奖励
+  个人发现列表              GET    /api/v1/discovery               个人发现记录
+  个人收藏列表              GET    /api/v1/collection              收藏图鉴
+  世界传奇档案              GET    /api/v1/world-archive           全服首次发现列表
+  成就进度（扩展）          GET    /api/v1/achievement             启用成就后查询
 
 ### 【请求/响应字段示例：登录初始化】
 

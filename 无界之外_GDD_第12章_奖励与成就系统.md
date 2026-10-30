@@ -1,12 +1,19 @@
-# 《无界之外》GDD V0.1
+# 《无界之外》GDD V0.2
 
 ## 第12章 奖励与成就系统
 
--   **文档版本：** GDD V0.1
--   **章节版本：** 第12章 V0.1
+## 变更日志
+
+| 版本 | 日期 | 变更内容 |
+|---|---|---|
+| V0.1 | 2026-10-30 | 建立奖励与成就系统初稿 |
+| V0.2 | 2026-10-30 | 完整成就进度系统调整为可选扩展；统一奖励表字段与状态以第17章数据字典为准 |
+
+-   **文档版本：** GDD V0.2
+-   **章节版本：** 第12章 V0.2
 -   **日期：** 2026-10-30
 -   **适用岗位：** 系统策划、服务端程序、客户端程序、UI、测试
--   **章节状态：** 初稿
+-   **章节状态：** V0.2修订稿（待评审）
 -   **优先级标记：**【MVP必须】、【可选扩展】、【不在本期范围】
 
 ------------------------------------------------------------------------
@@ -323,7 +330,9 @@ flowchart TD
 
 ## 12.6 成就系统
 
-**优先级：【MVP必须】**
+**优先级：【可选扩展】**
+
+> V0.2范围收敛：完整成就进度、成就列表和成就完成弹窗不属于首期MVP。基础发现、收藏、关卡结算与奖励发放仍按本章MVP要求实现；后续启用成就时复用本节数据模型。
 
 ### 【功能说明】
 
@@ -426,13 +435,17 @@ flowchart TD
 
   字段           类型       必填 说明
   -------------- ---------- ------ -----------------------------
-  id             bigint     是   自增主键
+  player_reward_id uuid    是   主键
   player_id      string     是   玩家ID
   reward_id      string     是   奖励ID
+  grant_mode     enum       是   AUTO / CLAIM
   status         enum       是   OWNED / PENDING_CLAIM
-  granted_at     timestamp  是   发放/到账时间
-  claimed_at     timestamp  否   领取时间（CLAIM 类型）
-  UNIQUE KEY     (player_id, reward_id)
+  source         string     是   发放来源
+  source_id      string     是   来源业务ID
+  idempotency_key string    是   业务幂等键
+  granted_at     timestamptz 是 UTC发放时间
+  claimed_at     timestamptz 否   UTC领取时间（CLAIM类型）
+  UNIQUE KEY     (player_id, reward_id, source_id)
 
 **表 achievements（成就）：**
 
@@ -456,7 +469,7 @@ flowchart TD
   status           enum       是   IN_PROGRESS / COMPLETED
   UNIQUE KEY       (player_id, achievement_id)
 
-幂等约束：`player_rewards` 对 `(player_id, reward_id)` 唯一；`player_achievements` 对 `(player_id, achievement_id)` 唯一。
+V0.2幂等约束以第17章17.3为准：`player_rewards` 使用 `(player_id, reward_id, source_id)` 唯一键，以允许不同合法来源分别授予同一奖励；同一来源重试不得重复发放。`player_achievements` 对 `(player_id, achievement_id)` 唯一。成就相关表在启用完整成就扩展后创建；奖励配置与基础奖励持有表仍为MVP。
 
 ### 【反馈（动画、音效、UI、屏幕表现）】
 
