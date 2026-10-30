@@ -65,6 +65,8 @@ export class BeyondTheUnknownGameEntry extends Component {
   private levelMoveSendElapsed = 0;
   private levelPosition = { x: 1, y: 4 };
   private levelAvatar?: Node;
+  private readonly roomControlNodes: Node[] = [];
+  private roomMechanismStates = new Map<string, Record<string, unknown>>();
   private levelRoomScale = 40;
   private readonly worldPixelsPerUnit = 40;
   private readonly moveSpeedPixelsPerSecond = 160;
@@ -488,7 +490,8 @@ export class BeyondTheUnknownGameEntry extends Component {
         { targetId: "M01-HIDEABLE-01", targetPoint: { x: 5, y: 4 } },
         this.makeIdempotencyKey("room01-echo")
       );
-      await this.levelSession.refreshState();
+      const state = await this.levelSession.refreshState();
+      this.roomMechanismStates = new Map(state.mechanisms.map((item) => [item.mechanism_id, item.state]));
       this.setStatus(result.effects.length ? "回声扩散：隐藏的符号显现了" : "回声没有回应");
       this.drawPersonalRoom(this.pendingLevelName);
     } catch (error) {
@@ -581,6 +584,8 @@ export class BeyondTheUnknownGameEntry extends Component {
   private drawPersonalRoom(levelName: string): void {
     if (!this.worldRoot) return;
     this.worldRoot.removeAllChildren();
+    for (const control of this.roomControlNodes) control.destroy();
+    this.roomControlNodes.length = 0;
     const size = this.worldRoot.getComponent(UITransform).contentSize;
     const room = new Node("Room01Prototype");
     this.worldRoot.addChild(room);
@@ -609,7 +614,9 @@ export class BeyondTheUnknownGameEntry extends Component {
       }
       return node;
     };
-    drawMarker("HiddenObject", 5, 4, new Color(125, 207, 236, 255), 14, false);
+    const hiddenState = this.roomMechanismStates.get("M01-HIDEABLE-01");
+    const hiddenVisible = hiddenState?.visible === true || hiddenState?.visible_by_echo === true;
+    drawMarker("HiddenObject", 5, 4, new Color(125, 207, 236, 255), 14, hiddenVisible);
     drawMarker("LightMarker", 7.5, 4, new Color(236, 211, 132, 255), 11, true);
     drawMarker("ExitGate", 10.5, 4, new Color(155, 214, 174, 255), 17, true);
     this.levelAvatar = drawMarker("Player", this.levelPosition.x, this.levelPosition.y, new Color(115, 220, 255, 255), 12, true);
@@ -624,9 +631,11 @@ export class BeyondTheUnknownGameEntry extends Component {
     label.color = new Color(226, 237, 246, 255);
     label.horizontalAlign = Label.HorizontalAlign.CENTER;
 
-    this.createButton("RoomEchoButton", "回声 · 显形", -95, -size.height / 2 + 155, 150, 42, () => this.castRoomEcho());
-    this.createButton("RoomExitButton", "靠近出口并交互", 95, -size.height / 2 + 155, 170, 42, () => this.interactRoomExit());
-    this.createButton("RoomAbandonButton", "放弃返回", size.width / 2 - 82, -size.height / 2 + 105, 130, 38, () => this.returnToWorld());
+    this.roomControlNodes.push(
+      this.createButton("RoomEchoButton", "回声 · 显形", -95, -size.height / 2 + 155, 150, 42, () => this.castRoomEcho()),
+      this.createButton("RoomExitButton", "靠近出口并交互", 95, -size.height / 2 + 155, 170, 42, () => this.interactRoomExit()),
+      this.createButton("RoomAbandonButton", "放弃返回", size.width / 2 - 82, -size.height / 2 + 105, 130, 38, () => this.returnToWorld())
+    );
     this.setStatus("点击房间地面移动：先走近隐藏目标使用回声，再前往出口交互");
   }
 
