@@ -272,9 +272,13 @@ async def apply_law_action(
         "COMBO-002": "ENERGY_NODE",
         "COMBO-003": "MOVING_OBJECT",
     }
+    configured_combo = state["config"].get("requires_combo") or state["config"].get(
+        "reverse_combo"
+    )
     if (
         combo_id not in configured_combos
         or mechanism["mechanism_type"] != expected_type.get(combo_id)
+        or configured_combo != combo_id
     ):
         combo_id = None
     if combo_id:
