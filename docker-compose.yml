@@ -64,6 +64,20 @@ services:
       RABBITMQ_MAX_RETRIES: ${RABBITMQ_MAX_RETRIES:-3}
     command: ["uv", "run", "--no-sync", "python", "-m", "app.workers.task_worker"]
     depends_on:
+      postgres: { condition: service_healthy }
+      rabbitmq: { condition: service_healthy }
+  outbox-dispatcher:
+    build:
+      context: .
+      dockerfile: server/Dockerfile
+    environment:
+      APP_ENV: local
+      DATABASE_URL: postgresql+asyncpg://beyond:beyond_dev_only@postgres:5432/beyond
+      RABBITMQ_URL: amqp://beyond:beyond_dev_only@rabbitmq:5672/
+      RABBITMQ_TASK_QUEUE: game.tasks.v1
+    command: ["uv", "run", "--no-sync", "python", "-m", "app.workers.outbox_dispatcher"]
+    depends_on:
+      postgres: { condition: service_healthy }
       rabbitmq: { condition: service_healthy }
 volumes:
   postgres_data:
