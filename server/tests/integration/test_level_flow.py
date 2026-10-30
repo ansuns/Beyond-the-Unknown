@@ -262,5 +262,17 @@ def test_personal_laws_are_authoritative_idempotent_and_combo_aware(monkeypatch)
             assert gaze_bridge.status_code == 200
             assert gaze_bridge.json()["data"]["combo_id"] == "COMBO-001"
             assert gaze_bridge.json()["data"]["state"]["state"] == "OPEN"
+
+            # Do not leave the second test player occupying a shared-map slot
+            # for the following integration test module.
+            second_cleanup = client.post(
+                "/api/v1/level/enter",
+                headers={
+                    **second["headers"],
+                    "Idempotency-Key": "law-second-cleanup-0001",
+                },
+                json={"level_id": "LV-ROOM-01", "entrance_id": "ENT-ROOM-01"},
+            )
+            assert second_cleanup.status_code == 200
     finally:
         app.dependency_overrides.clear()
