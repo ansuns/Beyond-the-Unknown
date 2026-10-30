@@ -13,6 +13,8 @@ class Settings(BaseSettings):
     database_url: str = "postgresql+asyncpg://beyond:beyond_dev_only@localhost:5432/beyond"
     rabbitmq_url: str = "amqp://beyond:beyond_dev_only@localhost:5672/"
     rabbitmq_task_queue: str = "game.tasks.v1"
+    rabbitmq_retry_delay_ms: int = 5_000
+    rabbitmq_max_retries: int = 3
     wechat_app_id: str | None = None
     wechat_app_secret: str | None = None
     wechat_api_url: str = "https://api.weixin.qq.com/sns/jscode2session"
