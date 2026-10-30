@@ -1,6 +1,6 @@
 from typing import Annotated
 
-from fastapi import APIRouter, Depends, Header, HTTPException, Query, Request, status
+from fastapi import APIRouter, Depends, Header, HTTPException, Path, Query, Request
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.authentication import get_current_player_id
@@ -124,7 +124,7 @@ async def get_leaderboard_endpoint(
 
 @router.get("/leaderboard/{board_type}")
 async def get_leaderboard_by_path(
-    board_type: Annotated[str, Query(pattern="^(EXPLORE|CLEAR|COLLECT)$")],
+    board_type: Annotated[str, Path(pattern="^(EXPLORE|CLEAR|COLLECT)$")],
     request: Request,
     season_type: Annotated[str, Query(pattern="^(WEEKLY|MONTHLY)$")] = "WEEKLY",
     limit: Annotated[int, Query(ge=1, le=100)] = 50,
