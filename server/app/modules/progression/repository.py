@@ -605,3 +605,64 @@ async def claim_reward(
             raise RewardNotFound
         raise RewardNotClaimable
     return dict(row)
+
+
+async def get_player_discoveries(
+    session: AsyncSession, player_id: UUID
+) -> list[dict[str, Any]]:
+    rows = (
+        await session.execute(
+            text("""
+                SELECT d.discovery_id, c.display_name, d.discovery_type::text AS discovery_type,
+                       d.level_id, d.first_discovered_at, d.trigger_count,
+                       (w.first_player_id = :player_id) AS is_world_first
+                FROM player_discoveries AS d
+                JOIN discovery_catalog AS c USING (discovery_id)
+                LEFT JOIN world_archive AS w USING (discovery_id)
+                WHERE d.player_id = :player_id
+                ORDER BY d.first_discovered_at DESC
+            """),
+            {"player_id": player_id},
+        )
+    ).mappings().all()
+    return [dict(row) for row in rows]
+
+
+async def get_player_collections(
+    session: AsyncSession, player_id: UUID
+) -> list[dict[str, Any]]:
+    rows = (
+        await session.execute(
+            text("""
+                SELECT c.collection_id, c.codex_category::text AS codex_category,
+                       c.display_name, c.description, c.asset_id, c.sort_order,
+                       p.source::text AS source, p.source_id, p.obtained_at
+                FROM player_collections AS p
+                JOIN collection_catalog AS c USING (collection_id)
+                WHERE p.player_id = :player_id
+                ORDER BY c.codex_category, c.sort_order, c.collection_id
+            """),
+            {"player_id": player_id},
+        )
+    ).mappings().all()
+    return [dict(row) for row in rows]
+
+
+async def get_world_archive(
+    session: AsyncSession, limit: int = 50
+) -> list[dict[str, Any]]:
+    rows = (
+        await session.execute(
+            text("""
+                SELECT w.discovery_id, d.display_name, d.discovery_type::text AS discovery_type,
+                       '探索者-' || left(w.first_player_id::text, 8) AS first_player_label,
+                       w.first_discovered_at, w.location, w.related_rule
+                FROM world_archive AS w
+                JOIN discovery_catalog AS d USING (discovery_id)
+                ORDER BY w.first_discovered_at DESC
+                LIMIT :limit
+            """),
+            {"limit": limit},
+        )
+    ).mappings().all()
+    return [dict(row) for row in rows]
