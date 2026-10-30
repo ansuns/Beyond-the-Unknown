@@ -90,6 +90,16 @@ paths:
           content:
             application/json:
               schema: { $ref: '#/components/schemas/EnvelopeObject' }
+  /level:
+    get:
+      tags: [Level]
+      operationId: listLevels
+      responses:
+        '200':
+          description: Enabled level catalog and player-visible unlock status
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/EnvelopeObject' }
   /level/enter:
     post:
       tags: [Level]
@@ -101,14 +111,53 @@ paths:
           application/json:
             schema:
               type: object
-              required: [level_id]
-              properties: { level_id: { type: string } }
+              required: [level_id, entrance_id]
+              properties:
+                level_id: { type: string, maxLength: 64 }
+                entrance_id: { type: string, maxLength: 64 }
       responses:
         '200':
-          description: Personal run created
+          description: Personal run created or idempotent replay
           content:
             application/json:
               schema: { $ref: '#/components/schemas/EnvelopeObject' }
+        '403': { description: Hidden or locked level }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409': { $ref: '#/components/responses/Conflict' }
+  /level/start:
+    post:
+      tags: [Level]
+      operationId: startLevel
+      parameters: [{ $ref: '#/components/parameters/RequestId' }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [run_id]
+              properties: { run_id: { type: string, format: uuid } }
+      responses:
+        '200': { description: Run transitioned to RUNNING (idempotent) }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409': { $ref: '#/components/responses/Conflict' }
+  /level/abandon:
+    post:
+      tags: [Level]
+      operationId: abandonLevel
+      parameters: [{ $ref: '#/components/parameters/RequestId' }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [run_id]
+              properties: { run_id: { type: string, format: uuid } }
+      responses:
+        '200': { description: Run transitioned to ABANDONED (idempotent) }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409': { $ref: '#/components/responses/Conflict' }
   /level/settle:
     post:
       tags: [Level]
