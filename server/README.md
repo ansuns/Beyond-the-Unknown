@@ -113,3 +113,13 @@ VS-5 was merged into `main` after the Python/Ruff, PostgreSQL migration/integrat
 - After `RABBITMQ_MAX_RETRIES` (default 3) retries, the message is sent to the DLQ. If a retry/DLQ publish is not confirmed, the original delivery is NACKed with requeue=true.
 - Every registered consumer must still enforce business idempotency using the envelope's `idempotency_key`; delivery is at-least-once, not exactly-once.
 - Current registered handler is only `worker.ping`. Transactional Outbox integration with gameplay write transactions is still a separate release-readiness task.
+
+
+## Transactional Outbox
+
+- `outbox_events` rows are inserted through `enqueue_outbox_event(session, event_type, payload, idempotency_key)` using the caller's existing SQLAlchemy transaction. The enqueue helper never commits the caller's transaction.
+- A settlement writes its `game.level.settled` event in the same transaction as the settlement, score events, reward grants and permanent progress snapshot.
+- The separate `outbox-dispatcher` Compose service claims pending rows with `FOR UPDATE SKIP LOCKED`, publishes persistent task envelopes to the durable worker queue with publisher confirms, then marks the row published.
+- If publication fails, the event remains pending with bounded exponential scheduling (1–256 seconds, capped at 300 seconds); the dispatcher never marks an unconfirmed event as published.
+- A crash after broker confirmation but before the database commit can produce a duplicate delivery. Consumers therefore use the envelope `idempotency_key`; the `game.level.settled` worker stores idempotent receipts in `processed_task_messages`.
+- Delivery is at-least-once. The outbox guarantees durable publication intent, not exactly-once execution.
