@@ -8,9 +8,8 @@ from app.core.database import get_session
 from app.modules.levels.repository import (
     ActiveLevelRunExists,
     IdempotencyConflict,
-    InvalidLevelRunState,
     InvalidLevelPosition,
-    update_level_position,
+    InvalidLevelRunState,
     LevelLocked,
     LevelNotFound,
     PlayerNotInMap,
@@ -18,6 +17,7 @@ from app.modules.levels.repository import (
     enter_level,
     list_levels,
     start_level,
+    update_level_position,
 )
 from app.modules.levels.schemas import (
     LevelEnterRequest,
