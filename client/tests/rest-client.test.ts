@@ -247,8 +247,6 @@ describe("PersonalLevelSession", () => {
     expect(JSON.parse(String(init?.body))).toEqual({ character_id: "CHR_002" });
   });
 
-});
-
 
   it("updates the authoritative personal room position", async () => {
     const fetchImpl = vi.fn<typeof fetch>().mockResolvedValue(new Response(JSON.stringify({
@@ -308,3 +306,5 @@ describe("PersonalLevelSession", () => {
       mechanism_id: "M01-EXIT-01"
     });
   });
+
+});
