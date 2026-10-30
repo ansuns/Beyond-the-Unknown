@@ -5,6 +5,7 @@ export interface PrototypeComboDefinition {
   targetId: string;
   ruleIds: LawRuleId[];
   displayName: string;
+  maintainGaze: boolean;
 }
 
 const LAW_RULE_IDS = new Set<LawRuleId>([
@@ -42,6 +43,7 @@ export function parsePrototypeComboDefinitions(
       !targetId.trim() ||
       typeof displayName !== "string" ||
       !displayName.trim() ||
+      typeof item.maintain_gaze !== "boolean" ||
       !Array.isArray(ruleSequence) ||
       ruleSequence.length !== 2 ||
       ruleSequence.some((rule) => typeof rule !== "string" || !LAW_RULE_IDS.has(rule as LawRuleId))
@@ -54,6 +56,7 @@ export function parsePrototypeComboDefinitions(
       comboId,
       targetId,
       displayName,
+      maintainGaze: item.maintain_gaze as boolean,
       ruleIds: ruleSequence as LawRuleId[]
     };
   });
