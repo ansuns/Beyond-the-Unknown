@@ -7,6 +7,7 @@ from uuid import UUID
 
 from fastapi import APIRouter, WebSocket, WebSocketDisconnect
 from sqlalchemy import text
+from sqlalchemy import text
 
 from app.core.config import get_settings
 from app.core.database import SessionFactory
@@ -148,7 +149,7 @@ async def map_websocket(websocket: WebSocket) -> None:
             await touch_membership(session, player_id, session_id)
         joined = True
         last_seq = int(enter_message.get("seq", 0))
-        last_move_at = 0.0
+        last_move_at = asyncio.get_running_loop().time()
         action_times: deque[float] = deque()
 
         while True:
@@ -176,6 +177,13 @@ async def map_websocket(websocket: WebSocket) -> None:
                 )
             elif command == "MOVE_SYNC":
                 try:
+                    if (
+                        not isinstance(payload["client_tick"], int)
+                        or isinstance(payload["client_tick"], bool)
+                    ):
+                        raise ValueError
+                    if isinstance(payload["x"], bool) or isinstance(payload["y"], bool):
+                        raise ValueError
                     x, y = float(payload["x"]), float(payload["y"])
                     direction = payload["dir"]
                     if not math.isfinite(x) or not math.isfinite(y) or direction not in DIRECTIONS:
@@ -212,7 +220,7 @@ async def map_websocket(websocket: WebSocket) -> None:
                 )
             elif command == "ACTION_BROADCAST":
                 action_id = payload.get("action_id")
-                if action_id not in ACTION_IDS:
+                if not isinstance(action_id, str) or action_id not in ACTION_IDS:
                     await _send(websocket, "ERROR", {"code": "ACTION_NOT_ALLOWED"})
                     continue
                 now = asyncio.get_running_loop().time()
