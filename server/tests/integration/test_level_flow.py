@@ -128,6 +128,10 @@ def test_personal_level_run_entry_is_idempotent_and_isolated() -> None:
             assert [
                 room["room_index"] for room in rooms if not room["is_hidden"]
             ] == [1, 2, 3, 4, 5]
+            room_one = next(room for room in rooms if room["level_id"] == "LV-ROOM-01")
+            assert room_one["necessary_objectives"][0]["mechanism_id"] == "M01-HIDEABLE-01"
+            hidden_level = next(room for room in rooms if room["level_id"] == "LV-HIDDEN-01")
+            assert hidden_level["is_unlocked"] is False
 
             cleanup = client.post(
                 "/api/v1/level/enter",
