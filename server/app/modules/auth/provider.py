@@ -1,7 +1,7 @@
 from typing import Protocol
 
-import httpx
 from fastapi import Depends
+import httpx
 
 from app.core.config import Settings, get_settings
 
@@ -42,9 +42,15 @@ class WeChatCodeExchange:
         except (httpx.TimeoutException, httpx.RequestError, httpx.HTTPStatusError, ValueError) as exc:
             raise WeChatProviderUnavailable("WeChat identity service is unavailable") from exc
 
+        if not isinstance(payload, dict):
+            raise WeChatProviderUnavailable("WeChat identity response is malformed")
         error_code = payload.get("errcode")
         if error_code is not None:
-            if int(error_code) in {40029, 40163}:
+            try:
+                parsed_error_code = int(error_code)
+            except (TypeError, ValueError):
+                raise WeChatProviderUnavailable("WeChat identity service returned an invalid error") from None
+            if parsed_error_code in {40029, 40163}:
                 raise InvalidWeChatCode("WeChat login code is invalid or already used")
             raise WeChatProviderUnavailable("WeChat identity service rejected the request")
         openid = payload.get("openid")

@@ -1,0 +1,78 @@
+name: server-ci
+
+on:
+  pull_request:
+    paths:
+      - "server/**"
+      - "docs/engineering/**"
+      - "docker-compose.yml"
+      - ".github/workflows/server-ci.yml"
+  push:
+    branches: [main]
+    paths:
+      - "server/**"
+      - "docs/engineering/**"
+      - "docker-compose.yml"
+
+jobs:
+  python:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_DB: beyond
+          POSTGRES_USER: beyond
+          POSTGRES_PASSWORD: beyond_dev_only
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U beyond -d beyond"
+          --health-interval 5s
+          --health-timeout 3s
+          --health-retries 20
+    env:
+      APP_ENV: test
+      DATABASE_URL: postgresql+asyncpg://beyond:beyond_dev_only@localhost:5432/beyond
+      TEST_DATABASE_URL: postgresql+asyncpg://beyond:beyond_dev_only@localhost:5432/beyond
+      JWT_SECRET: test-jwt-secret-with-at-least-32-characters
+      OPENID_HMAC_SECRET: test-openid-hmac-secret-with-at-least-32-characters
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - uses: astral-sh/setup-uv@v5
+      - name: Install dependencies
+        working-directory: server
+        run: uv sync --group dev
+      - name: Apply database migrations
+        working-directory: server
+        run: uv run alembic -c alembic.ini upgrade head
+      - name: Lint
+        working-directory: server
+        run: uv run ruff check .
+      - name: Unit and integration tests
+        working-directory: server
+        run: uv run pytest
+  compose-smoke:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build and start services
+        run: docker compose up -d --build
+      - name: Apply database migration
+        run: docker compose run --rm api uv run --no-sync alembic -c alembic.ini upgrade head
+      - name: Check API health
+        run: |
+          for attempt in $(seq 1 30); do
+            if curl --fail http://localhost:8000/health/live && curl --fail http://localhost:8000/health/ready; then
+              exit 0
+            fi
+            sleep 2
+          done
+          docker compose logs
+          exit 1
+      - name: Stop services
+        if: always()
+        run: docker compose down -v

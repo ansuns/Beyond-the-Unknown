@@ -4,7 +4,10 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.config import Settings, get_settings
 from app.core.database import get_session
 from app.modules.auth.provider import (
-    InvalidWeChatCode, WeChatCodeProvider, WeChatProviderUnavailable, get_wechat_code_provider,
+    InvalidWeChatCode,
+    WeChatCodeProvider,
+    WeChatProviderUnavailable,
+    get_wechat_code_provider,
 )
 from app.modules.auth.repository import PlayerBannedError
 from app.modules.auth.schemas import WeChatLoginRequest
