@@ -248,3 +248,63 @@ describe("PersonalLevelSession", () => {
   });
 
 });
+
+
+  it("updates the authoritative personal room position", async () => {
+    const fetchImpl = vi.fn<typeof fetch>().mockResolvedValue(new Response(JSON.stringify({
+      code: 0,
+      message: "ok",
+      request_id: "position-request",
+      data: { run_id: "run-1", x: 4, y: 4 }
+    }), { status: 200 }));
+    const api = new RestClient({
+      baseUrl: "https://example.test/api/v1",
+      token: () => "jwt-token",
+      fetchImpl,
+      requestId: () => "position-request"
+    });
+
+    const result = await api.updateLevelPosition("run-1", 4, 4);
+    expect(result).toEqual({ run_id: "run-1", x: 4, y: 4 });
+    const [url, init] = fetchImpl.mock.calls[0];
+    expect(url).toBe("https://example.test/api/v1/level/position");
+    expect((init?.headers as Record<string, string>).Authorization).toBe("Bearer jwt-token");
+    expect(JSON.parse(String(init?.body))).toEqual({ run_id: "run-1", x: 4, y: 4 });
+  });
+
+  it("interacts with a room mechanism using an idempotency key", async () => {
+    const fetchImpl = vi.fn<typeof fetch>().mockResolvedValue(new Response(JSON.stringify({
+      code: 0,
+      message: "ok",
+      request_id: "interact-request",
+      data: {
+        run_id: "run-1",
+        mechanism_id: "M01-EXIT-01",
+        state: { status: "TRIGGERED", activated: true },
+        already_interacted: false,
+        idempotent_replay: false
+      }
+    }), { status: 200 }));
+    const api = new RestClient({
+      baseUrl: "https://example.test/api/v1",
+      token: () => "jwt-token",
+      fetchImpl,
+      requestId: () => "interact-request"
+    });
+
+    const result = await api.interactMechanism(
+      "run-1",
+      "M01-EXIT-01",
+      "room01-interact-0001"
+    );
+    expect(result.state.status).toBe("TRIGGERED");
+    const [url, init] = fetchImpl.mock.calls[0];
+    expect(url).toBe("https://example.test/api/v1/level/mechanism/interact");
+    const headers = init?.headers as Record<string, string>;
+    expect(headers.Authorization).toBe("Bearer jwt-token");
+    expect(headers["Idempotency-Key"]).toBe("room01-interact-0001");
+    expect(JSON.parse(String(init?.body))).toEqual({
+      run_id: "run-1",
+      mechanism_id: "M01-EXIT-01"
+    });
+  });
