@@ -1,5 +1,5 @@
-from alembic import op
 import sqlalchemy as sa
+from alembic import op
 from sqlalchemy.dialects.postgresql import JSONB
 
 
@@ -88,7 +88,12 @@ def upgrade() -> None:
         sa.Column("idempotency_key", sa.String(200), primary_key=True),
         sa.Column("request_hash", sa.String(64), nullable=False),
         sa.Column("run_id", sa.Uuid(), nullable=False),
-        sa.Column("created_at", sa.DateTime(timezone=True), nullable=False, server_default=sa.func.now()),
+        sa.Column(
+            "created_at",
+            sa.DateTime(timezone=True),
+            nullable=False,
+            server_default=sa.func.now(),
+        ),
         sa.ForeignKeyConstraint(
             ["run_id", "player_id"],
             ["level_runs.run_id", "level_runs.player_id"],
