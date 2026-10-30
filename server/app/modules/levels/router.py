@@ -27,7 +27,7 @@ from app.modules.gameplay.service import (
     apply_law_action,
     get_run_mechanisms,
 )
-from app.modules.levels.schemas import LawActionRequest, LevelEnterRequest, LevelRunRequest
+from app.modules.levels.schemas import (\n    LawActionRequest,\n    LevelEnterRequest,\n    LevelRunRequest,\n)
 from app.realtime.manager import map_connections
 from app.schemas.envelope import success_envelope
 
