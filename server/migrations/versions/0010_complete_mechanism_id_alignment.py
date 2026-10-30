@@ -35,6 +35,10 @@ def upgrade() -> None:
     )
 
     id_map = {
+        "MECH-ROOM01-HIDDEN-01": "M01-HIDEABLE-01",
+        "MECH_BRIDGE": "M02-BRIDGE-01",
+        "MECH_ENERGY_GATE": "M03-ENERGY-01",
+        "MECH_MOVING_PLATFORM": "M04-PLATFORM-01",
         "MECH-ROOM01-LIGHT-01": "M01-LIGHT-01",
         "MECH_ROOM03_DOOR_BARRIER": "M03-DOOR-01",
         "MECH-HIDDEN-ENDING-01": "H01-END",
@@ -42,6 +46,7 @@ def upgrade() -> None:
     for old_id, new_id in id_map.items():
         _replace_id("level_objectives", "mechanism_config_id", old_id, new_id)
         _replace_id("level_mechanism_catalog", "mechanism_config_id", old_id, new_id)
+        _replace_id("combo_catalog", "target_mechanism_id", old_id, new_id)
 
         # Preserve run state if both the old and new IDs have historical rows.
         op.get_bind().execute(
@@ -208,6 +213,18 @@ def downgrade() -> None:
         _replace_id("level_objectives", "mechanism_config_id", new_id, old_id)
         _replace_id("level_mechanism_catalog", "mechanism_config_id", new_id, old_id)
         _replace_id("mechanism_states", "mechanism_config_id", new_id, old_id)
+        _replace_id("rule_cast_events", "target_id", new_id, old_id)
+        _replace_id("player_rule_states", "active_target_id", new_id, old_id)
+
+    # The first four IDs were renamed in migration 0009; only their remaining
+    # references in combo/event records are reversed by this migration.
+    for new_id, old_id in {
+        "M01-HIDEABLE-01": "MECH-ROOM01-HIDDEN-01",
+        "M02-BRIDGE-01": "MECH_BRIDGE",
+        "M03-ENERGY-01": "MECH_ENERGY_GATE",
+        "M04-PLATFORM-01": "MECH_MOVING_PLATFORM",
+    }.items():
+        _replace_id("combo_catalog", "target_mechanism_id", new_id, old_id)
         _replace_id("rule_cast_events", "target_id", new_id, old_id)
         _replace_id("player_rule_states", "active_target_id", new_id, old_id)
 
