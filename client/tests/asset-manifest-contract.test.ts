@@ -3,6 +3,9 @@ import { readFile } from "node:fs/promises";
 import { resolve } from "node:path";
 import { validateAssetManifestStructure } from "../scripts/asset-manifest-contract.mjs";
 
+type AssetEntry = { asset_id: string; category: string; status: string; files: string[] };
+type MutableManifest = Record<string, any> & { entries: AssetEntry[]; status: string };
+
 const [manifest, levels] = await Promise.all([
   readFile(resolve(process.cwd(), "../docs/engineering/assets/asset-manifest.v1.json"), "utf8"),
   readFile(resolve(process.cwd(), "../docs/engineering/levels/levels.v1.json"), "utf8")
@@ -17,7 +20,7 @@ describe("asset manifest contract", () => {
   });
 
   it("rejects a missing character asset entry", () => {
-    const invalid = structuredClone(manifest);
+    const invalid = structuredClone(manifest) as MutableManifest;
     invalid.entries = invalid.entries.filter((entry) => entry.asset_id !== "CHR_012_ANIMATION_SET");
     expect(validateAssetManifestStructure(invalid, levels).errors.join("\n")).toContain(
       "required asset missing from manifest: CHR_012_ANIMATION_SET"
