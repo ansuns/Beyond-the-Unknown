@@ -512,6 +512,37 @@ async def cast_rule(
         "cooldown_until": cooldown_until.isoformat(),
         "idempotent_replay": False,
     }
+    discovery_ids: set[str] = set()
+    if effects:
+        rule_discovery = {
+            "RULE_ECHO": "DIS_RULE_ECHO",
+            "RULE_GAZE": "DIS_RULE_GAZE",
+            "RULE_REVERSE": "DIS_RULE_REVERSE",
+        }.get(rule_id)
+        if rule_discovery:
+            discovery_ids.add(rule_discovery)
+        for effect in effects:
+            mechanism_id = effect["mechanism_id"]
+            if (
+                run["level_id"] == "LV-ROOM-01"
+                and mechanism_id == "MECH-ROOM01-HIDDEN-01"
+            ):
+                discovery_ids.add("DIS_HIDDEN_OBJ_LV_ROOM_01_HIDDEN_01")
+            if (
+                run["level_id"] == "LV-ROOM-05"
+                and mechanism_id == "M05-HIDDEN-01"
+            ):
+                discovery_ids.add("DIS_HIDDEN_ROUTE_CLUE_01")
+    if combo_result and combo_result.get("combo_id"):
+        discovery_ids.add(f"DIS_{combo_result['combo_id'].replace('-', '_')}")
+    discovery_results = []
+    for discovery_id in sorted(discovery_ids):
+        discovery = await _record_discovery(
+            session, player_id, run_id, discovery_id
+        )
+        if discovery is not None:
+            discovery_results.append(discovery)
+    result["discoveries"] = discovery_results
     await session.execute(
         text("""
             INSERT INTO rule_cast_events
@@ -790,4 +821,118 @@ async def get_level_state(
             }
             for row in rows
         ],
+    }
+
+
+
+async def _record_discovery(
+    session: AsyncSession,
+    player_id: UUID,
+    run_id: UUID,
+    discovery_id: str,
+) -> dict[str, Any] | None:
+    catalog = (
+        await session.execute(
+            text("""
+                SELECT discovery_type, level_id, location, related_rule
+                FROM discovery_catalog
+                WHERE discovery_id = :discovery_id AND is_enabled = true
+            """),
+            {"discovery_id": discovery_id},
+        )
+    ).mappings().one_or_none()
+    if catalog is None:
+        return None
+
+    inserted = (
+        await session.execute(
+            text("""
+                INSERT INTO player_discoveries
+                    (player_id, discovery_id, discovery_type, level_id, run_id,
+                     location, related_rule)
+                VALUES (:player_id, :discovery_id, :discovery_type, :level_id,
+                        :run_id, :location, :related_rule)
+                ON CONFLICT (player_id, discovery_id) DO NOTHING
+                RETURNING first_discovered_at
+            """),
+            {
+                "player_id": player_id,
+                "discovery_id": discovery_id,
+                "discovery_type": catalog["discovery_type"],
+                "level_id": catalog["level_id"],
+                "run_id": run_id,
+                "location": json.dumps(catalog["location"]),
+                "related_rule": catalog["related_rule"],
+            },
+        )
+    ).mappings().one_or_none()
+    if inserted is None:
+        await session.execute(
+            text("""
+                UPDATE player_discoveries
+                SET trigger_count = trigger_count + 1
+                WHERE player_id = :player_id AND discovery_id = :discovery_id
+            """),
+            {"player_id": player_id, "discovery_id": discovery_id},
+        )
+        return {
+            "discovery_id": discovery_id,
+            "first_for_player": False,
+            "world_first": False,
+        }
+
+    archive = (
+        await session.execute(
+            text("""
+                INSERT INTO world_archive
+                    (discovery_id, first_player_id, first_discovered_at,
+                     location, related_rule)
+                SELECT discovery_id, player_id, first_discovered_at,
+                       location, related_rule
+                FROM player_discoveries
+                WHERE player_id = :player_id AND discovery_id = :discovery_id
+                ON CONFLICT (discovery_id) DO NOTHING
+                RETURNING discovery_id
+            """),
+            {"player_id": player_id, "discovery_id": discovery_id},
+        )
+    ).scalar_one_or_none()
+    world_first = archive is not None
+
+    await session.execute(
+        text("""
+            INSERT INTO player_collections
+                (player_id, collection_id, codex_category, source, source_id)
+            SELECT :player_id, collection_id, codex_category, 'DISCOVERY',
+                   :discovery_id
+            FROM collection_catalog
+            WHERE source_discovery_id = :discovery_id AND is_enabled = true
+            ON CONFLICT (player_id, collection_id) DO NOTHING
+        """),
+        {"player_id": player_id, "discovery_id": discovery_id},
+    )
+
+    if world_first:
+        await session.execute(
+            text("""
+                INSERT INTO player_rewards
+                    (player_id, reward_id, grant_mode, status, source,
+                     source_id, idempotency_key)
+                VALUES (:player_id, 'REWARD_WORLD_FIRST_TITLE', 'AUTO',
+                        'OWNED', 'WORLD_FIRST', :discovery_id,
+                        :idempotency_key)
+                ON CONFLICT DO NOTHING
+            """),
+            {
+                "player_id": player_id,
+                "discovery_id": discovery_id,
+                "idempotency_key": f"WORLD_FIRST:{discovery_id}",
+            },
+        )
+
+    return {
+        "discovery_id": discovery_id,
+        "first_for_player": True,
+        "world_first": world_first,
+        "first_discovered_at": inserted["first_discovered_at"].isoformat(),
     }
