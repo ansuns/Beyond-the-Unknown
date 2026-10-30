@@ -325,7 +325,6 @@ export class BeyondTheUnknownGameEntry extends Component {
       this.setStatus(
         `已进入共享世界 · 在线实例 ${map.current_players}/${map.max_players} · ${map.instance_id.slice(0, 8)}`
       );
-      void this.refreshProgress();
     } catch (error) {
       this.setStatus(`连接失败：${error instanceof Error ? error.message : "未知错误"}`);
     }
