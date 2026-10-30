@@ -156,6 +156,10 @@ export interface PersonalMechanismState {
   mechanism_id: string;
   mechanism_type: string;
   state: Record<string, unknown>;
+  position_x: number | null;
+  position_y: number | null;
+  target_type: string | null;
+  config: Record<string, unknown>;
   updated_at: string;
 }
 

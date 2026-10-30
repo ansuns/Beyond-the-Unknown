@@ -957,6 +957,23 @@ async def _try_unlock_hidden_route(
                 },
             )
         ).scalar_one_or_none()
+        await session.execute(
+            text("""
+                UPDATE mechanism_states
+                SET state = state || CAST(:state AS jsonb), updated_at = now()
+                WHERE run_id = :run_id AND player_id = :player_id
+                  AND mechanism_config_id = 'M05-HIDDEN-GATE'
+            """),
+            {
+                "run_id": matched_run_id,
+                "player_id": player_id,
+                "state": json.dumps({
+                    "status": "TRIGGERED",
+                    "visible": True,
+                    "opened_by_route": route["hidden_route_id"],
+                }),
+            },
+        )
         if inserted is not None:
             await record_discovery(
                 session,

@@ -25,6 +25,29 @@ for (const level of levels) {
   const mechanisms = level.mechanisms ?? [];
   const mechanismIds = mechanisms.map((item) => item.mechanism_id);
   if (new Set(mechanismIds).size !== mechanismIds.length) add(`${level.level_id}: duplicate mechanism_id`);
+  const layout = level.prototype_layout;
+  if (!layout?.prototype_only || layout.status !== "PROTOTYPE_TUNING_PENDING") {
+    add(`${level.level_id}: prototype_layout must remain explicitly provisional`);
+  }
+  const bounds = layout?.bounds;
+  const spawn = layout?.spawn;
+  if (!bounds || !spawn ||
+      spawn.x < bounds.min_x || spawn.x > bounds.max_x ||
+      spawn.y < bounds.min_y || spawn.y > bounds.max_y) {
+    add(`${level.level_id}: prototype spawn must be inside configured bounds`);
+  }
+  for (const mechanism of mechanisms) {
+    const position = mechanism.position;
+    if (!mechanism.prototype_only || !position || !bounds ||
+        !Number.isFinite(position.x) || !Number.isFinite(position.y) ||
+        position.x < bounds.min_x || position.x > bounds.max_x ||
+        position.y < bounds.min_y || position.y > bounds.max_y) {
+      add(`${level.level_id}: mechanism ${mechanism.mechanism_id} requires a valid provisional position`);
+    }
+    if (mechanism.config?.prototype_only !== true) {
+      add(`${level.level_id}: mechanism ${mechanism.mechanism_id} config must be marked prototype_only`);
+    }
+  }
   for (const objective of level.necessary_objectives ?? []) {
     if (!mechanismIds.includes(objective.mechanism_id)) {
       add(`${level.level_id}: objective ${objective.objective_id} references missing mechanism ${objective.mechanism_id}`);

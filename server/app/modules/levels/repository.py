@@ -273,16 +273,19 @@ async def start_level(
     run = (
         await session.execute(
             text("""
-                SELECT run_id, level_id, status::text AS run_status, started_at, ended_at
-                FROM level_runs
-                WHERE run_id = :run_id AND player_id = :player_id
-                FOR UPDATE
+                SELECT r.run_id, r.level_id, r.status::text AS run_status,
+                       r.started_at, r.ended_at, l.config
+                FROM level_runs AS r
+                JOIN levels AS l ON l.level_id = r.level_id
+                WHERE r.run_id = :run_id AND r.player_id = :player_id
+                FOR UPDATE OF r
             """),
             {"run_id": run_id, "player_id": player_id},
         )
     ).mappings().one_or_none()
     if run is None:
         raise LevelNotFound
+    level_config = run["config"] or {}
     if run["run_status"] == "CREATED":
         run = (
             await session.execute(
@@ -297,15 +300,44 @@ async def start_level(
         ).mappings().one()
     elif run["run_status"] != "RUNNING":
         raise InvalidLevelRunState
-    if run["level_id"] == "LV-ROOM-01":
-        await session.execute(
-            text("""
-                INSERT INTO level_run_positions (run_id, player_id, x, y)
-                VALUES (:run_id, :player_id, 1.0, 4.0)
-                ON CONFLICT (run_id, player_id) DO NOTHING
-            """),
-            {"run_id": run_id, "player_id": player_id},
-        )
+    spawn = level_config.get("prototype_spawn", {"x": 1.0, "y": 4.0})
+    await session.execute(
+        text("""
+            INSERT INTO level_run_positions (run_id, player_id, x, y)
+            VALUES (:run_id, :player_id, :x, :y)
+            ON CONFLICT (run_id, player_id) DO NOTHING
+        """),
+        {
+            "run_id": run_id,
+            "player_id": player_id,
+            "x": float(spawn.get("x", 1.0)),
+            "y": float(spawn.get("y", 4.0)),
+        },
+    )
+    await session.execute(
+        text("""
+            INSERT INTO mechanism_states
+                (run_id, player_id, mechanism_config_id, mechanism_type, state)
+            SELECT
+                :run_id,
+                :player_id,
+                mechanism_config_id,
+                mechanism_type,
+                jsonb_build_object(
+                    'status', initial_state,
+                    'direction', COALESCE((config ->> 'initial_direction')::integer, 1),
+                    'visible', COALESCE((config ->> 'visible_by_default')::boolean, false)
+                )
+            FROM level_mechanism_catalog
+            WHERE level_id = :level_id AND is_enabled = true
+            ON CONFLICT (run_id, mechanism_config_id) DO NOTHING
+        """),
+        {
+            "run_id": run_id,
+            "player_id": player_id,
+            "level_id": run["level_id"],
+        },
+    )
     await session.commit()
     return {
         "run_id": str(run["run_id"]),

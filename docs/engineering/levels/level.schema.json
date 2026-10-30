@@ -102,7 +102,9 @@
         "mechanism_id",
         "mechanism_type",
         "initial_state",
-        "config"
+        "config",
+        "position",
+        "prototype_only"
       ],
       "properties": {
         "mechanism_id": {
@@ -116,6 +118,29 @@
         },
         "config": {
           "type": "object"
+        },
+        "position": {
+          "type": "object",
+          "required": [
+            "x",
+            "y"
+          ],
+          "properties": {
+            "x": {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 12
+            },
+            "y": {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 8
+            }
+          },
+          "additionalProperties": false
+        },
+        "prototype_only": {
+          "const": true
         }
       },
       "additionalProperties": false
@@ -134,7 +159,8 @@
         "mechanisms",
         "necessary_objectives",
         "discoveries",
-        "entrance_id"
+        "entrance_id",
+        "prototype_layout"
       ],
       "properties": {
         "level_id": {
@@ -203,6 +229,78 @@
         },
         "presentation": {
           "type": "object"
+        },
+        "prototype_layout": {
+          "type": "object",
+          "required": [
+            "prototype_only",
+            "status",
+            "bounds",
+            "spawn",
+            "movement_speed",
+            "interaction_radius"
+          ],
+          "properties": {
+            "prototype_only": {
+              "const": true
+            },
+            "status": {
+              "const": "PROTOTYPE_TUNING_PENDING"
+            },
+            "bounds": {
+              "type": "object",
+              "required": [
+                "min_x",
+                "max_x",
+                "min_y",
+                "max_y"
+              ],
+              "properties": {
+                "min_x": {
+                  "const": 0
+                },
+                "max_x": {
+                  "const": 12
+                },
+                "min_y": {
+                  "const": 0
+                },
+                "max_y": {
+                  "const": 8
+                }
+              },
+              "additionalProperties": false
+            },
+            "spawn": {
+              "type": "object",
+              "required": [
+                "x",
+                "y"
+              ],
+              "properties": {
+                "x": {
+                  "type": "number",
+                  "minimum": 0,
+                  "maximum": 12
+                },
+                "y": {
+                  "type": "number",
+                  "minimum": 0,
+                  "maximum": 8
+                }
+              },
+              "additionalProperties": false
+            },
+            "movement_speed": {
+              "type": "number",
+              "exclusiveMinimum": 0
+            },
+            "interaction_radius": {
+              "type": "number",
+              "exclusiveMinimum": 0
+            }
+          },
+          "additionalProperties": false
         }
       },
       "additionalProperties": false

@@ -20,22 +20,41 @@
           "mechanism_type": "HIDEABLE",
           "initial_state": "HIDDEN",
           "config": {
-            "reveal_rule": "RULE_ECHO"
-          }
+            "reveal_rule": "RULE_ECHO",
+            "prototype_only": true
+          },
+          "position": {
+            "x": 5,
+            "y": 4
+          },
+          "prototype_only": true
         },
         {
           "mechanism_id": "M01-LIGHT-01",
           "mechanism_type": "LIGHT_REVEAL",
           "initial_state": "INACTIVE",
           "config": {
-            "requires_interaction": true
-          }
+            "requires_interaction": true,
+            "prototype_only": true
+          },
+          "position": {
+            "x": 7.5,
+            "y": 4
+          },
+          "prototype_only": true
         },
         {
           "mechanism_id": "M01-EXIT-01",
           "mechanism_type": "EXIT_GATE",
           "initial_state": "LOCKED",
-          "config": {}
+          "config": {
+            "prototype_only": true
+          },
+          "position": {
+            "x": 10.5,
+            "y": 4
+          },
+          "prototype_only": true
         }
       ],
       "necessary_objectives": [
@@ -56,6 +75,22 @@
       "presentation": {
         "hint_level": "L1",
         "completion_effect": "FX_ROOM_CLEAR_01"
+      },
+      "prototype_layout": {
+        "prototype_only": true,
+        "status": "PROTOTYPE_TUNING_PENDING",
+        "bounds": {
+          "min_x": 0,
+          "max_x": 12,
+          "min_y": 0,
+          "max_y": 8
+        },
+        "spawn": {
+          "x": 1,
+          "y": 4
+        },
+        "movement_speed": 3,
+        "interaction_radius": 1.5
       }
     },
     {
@@ -80,8 +115,14 @@
           "initial_state": "INVISIBLE",
           "config": {
             "stable_state": "OPEN",
-            "requires_combo": "COMBO-001"
-          }
+            "requires_combo": "COMBO-001",
+            "prototype_only": true
+          },
+          "position": {
+            "x": 6,
+            "y": 4
+          },
+          "prototype_only": true
         }
       ],
       "necessary_objectives": [
@@ -97,6 +138,22 @@
       "presentation": {
         "hint_level": "L1",
         "completion_effect": "FX_ROOM_CLEAR_02"
+      },
+      "prototype_layout": {
+        "prototype_only": true,
+        "status": "PROTOTYPE_TUNING_PENDING",
+        "bounds": {
+          "min_x": 0,
+          "max_x": 12,
+          "min_y": 0,
+          "max_y": 8
+        },
+        "spawn": {
+          "x": 1,
+          "y": 4
+        },
+        "movement_speed": 3,
+        "interaction_radius": 1.5
       }
     },
     {
@@ -121,16 +178,28 @@
           "initial_state": "DORMANT",
           "config": {
             "reveal_rule": "RULE_ECHO",
-            "reverse_rule": "RULE_REVERSE"
-          }
+            "reverse_rule": "RULE_REVERSE",
+            "prototype_only": true
+          },
+          "position": {
+            "x": 4,
+            "y": 4
+          },
+          "prototype_only": true
         },
         {
           "mechanism_id": "M03-DOOR-01",
           "mechanism_type": "DOOR_BARRIER",
           "initial_state": "CLOSED",
           "config": {
-            "open_on_combo": "COMBO-002"
-          }
+            "open_on_combo": "COMBO-002",
+            "prototype_only": true
+          },
+          "position": {
+            "x": 8,
+            "y": 4
+          },
+          "prototype_only": true
         }
       ],
       "necessary_objectives": [
@@ -147,6 +216,22 @@
       "presentation": {
         "hint_level": "L1",
         "completion_effect": "FX_ROOM_CLEAR_03"
+      },
+      "prototype_layout": {
+        "prototype_only": true,
+        "status": "PROTOTYPE_TUNING_PENDING",
+        "bounds": {
+          "min_x": 0,
+          "max_x": 12,
+          "min_y": 0,
+          "max_y": 8
+        },
+        "spawn": {
+          "x": 1,
+          "y": 4
+        },
+        "movement_speed": 3,
+        "interaction_radius": 1.5
       }
     },
     {
@@ -170,16 +255,28 @@
           "mechanism_type": "MOVING_OBJECT",
           "initial_state": "MOVING_FORWARD",
           "config": {
-            "reverse_combo": "COMBO-003"
-          }
+            "reverse_combo": "COMBO-003",
+            "prototype_only": true
+          },
+          "position": {
+            "x": 4,
+            "y": 4
+          },
+          "prototype_only": true
         },
         {
           "mechanism_id": "M04-PLATFORM-02",
           "mechanism_type": "PLATFORM_BRIDGE",
           "initial_state": "UNSTABLE",
           "config": {
-            "lock_at_endpoint": true
-          }
+            "lock_at_endpoint": true,
+            "prototype_only": true
+          },
+          "position": {
+            "x": 8,
+            "y": 4
+          },
+          "prototype_only": true
         }
       ],
       "necessary_objectives": [
@@ -196,6 +293,22 @@
       "presentation": {
         "hint_level": "L1",
         "completion_effect": "FX_ROOM_CLEAR_04"
+      },
+      "prototype_layout": {
+        "prototype_only": true,
+        "status": "PROTOTYPE_TUNING_PENDING",
+        "bounds": {
+          "min_x": 0,
+          "max_x": 12,
+          "min_y": 0,
+          "max_y": 8
+        },
+        "spawn": {
+          "x": 1,
+          "y": 4
+        },
+        "movement_speed": 3,
+        "interaction_radius": 1.5
       }
     },
     {
@@ -222,32 +335,56 @@
           "mechanism_type": "PLATFORM_BRIDGE",
           "initial_state": "INVISIBLE",
           "config": {
-            "requires_combo": "COMBO-001"
-          }
+            "requires_combo": "COMBO-001",
+            "prototype_only": true
+          },
+          "position": {
+            "x": 3,
+            "y": 4
+          },
+          "prototype_only": true
         },
         {
           "mechanism_id": "M05-ENERGY-01",
           "mechanism_type": "ENERGY_NODE",
           "initial_state": "DORMANT",
           "config": {
-            "requires_combo": "COMBO-002"
-          }
+            "requires_combo": "COMBO-002",
+            "prototype_only": true
+          },
+          "position": {
+            "x": 6,
+            "y": 4
+          },
+          "prototype_only": true
         },
         {
           "mechanism_id": "M05-REVERSE-01",
           "mechanism_type": "MOVING_OBJECT",
           "initial_state": "MOVING_FORWARD",
           "config": {
-            "requires_combo": "COMBO-003"
-          }
+            "requires_combo": "COMBO-003",
+            "prototype_only": true
+          },
+          "position": {
+            "x": 9,
+            "y": 4
+          },
+          "prototype_only": true
         },
         {
           "mechanism_id": "M05-HIDDEN-GATE",
           "mechanism_type": "HIDDEN_GATE",
           "initial_state": "SEALED",
           "config": {
-            "opens_on_route": "HIDDEN-ROUTE-01"
-          }
+            "opens_on_route": "HIDDEN-ROUTE-01",
+            "prototype_only": true
+          },
+          "position": {
+            "x": 11,
+            "y": 4
+          },
+          "prototype_only": true
         }
       ],
       "necessary_objectives": [
@@ -276,6 +413,22 @@
       "presentation": {
         "hint_level": "L1",
         "completion_effect": "FX_ROOM_CLEAR_05"
+      },
+      "prototype_layout": {
+        "prototype_only": true,
+        "status": "PROTOTYPE_TUNING_PENDING",
+        "bounds": {
+          "min_x": 0,
+          "max_x": 12,
+          "min_y": 0,
+          "max_y": 8
+        },
+        "spawn": {
+          "x": 1,
+          "y": 4
+        },
+        "movement_speed": 3,
+        "interaction_radius": 1.5
       }
     },
     {
@@ -312,16 +465,28 @@
           "mechanism_type": "HIDDEN_GATE",
           "initial_state": "OPEN",
           "config": {
-            "opened_by_route": "HIDDEN-ROUTE-01"
-          }
+            "opened_by_route": "HIDDEN-ROUTE-01",
+            "prototype_only": true
+          },
+          "position": {
+            "x": 3,
+            "y": 4
+          },
+          "prototype_only": true
         },
         {
           "mechanism_id": "H01-END",
           "mechanism_type": "ENDING_CORE",
           "initial_state": "DORMANT",
           "config": {
-            "target_state": "ENDING_REVEALED"
-          }
+            "target_state": "ENDING_REVEALED",
+            "prototype_only": true
+          },
+          "position": {
+            "x": 9,
+            "y": 4
+          },
+          "prototype_only": true
         }
       ],
       "necessary_objectives": [
@@ -337,6 +502,22 @@
       "presentation": {
         "hint_level": "L1",
         "completion_effect": "FX_HIDDEN_ENDING"
+      },
+      "prototype_layout": {
+        "prototype_only": true,
+        "status": "PROTOTYPE_TUNING_PENDING",
+        "bounds": {
+          "min_x": 0,
+          "max_x": 12,
+          "min_y": 0,
+          "max_y": 8
+        },
+        "spawn": {
+          "x": 1,
+          "y": 4
+        },
+        "movement_speed": 3,
+        "interaction_radius": 1.5
       }
     }
   ],

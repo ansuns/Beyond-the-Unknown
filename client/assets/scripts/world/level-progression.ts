@@ -25,8 +25,15 @@ export function selectNextPlayableLevel<T extends LevelProgressionCandidate>(
   const nextIncomplete = normal.find((level) => !completed.has(level.level_id));
   if (nextIncomplete) return nextIncomplete;
 
-  const hiddenEnding = levels.find((level) => level.is_hidden && level.is_unlocked);
+  const hiddenEnding = levels.find(
+    (level) => level.is_hidden && level.is_unlocked && !completed.has(level.level_id)
+  );
   if (hiddenEnding) return hiddenEnding;
+
+  const hiddenAlreadyCompleted = levels.some(
+    (level) => level.is_hidden && completed.has(level.level_id)
+  );
+  if (hiddenAlreadyCompleted) return undefined;
 
   return normal.filter((level) => level.repeatable).at(-1);
 }
