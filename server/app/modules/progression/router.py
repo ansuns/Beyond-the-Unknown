@@ -13,6 +13,9 @@ from app.modules.progression.repository import (
     RewardNotClaimable,
     RewardNotFound,
     get_leaderboard,
+    get_player_collections,
+    get_player_discoveries,
+    get_world_archive,
     get_progress_summary,
     list_player_rewards,
     claim_reward,
@@ -35,6 +38,7 @@ async def post_level_settle(
 ) -> dict:
     try:
         data = await settle_level(session, player_id, payload.run_id, idempotency_key)
+        await session.commit()
     except ProgressionRunNotFound as exc:
         raise HTTPException(status_code=404, detail="Level run not found") from exc
     except ProgressionRunNotActive as exc:
@@ -45,6 +49,38 @@ async def post_level_settle(
             detail={"code": "OBJECTIVES_INCOMPLETE", "missing_objectives": exc.missing},
         ) from exc
     return success_envelope(data, request.state.request_id)
+
+
+
+@router.get("/discovery/me")
+async def get_my_discoveries(
+    request: Request,
+    player_id=Depends(get_current_player_id),
+    session: AsyncSession = Depends(get_session),
+) -> dict:
+    data = await get_player_discoveries(session, player_id)
+    return success_envelope({"discoveries": data}, request.state.request_id)
+
+
+@router.get("/collection/me")
+async def get_my_collections(
+    request: Request,
+    player_id=Depends(get_current_player_id),
+    session: AsyncSession = Depends(get_session),
+) -> dict:
+    data = await get_player_collections(session, player_id)
+    return success_envelope({"collections": data}, request.state.request_id)
+
+
+@router.get("/archive")
+async def get_world_archive_endpoint(
+    request: Request,
+    limit: Annotated[int, Query(ge=1, le=100)] = 50,
+    player_id=Depends(get_current_player_id),
+    session: AsyncSession = Depends(get_session),
+) -> dict:
+    data = await get_world_archive(session, limit)
+    return success_envelope({"entries": data}, request.state.request_id)
 
 
 @router.get("/progress/me")
