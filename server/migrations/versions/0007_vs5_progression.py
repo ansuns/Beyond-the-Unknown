@@ -39,7 +39,7 @@ def upgrade() -> None:
             """),
             {"level_id": level_id, "old_id": old_id, "new_id": new_id},
         )
-        op.execute(
+        op.get_bind().execute(
             sa.text("""
                 UPDATE mechanism_states AS s
                 SET mechanism_config_id = :new_id
