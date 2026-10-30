@@ -8,6 +8,8 @@ from uuid import UUID
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.modules.progression.service import mark_objective_complete, record_discovery
+
 
 class RuleRunNotFound(Exception):
     pass
@@ -464,6 +466,56 @@ async def cast_rule(
         target_id,
         now,
     )
+
+    if effects:
+        await record_discovery(
+            session, player_id, run_id, f"DISC-{rule_id.replace('_', '-')}"
+        )
+        if rule_id == "RULE_ECHO" and any(
+            item["mechanism_type"] == "HIDEABLE" for item in mechanisms
+        ):
+            await record_discovery(
+                session, player_id, run_id, "DISC-HIDDEN-OBJ-ROOM01-01"
+            )
+            await mark_objective_complete(
+                session,
+                player_id,
+                run_id,
+                "HIDDEN_TARGET_REVEALED",
+                f"rule:{run_id}:{idempotency_key}",
+            )
+    if combo_result is not None:
+        combo_id = combo_result["combo_id"]
+        await record_discovery(
+            session, player_id, run_id, f"DISC-{combo_id}"
+        )
+        combo_objectives = {
+            ("LV-ROOM-02", "COMBO-001"): "BRIDGE_OPEN",
+            ("LV-ROOM-03", "COMBO-002"): "ENERGY_DOOR_OPEN",
+            ("LV-ROOM-04", "COMBO-003"): "MOVING_PLATFORM_LOCKED",
+            ("LV-ROOM-05", "COMBO-001"): "ROOM05_TARGET_A",
+            ("LV-ROOM-05", "COMBO-002"): "ROOM05_TARGET_B",
+            ("LV-ROOM-05", "COMBO-003"): "ROOM05_TARGET_C",
+        }
+        objective_id = combo_objectives.get((run["level_id"], combo_id))
+        if objective_id is not None:
+            await mark_objective_complete(
+                session,
+                player_id,
+                run_id,
+                objective_id,
+                f"combo:{run_id}:{combo_id}:{target_id}",
+            )
+        puzzle_discoveries = {
+            "COMBO-001": "DISC-PUZZLE-ROOM02-BRIDGE",
+            "COMBO-002": "DISC-PUZZLE-ROOM03-ENERGY",
+            "COMBO-003": "DISC-PUZZLE-ROOM04-PLATFORM",
+        }
+        puzzle_discovery = puzzle_discoveries.get(combo_id)
+        if puzzle_discovery is not None:
+            await record_discovery(
+                session, player_id, run_id, puzzle_discovery
+            )
 
     cooldown_until = now + timedelta(milliseconds=rule["cooldown_ms"])
     active_target = (
