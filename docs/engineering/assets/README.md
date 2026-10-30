@@ -17,6 +17,17 @@
 
 每个条目必须维护 `files`（相对 client/ 的真实文件路径）、`status`、`expected_directory`。只有文件存在且完成对应验收，才允许置为 `READY`。
 
+## 制作计划
+
+详细制作优先级、P0/P1/P2 资源范围、交付格式、分包建议和 READY 验收证据见 [production-plan.md](./production-plan.md)。
+
+## Cocos / 微信小游戏包体基线
+
+- Cocos Creator 3.8 微信小游戏主包平台上限 4 MB、全部分包合计上限 30 MB；项目安全预算分别为 3.2 MB 和 24 MB。
+- 使用 Cocos Asset Bundle 将主地图、房间和隐藏结局按需分包；微信本地分包不能配置为远程包。资源 bundle 尽量不包含相互依赖的脚本。
+- 微信小游戏纹理压缩格式和 ASTC 真机限制参见 [Cocos Creator 3.8 压缩纹理文档](https://docs.cocos.com/creator/3.8/manual/zh/asset/compress-texture.html) 与 [小游戏分包文档](https://docs.cocos.com/creator/3.8/manual/zh/editor/publish/subpackage.html)。
+- 包体限制属于平台基线；项目安全预算属于内部约束。每次构建必须记录真实构建产物大小。
+
 ## 资源范围
 
 - 角色：12 个角色，每个至少头像、主体模型/2D角色资源、预览和动画组；动画组必须包含 8 方向 IDLE、8 方向 MOVE、INTERACT、ACT_001–ACT_004。
