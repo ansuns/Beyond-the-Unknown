@@ -29,3 +29,16 @@ npm test
 ```
 
 This is a TypeScript client foundation, not yet a complete playable Cocos scene project. Scene assets, prefabs, input bindings, art resources and WeChat DevTools packaging are subsequent client integration work. Construct `RestClient` with `createWeChatFetch(wx)` and `MapSession` with `createWeChatWebSocketFactory(wx)` in the WeChat runtime. Import the source into the pinned Cocos Creator 3.x project; do not commit editor caches or generated build output.
+
+
+## Personal level and law API client
+
+`RestClient` now exposes typed methods for the VS-3/VS-4 contract:
+
+- `listLevels()`
+- `enterLevel(levelId, entranceId, idempotencyKey)`
+- `startLevel(runId)` / `abandonLevel(runId)`
+- `applyLawAction(runId, ruleId, mechanismId, action, idempotencyKey)`
+- `getRunMechanisms(runId)`
+
+Write calls that can be retried accept an explicit idempotency key. The API client does not calculate law effects, combo IDs, or mechanism states; it only sends the player's intent and consumes the server-authoritative response. Scene/UI bindings and an interactive playable room are not part of this API adapter slice.
