@@ -318,7 +318,9 @@ def test_outbox_finalizes_season_and_grants_rank_reward_once() -> None:
                 VALUES
                     (:player_id, 'EXPLORE', :season_id, 100, 'EXP_DISCOVER',
                      'test-season-discovery', 'test-season-score-event')
-                ON CONFLICT (board_type, period_id, idempotency_key) DO NOTHING
+                ON CONFLICT (board_type, period_id, idempotency_key) DO UPDATE
+                SET player_id = EXCLUDED.player_id, delta = EXCLUDED.delta,
+                    reason = EXCLUDED.reason
             """, {"player_id": player_id, "season_id": season_id}),
             ("""
                 INSERT INTO rewards
