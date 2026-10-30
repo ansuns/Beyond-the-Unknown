@@ -157,8 +157,24 @@ async def enter_level(
     if level is None:
         raise LevelNotFound
     if level["is_hidden"]:
-        # Hidden-route unlock is driven by authoritative discovery state in VS-5.
-        raise LevelLocked
+        unlocked = (
+            await session.execute(
+                text("""
+                    SELECT 1
+                    FROM hidden_routes AS h
+                    JOIN player_unlocked_hidden_routes AS u
+                      ON u.hidden_route_id = h.hidden_route_id
+                    WHERE u.player_id = :player_id
+                      AND h.result_level_id = :level_id
+                      AND h.is_enabled = true
+                      AND h.config_status = 'READY'
+                    LIMIT 1
+                """),
+                {"player_id": player_id, "level_id": level_id},
+            )
+        ).first()
+        if unlocked is None:
+            raise LevelLocked
 
     active_run = (
         await session.execute(
