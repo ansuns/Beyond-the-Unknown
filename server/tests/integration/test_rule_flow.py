@@ -684,7 +684,10 @@ def test_mechanism_catalog_and_references_match_canonical_gdd_ids() -> None:
             assert row["position_x"] == mechanism["position"]["x"]
             assert row["position_y"] == mechanism["position"]["y"]
             assert row["config"].get("prototype_only") is True
-            assert row["config"].get("linked_mechanism_id") == mechanism["config"].get("linked_mechanism_id")
+            assert (
+                row["config"].get("linked_mechanism_id")
+                == mechanism["config"].get("linked_mechanism_id")
+            )
     assert contract["combo_targets"] == [
         "M02-BRIDGE-01",
         "M03-ENERGY-01",
