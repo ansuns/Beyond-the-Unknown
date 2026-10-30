@@ -1,6 +1,7 @@
 # ruff: noqa: I001
 
 import os
+import time
 from uuid import uuid4
 
 import pytest
@@ -171,12 +172,15 @@ def test_room01_echo_exit_interaction_and_settlement() -> None:
             )
             assert outside.status_code == 422
 
-            at_exit = client.post(
-                "/api/v1/level/position",
-                headers=player["headers"],
-                json={"run_id": run_id, "x": 10.5, "y": 4},
-            )
-            assert at_exit.status_code == 200, at_exit.text
+            at_exit = None
+            for x in range(2, 11):
+                time.sleep(0.1)
+                at_exit = client.post(
+                    "/api/v1/level/position",
+                    headers=player["headers"],
+                    json={"run_id": run_id, "x": float(x), "y": 4},
+                )
+                assert at_exit.status_code == 200, at_exit.text
 
             locked_exit = client.post(
                 "/api/v1/level/mechanism/interact",
