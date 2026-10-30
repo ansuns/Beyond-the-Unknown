@@ -5,7 +5,6 @@
 Requires Docker Compose and Python 3.12+ with uv.
 
 ```bash
-cp server/.env.example server/.env
 docker compose up --build
 ```
 
