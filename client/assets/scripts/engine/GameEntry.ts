@@ -65,6 +65,7 @@ export class BeyondTheUnknownGameEntry extends Component {
   private levelMoveSendElapsed = 0;
   private levelPosition = { x: 1, y: 4 };
   private levelAvatar?: Node;
+  private levelPositionSyncPromise?: Promise<void>;
   private readonly roomControlNodes: Node[] = [];
   private roomMechanismStates = new Map<string, Record<string, unknown>>();
   private levelRoomScale = 40;
@@ -323,6 +324,7 @@ export class BeyondTheUnknownGameEntry extends Component {
 
   private async loginAndEnterWorld(): Promise<void> {
     try {
+      this.clearRoomControls();
       this.worldRoot?.removeAllChildren();
       this.clearAvatars();
       this.moveTarget = undefined;
@@ -437,9 +439,10 @@ export class BeyondTheUnknownGameEntry extends Component {
     const localX = uiPoint.x - visible.width / 2 - this.worldRoot.position.x;
     const localY = uiPoint.y - visible.height / 2 - this.worldRoot.position.y;
     if (this.currentMode === "PERSONAL_LEVEL") {
+      // ROOM-01 artwork is centered and occupies 480 × 320 px (12 × 8 units).
       this.moveTarget = {
-        x: Math.max(0, Math.min(12, (localX + transform.width / 2) / this.levelRoomScale)),
-        y: Math.max(0, Math.min(8, (localY + transform.height / 2) / this.levelRoomScale))
+        x: Math.max(0, Math.min(12, (localX + 240) / this.levelRoomScale)),
+        y: Math.max(0, Math.min(8, (localY + 160) / this.levelRoomScale))
       };
       return;
     }
@@ -473,10 +476,7 @@ export class BeyondTheUnknownGameEntry extends Component {
     );
     this.levelMoveSendElapsed += deltaTime;
     if (this.levelMoveSendElapsed >= 0.12 || reached) {
-      const position = { ...this.levelPosition };
-      void this.levelSession.updatePosition(position.x, position.y).catch((error) => {
-        this.setStatus(`位置同步失败：${error instanceof Error ? error.message : "网络错误"}`);
-      });
+      this.sendLevelPosition({ ...this.levelPosition });
       this.levelMoveSendElapsed = 0;
     }
     if (reached) this.moveTarget = undefined;
@@ -485,15 +485,16 @@ export class BeyondTheUnknownGameEntry extends Component {
   private async castRoomEcho(): Promise<void> {
     if (!this.levelSession) return;
     try {
+      await this.flushLevelPosition();
       const result = await this.levelSession.castRule(
         "RULE_ECHO",
         { targetId: "M01-HIDEABLE-01", targetPoint: { x: 5, y: 4 } },
         this.makeIdempotencyKey("room01-echo")
       );
       const state = await this.levelSession.refreshState();
-      this.roomMechanismStates = new Map(state.mechanisms.map((item) => [item.mechanism_id, item.state]));
-      this.setStatus(result.effects.length ? "回声扩散：隐藏的符号显现了" : "回声没有回应");
+      this.applyRoomMechanismStates(state);
       this.drawPersonalRoom(this.pendingLevelName);
+      this.setStatus(result.effects.length ? "回声扩散：隐藏的符号显现了" : "回声没有回应");
     } catch (error) {
       this.setStatus(`回声失败：${error instanceof Error ? error.message : "请稍后重试"}`);
     }
@@ -502,16 +503,18 @@ export class BeyondTheUnknownGameEntry extends Component {
   private async interactRoomExit(): Promise<void> {
     if (!this.levelSession) return;
     try {
+      await this.flushLevelPosition();
       const result = await this.levelSession.interact(
         "M01-EXIT-01",
         this.makeIdempotencyKey("room01-exit")
       );
+      this.roomMechanismStates.set(result.mechanism_id, result.state);
       if (result.state.status === "TRIGGERED") {
         const settled = await this.levelSession.settle(this.makeIdempotencyKey("room01-settle"));
-        this.setStatus(`探索完成 · 用时 ${Math.round(settled.completion_time_ms / 1000)} 秒`);
         this.currentMode = "MENU";
         this.levelSession = undefined;
-        this.drawPersonalRoom("探索完成");
+        this.drawPersonalRoom("探索完成", true);
+        this.setStatus(`探索完成 · 用时 ${Math.round(settled.completion_time_ms / 1000)} 秒`);
       }
     } catch (error) {
       this.setStatus(`出口尚未开启或距离不足：${error instanceof Error ? error.message : "请继续探索"}`);
@@ -575,14 +578,53 @@ export class BeyondTheUnknownGameEntry extends Component {
     }
     this.levelPosition = { x: 1, y: 4 };
     this.levelMoveSendElapsed = 0;
+    this.levelPositionSyncPromise = undefined;
+    this.roomMechanismStates.clear();
+    const state = await this.levelSession.refreshState();
+    this.applyRoomMechanismStates(state);
     this.setStatus(
       `已进入个人关卡 ${levelName} · 原型坐标/数值待实测 · 法则可用配置 ${ready}/${configured.length}`
     );
     this.drawPersonalRoom(levelName);
   }
 
-  private drawPersonalRoom(levelName: string): void {
+  private applyRoomMechanismStates(
+    state: { mechanisms: Array<{ mechanism_id: string; state: Record<string, unknown> }> }
+  ): void {
+    this.roomMechanismStates = new Map(
+      state.mechanisms.map((item) => [item.mechanism_id, item.state])
+    );
+  }
+
+  private sendLevelPosition(position: { x: number; y: number }): void {
+    if (!this.levelSession || this.levelPositionSyncPromise) return;
+    const session = this.levelSession;
+    const request = session.updatePosition(position.x, position.y)
+      .catch((error) => {
+        this.setStatus(`位置同步失败：${error instanceof Error ? error.message : "网络错误"}`);
+      })
+      .finally(() => {
+        if (this.levelPositionSyncPromise === request) {
+          this.levelPositionSyncPromise = undefined;
+        }
+      });
+    this.levelPositionSyncPromise = request;
+  }
+
+  private async flushLevelPosition(): Promise<void> {
+    if (!this.levelSession) return;
+    if (this.levelPositionSyncPromise) await this.levelPositionSyncPromise;
+    await this.levelSession.updatePosition(this.levelPosition.x, this.levelPosition.y);
+  }
+
+  private clearRoomControls(): void {
+    for (const control of this.roomControlNodes) control.destroy();
+    this.roomControlNodes.length = 0;
+  }
+
+  private drawPersonalRoom(levelName: string, completed = false): void {
     if (!this.worldRoot) return;
+    this.clearRoomControls();
     this.worldRoot.removeAllChildren();
     for (const control of this.roomControlNodes) control.destroy();
     this.roomControlNodes.length = 0;
@@ -616,9 +658,17 @@ export class BeyondTheUnknownGameEntry extends Component {
     };
     const hiddenState = this.roomMechanismStates.get("M01-HIDEABLE-01");
     const hiddenVisible = hiddenState?.visible === true || hiddenState?.visible_by_echo === true;
+    const exitOpen = this.roomMechanismStates.get("M01-EXIT-01")?.status === "TRIGGERED";
     drawMarker("HiddenObject", 5, 4, new Color(125, 207, 236, 255), 14, hiddenVisible);
-    drawMarker("LightMarker", 7.5, 4, new Color(236, 211, 132, 255), 11, true);
-    drawMarker("ExitGate", 10.5, 4, new Color(155, 214, 174, 255), 17, true);
+    drawMarker("LightMarker", 7.5, 4, new Color(236, 211, 132, 255), 11, hiddenVisible);
+    drawMarker(
+      "ExitGate",
+      10.5,
+      4,
+      exitOpen ? new Color(155, 214, 174, 255) : new Color(180, 105, 105, 255),
+      17,
+      exitOpen
+    );
     this.levelAvatar = drawMarker("Player", this.levelPosition.x, this.levelPosition.y, new Color(115, 220, 255, 255), 12, true);
 
     const labelNode = new Node("RoomTitle");
@@ -631,12 +681,25 @@ export class BeyondTheUnknownGameEntry extends Component {
     label.color = new Color(226, 237, 246, 255);
     label.horizontalAlign = Label.HorizontalAlign.CENTER;
 
-    this.roomControlNodes.push(
-      this.createButton("RoomEchoButton", "回声 · 显形", -95, -size.height / 2 + 155, 150, 42, () => this.castRoomEcho()),
-      this.createButton("RoomExitButton", "靠近出口并交互", 95, -size.height / 2 + 155, 170, 42, () => this.interactRoomExit()),
-      this.createButton("RoomAbandonButton", "放弃返回", size.width / 2 - 82, -size.height / 2 + 105, 130, 38, () => this.returnToWorld())
-    );
-    this.setStatus("点击房间地面移动：先走近隐藏目标使用回声，再前往出口交互");
+    if (completed) {
+      this.roomControlNodes.push(
+        this.createButton(
+          "BackToWorldButton",
+          "返回共享世界",
+          0,
+          -size.height / 2 + 105,
+          170,
+          42,
+          () => this.loginAndEnterWorld()
+        )
+      );
+    } else {
+      this.roomControlNodes.push(
+        this.createButton("RoomEchoButton", "回声 · 显形", -95, -size.height / 2 + 155, 150, 42, () => this.castRoomEcho()),
+        this.createButton("RoomExitButton", "靠近出口并交互", 95, -size.height / 2 + 155, 170, 42, () => this.interactRoomExit()),
+        this.createButton("RoomAbandonButton", "放弃返回", size.width / 2 - 82, -size.height / 2 + 105, 130, 38, () => this.returnToWorld())
+      );
+    }
   }
 
   private async returnToWorld(): Promise<void> {
