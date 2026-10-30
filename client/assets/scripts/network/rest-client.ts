@@ -8,6 +8,8 @@ import type {
   LevelCatalogData,
   LevelEnterData,
   LevelRunData,
+  LevelPositionData,
+  MechanismInteractData,
   LoginData,
   MapEnterData,
   PersonalLevelState,
@@ -125,6 +127,21 @@ export class RestClient {
     return this.request<LevelRunData>("/level/start", {
       method: "POST",
       body: JSON.stringify({ run_id: runId })
+    });
+  }
+
+  async updateLevelPosition(runId: string, x: number, y: number): Promise<LevelPositionData> {
+    return this.request<LevelPositionData>("/level/position", {
+      method: "POST",
+      body: JSON.stringify({ run_id: runId, x, y })
+    });
+  }
+
+  async interactMechanism(runId: string, mechanismId: string, idempotencyKey: string): Promise<MechanismInteractData> {
+    return this.request<MechanismInteractData>("/level/mechanism/interact", {
+      method: "POST",
+      body: JSON.stringify({ run_id: runId, mechanism_id: mechanismId }),
+      headers: { "Idempotency-Key": idempotencyKey }
     });
   }
 

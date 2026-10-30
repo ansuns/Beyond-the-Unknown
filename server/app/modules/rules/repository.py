@@ -372,6 +372,23 @@ async def cast_rule(
         x, y = target_point["x"], target_point["y"]
         if not math.isfinite(x) or not math.isfinite(y):
             raise RuleTargetInvalid
+        # ROOM-01 Echo is cast from the player's authoritative server position;
+        # target_point cannot be used to reveal objects across the whole room.
+        if run["level_id"] == "LV-ROOM-01":
+            position = (
+                await session.execute(
+                    text("""
+                        SELECT x, y FROM level_run_positions
+                        WHERE run_id = :run_id AND player_id = :player_id
+                        FOR UPDATE
+                    """),
+                    {"run_id": run_id, "player_id": player_id},
+                )
+            ).mappings().one_or_none()
+            if position is None or math.hypot(
+                float(position["x"]) - x, float(position["y"]) - y
+            ) > rule["radius"]:
+                raise RuleTargetInvalid
         candidates = (
             await session.execute(
                 text("""
@@ -895,3 +912,148 @@ async def get_level_state(
             for row in rows
         ],
     }
+
+
+async def interact_mechanism(
+    session: AsyncSession,
+    player_id: UUID,
+    run_id: UUID,
+    mechanism_id: str,
+    idempotency_key: str,
+) -> dict[str, Any]:
+    """Apply a configured PLAYER_INTERACT transition using server-held position."""
+    request_hash = _hash_request("PLAYER_INTERACT", mechanism_id, None)
+    run = await _get_run(session, player_id, run_id)
+
+    prior = (
+        await session.execute(
+            text("""
+                SELECT request_hash, result
+                FROM mechanism_interaction_events
+                WHERE run_id = :run_id AND player_id = :player_id
+                  AND idempotency_key = :idempotency_key
+            """),
+            {
+                "run_id": run_id,
+                "player_id": player_id,
+                "idempotency_key": idempotency_key,
+            },
+        )
+    ).mappings().one_or_none()
+    if prior is not None:
+        if prior["request_hash"] != request_hash:
+            raise RuleIdempotencyConflict
+        result = dict(prior["result"])
+        result["idempotent_replay"] = True
+        await session.commit()
+        return result
+
+    position = (
+        await session.execute(
+            text("""
+                SELECT x, y
+                FROM level_run_positions
+                WHERE run_id = :run_id AND player_id = :player_id
+                FOR UPDATE
+            """),
+            {"run_id": run_id, "player_id": player_id},
+        )
+    ).mappings().one_or_none()
+    if position is None:
+        raise RuleStateConflict
+
+    mechanism = (
+        await session.execute(
+            text("""
+                SELECT mechanism_config_id, mechanism_type, target_type,
+                       initial_state, target_state, trigger_rule,
+                       position_x, position_y, config
+                FROM level_mechanism_catalog
+                WHERE level_id = :level_id
+                  AND mechanism_config_id = :mechanism_id
+                  AND is_enabled = true
+            """),
+            {"level_id": run["level_id"], "mechanism_id": mechanism_id},
+        )
+    ).mappings().one_or_none()
+    if (
+        mechanism is None
+        or "PLAYER_INTERACT" not in mechanism["trigger_rule"]
+        or mechanism["position_x"] is None
+        or mechanism["position_y"] is None
+    ):
+        raise RuleTargetInvalid
+
+    config = mechanism["config"] or {}
+    interaction_radius = float(config.get("interaction_radius", 1.5))
+    distance = math.hypot(
+        float(position["x"]) - mechanism["position_x"],
+        float(position["y"]) - mechanism["position_y"],
+    )
+    if distance > interaction_radius:
+        raise RuleTargetInvalid
+
+    required_visible_id = config.get("requires_visible_mechanism_id")
+    if required_visible_id:
+        prerequisite = (
+            await session.execute(
+                text("""
+                    SELECT state
+                    FROM mechanism_states
+                    WHERE run_id = :run_id AND player_id = :player_id
+                      AND mechanism_config_id = :mechanism_id
+                """),
+                {
+                    "run_id": run_id,
+                    "player_id": player_id,
+                    "mechanism_id": required_visible_id,
+                },
+            )
+        ).scalar_one_or_none()
+        if prerequisite is None or not prerequisite.get("visible", False):
+            raise RuleStateConflict
+
+    state = await _load_mechanism_state(
+        session, run_id, player_id, mechanism
+    )
+    already_interacted = state.get("status") == mechanism["target_state"]
+    if not already_interacted:
+        transitions = list(state.get("transitions", []))
+        transitions.append(
+            {"from": state.get("status"), "to": mechanism["target_state"]}
+        )
+        state["status"] = mechanism["target_state"]
+        state["activated"] = True
+        state["last_interaction"] = "PLAYER_INTERACT"
+        state["transitions"] = transitions
+        await _save_mechanism_state(
+            session, run_id, player_id, mechanism_id, state
+        )
+
+    result = {
+        "run_id": str(run_id),
+        "mechanism_id": mechanism_id,
+        "state": state,
+        "already_interacted": already_interacted,
+        "idempotent_replay": False,
+    }
+    await session.execute(
+        text("""
+            INSERT INTO mechanism_interaction_events
+                (run_id, player_id, mechanism_id, idempotency_key, request_hash, result)
+            VALUES (
+                :run_id, :player_id, :mechanism_id, :idempotency_key,
+                :request_hash, CAST(:result AS jsonb)
+            )
+        """),
+        {
+            "run_id": run_id,
+            "player_id": player_id,
+            "mechanism_id": mechanism_id,
+            "idempotency_key": idempotency_key,
+            "request_hash": request_hash,
+            "result": json.dumps(result),
+        },
+    )
+    await session.commit()
+    return result

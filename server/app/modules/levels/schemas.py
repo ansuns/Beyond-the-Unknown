@@ -10,3 +10,11 @@ class LevelEnterRequest(BaseModel):
 
 class LevelRunRequest(BaseModel):
     run_id: UUID
+
+
+class LevelPositionRequest(BaseModel):
+    model_config = {"allow_inf_nan": False}
+
+    run_id: UUID
+    x: float
+    y: float

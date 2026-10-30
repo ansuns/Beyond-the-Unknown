@@ -121,6 +121,20 @@ export interface LevelCatalogData {
   levels: LevelCatalogItem[];
 }
 
+export interface LevelPositionData {
+  run_id: string;
+  x: number;
+  y: number;
+}
+
+export interface MechanismInteractData {
+  run_id: string;
+  mechanism_id: string;
+  state: Record<string, unknown>;
+  already_interacted: boolean;
+  idempotent_replay: boolean;
+}
+
 export interface LevelRunData {
   run_id: string;
   level_id: string;

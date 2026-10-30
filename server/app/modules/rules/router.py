@@ -17,11 +17,13 @@ from app.modules.rules.repository import (
     RuleTargetInvalid,
     cast_rule,
     get_level_state,
+    interact_mechanism,
     list_player_rules,
     maintain_gaze,
     stop_gaze,
 )
 from app.modules.rules.schemas import (
+    MechanismInteractRequest,
     RuleCastRequest,
     RuleMaintainRequest,
     RuleRunRequest,
@@ -167,4 +169,39 @@ async def get_level_state_endpoint(
             status_code=status.HTTP_409_CONFLICT,
             detail="Level run is not active",
         ) from exc
+    return success_envelope(data, request.state.request_id)
+
+
+@router.post("/mechanism/interact")
+async def post_mechanism_interact(
+    payload: MechanismInteractRequest,
+    request: Request,
+    idempotency_key: Annotated[
+        str, Header(alias="Idempotency-Key", min_length=8, max_length=200)
+    ],
+    player_id=Depends(get_current_player_id),
+    session: AsyncSession = Depends(get_session),
+) -> dict:
+    try:
+        data = await interact_mechanism(
+            session,
+            player_id,
+            payload.run_id,
+            payload.mechanism_id,
+            idempotency_key,
+        )
+    except RuleRunNotFound as exc:
+        raise HTTPException(status_code=404, detail="Level run not found") from exc
+    except RuleTargetInvalid as exc:
+        raise HTTPException(
+            status_code=422,
+            detail="Mechanism is not interactable from the current position",
+        ) from exc
+    except RuleStateConflict as exc:
+        raise HTTPException(
+            status_code=409,
+            detail="Mechanism prerequisites are not satisfied",
+        ) from exc
+    except RuleIdempotencyConflict as exc:
+        raise HTTPException(status_code=409, detail="Idempotency key conflict") from exc
     return success_envelope(data, request.state.request_id)

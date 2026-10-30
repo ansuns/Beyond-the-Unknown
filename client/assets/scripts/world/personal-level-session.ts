@@ -4,6 +4,8 @@ import type {
   LawRuleId,
   LevelEnterData,
   LevelRunData,
+  LevelPositionData,
+  MechanismInteractData,
   PersonalLevelState,
   RuleCastData,
   RuleCatalogData,
@@ -43,6 +45,14 @@ export class PersonalLevelSession {
 
   async start(): Promise<LevelRunData> {
     return this.api.startLevel(this.requireRun());
+  }
+
+  updatePosition(x: number, y: number): Promise<LevelPositionData> {
+    return this.api.updateLevelPosition(this.requireRun(), x, y);
+  }
+
+  interact(mechanismId: string, idempotencyKey: string): Promise<MechanismInteractData> {
+    return this.api.interactMechanism(this.requireRun(), mechanismId, idempotencyKey);
   }
 
   async abandon(): Promise<LevelRunData> {
