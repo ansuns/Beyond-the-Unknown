@@ -47,7 +47,9 @@ class WeChatResponse implements HttpResponseLike {
 export function createWeChatFetch(wx: WeChatNetworkApi): FetchLike {
   return (input, init = {}) => new Promise((resolve, reject) => {
     if (init.signal?.aborted) {
-      reject(new Error("AbortError"));
+      const error = new Error("Request aborted");
+      error.name = "AbortError";
+      reject(error);
       return;
     }
     let data: unknown;
@@ -60,7 +62,9 @@ export function createWeChatFetch(wx: WeChatNetworkApi): FetchLike {
     let task: WxRequestTask | undefined;
     const abort = () => {
       task?.abort?.();
-      reject(new Error("AbortError"));
+      const error = new Error("Request aborted");
+      error.name = "AbortError";
+      reject(error);
     };
     init.signal?.addEventListener("abort", abort, { once: true });
     task = wx.request({
