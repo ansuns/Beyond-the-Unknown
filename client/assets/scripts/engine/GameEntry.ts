@@ -86,6 +86,7 @@ export class BeyondTheUnknownGameEntry extends Component {
   private prototypeComboDefinitions: PrototypeComboDefinition[] = [];
   private prototypeGazeTargetId: string | undefined;
   private prototypeGazeMaintainAt = 0;
+  private prototypeGazeNextMaintainAt = 0;
   private prototypeGazeMaintainInFlight = false;
   private readonly prototypeRuleCooldownUntil = new Map<string, number>();
   private prototypeActionInFlight = false;
@@ -481,6 +482,38 @@ export class BeyondTheUnknownGameEntry extends Component {
     this.moveTarget = { x, y };
   }
 
+  private updatePrototypeGazeMaintain(): void {
+    const session = this.levelSession;
+    const targetId = this.prototypeGazeTargetId;
+    if (!session || !targetId || this.prototypeGazeMaintainInFlight) return;
+
+    const now = Date.now();
+    if (now >= this.prototypeGazeMaintainAt) {
+      this.prototypeGazeTargetId = undefined;
+      this.prototypeGazeMaintainAt = 0;
+      this.prototypeGazeNextMaintainAt = 0;
+      void session.stopGaze().catch((error) => {
+        this.setStatus(`注视效果结束同步失败：${error instanceof Error ? error.message : "网络错误"}`);
+      });
+      return;
+    }
+
+    if (now < this.prototypeGazeNextMaintainAt) return;
+    this.prototypeGazeNextMaintainAt = now + 500;
+    this.prototypeGazeMaintainInFlight = true;
+    void session.maintainGaze(targetId)
+      .catch((error) => {
+        this.setStatus(`注视维持失败：${error instanceof Error ? error.message : "网络错误"}`);
+        this.prototypeGazeTargetId = undefined;
+        this.prototypeGazeMaintainAt = 0;
+        this.prototypeGazeNextMaintainAt = 0;
+        void session.stopGaze().catch(() => undefined);
+      })
+      .finally(() => {
+        this.prototypeGazeMaintainInFlight = false;
+      });
+  }
+
   private updatePersonalLevelMovement(deltaTime: number): void {
     if (!this.moveTarget || !this.levelAvatar || !this.levelSession) return;
     const dx = this.moveTarget.x - this.levelPosition.x;
@@ -556,10 +589,12 @@ export class BeyondTheUnknownGameEntry extends Component {
         if (matched && definition.maintainGaze) {
           this.prototypeGazeTargetId = targetId;
           this.prototypeGazeMaintainAt = Date.now() + 2000;
+          this.prototypeGazeNextMaintainAt = Date.now() + 500;
         } else {
           await this.levelSession.stopGaze();
           this.prototypeGazeTargetId = undefined;
           this.prototypeGazeMaintainAt = 0;
+          this.prototypeGazeNextMaintainAt = 0;
         }
       }
       const state = await this.levelSession.refreshState();
@@ -588,6 +623,7 @@ export class BeyondTheUnknownGameEntry extends Component {
       this.levelSession = undefined;
       this.prototypeGazeTargetId = undefined;
       this.prototypeGazeMaintainAt = 0;
+      this.prototypeGazeNextMaintainAt = 0;
       this.currentMode = "MENU";
       this.moveTarget = undefined;
       this.drawPersonalRoom("探索完成", true);
@@ -682,6 +718,7 @@ export class BeyondTheUnknownGameEntry extends Component {
       this.prototypeComboDefinitions = parsePrototypeComboDefinitions(level.config);
       this.prototypeGazeTargetId = undefined;
       this.prototypeGazeMaintainAt = 0;
+      this.prototypeGazeNextMaintainAt = 0;
       this.currentMode = "PERSONAL_LEVEL";
       this.moveTarget = undefined;
       this.mapSession.leave();
