@@ -19,7 +19,7 @@ export class MapSocketClient {
 
   constructor(
     private readonly url: string,
-    private readonly factory: WebSocketFactory = (url) => new WebSocket(url),
+    private readonly factory: WebSocketFactory = (url) => new WebSocket(url) as unknown as WebSocketLike,
     private readonly authTimeoutMs = 8_000
   ) {}
 
