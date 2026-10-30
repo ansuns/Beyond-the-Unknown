@@ -7,7 +7,7 @@
 | 版本 | 日期 | 变更内容 |
 |---|---|---|
 | V0.1 | 2026-10-30 | 建立技术架构与数据规范初稿 |
-| V0.2 | 2026-10-30 | 统一个人发现/收藏/机关状态/奖励/成就/积分/进度数据字典；补齐业务接口映射 |
+| V0.2 | 2026-10-30 | 统一个人发现/收藏/机关状态/奖励/成就/积分/进度数据字典；补齐业务接口映射 |\n| V0.2.1 | 2026-10-30 | 确认 Cocos Creator 3.x + TypeScript 客户端基线，工程附件转入可执行契约阶段 |\n| V0.2.2 | 2026-10-30 | 服务端技术栈调整为 Python + FastAPI；REST / WebSocket 契约保持语言无关 |
 
 -   **文档版本：** GDD V0.2
 -   **章节版本：** 第17章 V0.2
@@ -24,21 +24,26 @@
 
 本章不定义具体玩法数值（见第2–15章）、UI视觉规范（见第16章）与美术资源制作规格（见第18章）。
 
-**技术基线（建议方案，待最终确认）：**
+**技术基线（已确认）：**
 
   类别          建议方案
   ------------- ------------------------------------------------
-  客户端引擎    Cocos Creator 3.x（建议，待最终确认）
+  客户端引擎    Cocos Creator 3.x（已确认）
   客户端语言    TypeScript
-  服务端语言    Node.js + TypeScript
+  服务端语言    Python 3.12+
+  HTTP API      FastAPI
+  ORM           SQLAlchemy 2.x（async）
+  数据迁移      Alembic
+  数据校验      Pydantic 2.x
+  ASGI运行      Uvicorn
   实时通信      WebSocket
   关系数据库    PostgreSQL
   缓存          Redis
-  异步任务      BullMQ
+  异步任务      Celery / ARQ（按异步任务量选型）
   部署          Docker
   后端架构      模块化单体（建议，待最终确认）
 
-说明：以上技术选型均为建议方案，最终以技术评审与压测结论为准，不在本章固化为不可变更约束。凡涉及性能、容量、分库分表的硬指标，统一标注「待压测确定 / 待最终确认」。
+说明：Cocos Creator 3.x + TypeScript 客户端、Python + FastAPI 服务端已由项目决策确认。PostgreSQL、WebSocket、Redis、Docker 与模块化单体作为工程基线；Celery/ARQ 暂不作为首期强制依赖。容量、性能与部署拓扑仍以技术评审和压测为准。
 
 ------------------------------------------------------------------------
 
@@ -54,13 +59,13 @@
 
 ``` mermaid
 flowchart LR
-    C["客户端 Cocos Creator 3.x / TS"] -->|HTTPS REST| GW["API网关 / 鉴权"]
-    C -->|WebSocket| WS["WebSocket网关"]
+    C["客户端 Cocos Creator 3.x / TS"] -->|HTTPS REST| GW["FastAPI / 鉴权"]
+    C -->|WebSocket| WS["FastAPI WebSocket"]
     GW --> SVC["游戏服务（模块化单体）"]
     WS --> SVC
     SVC --> PG["PostgreSQL"]
     SVC --> RD["Redis 缓存/会话"]
-    SVC --> MQ["BullMQ 异步任务"]
+    SVC --> MQ["Celery / ARQ 异步任务（按需启用）"]
     MQ --> SVC
     SVC --> OSS["对象存储（资源/CDN）"]
     PG --- BAQ["备份与审计"]
@@ -77,7 +82,7 @@ flowchart LR
   游戏服务        登录、地图实例、关卡、法则、机关、发现、排行榜等
   PostgreSQL      玩家/角色/地图/关卡/排行等持久化数据
   Redis           会话、在线状态、排行榜缓存、限流计数
-  BullMQ          结算重试、赛季结算、奖励发放等异步任务
+  Celery / ARQ（按异步任务量选型）          结算重试、赛季结算、奖励发放等异步任务
   对象存储        美术/音频资源与CDN分发
 
 ------------------------------------------------------------------------
