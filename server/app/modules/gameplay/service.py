@@ -165,6 +165,27 @@ def _combo_for_pair(first: str, second: str, elapsed_ms: int) -> str | None:
     return combo_id
 
 
+def _combo_is_allowed(
+    combo_id: str | None,
+    level: dict[str, Any],
+    mechanism_type: str,
+    state: dict[str, Any],
+) -> bool:
+    expected_type = {
+        "COMBO-001": "PLATFORM_BRIDGE",
+        "COMBO-002": "ENERGY_NODE",
+        "COMBO-003": "MOVING_OBJECT",
+    }
+    configured_combo = state["config"].get("requires_combo") or state["config"].get(
+        "reverse_combo"
+    )
+    return (
+        combo_id in set(level.get("required_combos", []))
+        and mechanism_type == expected_type.get(combo_id)
+        and configured_combo == combo_id
+    )
+
+
 async def apply_law_action(
     session: AsyncSession,
     player_id: UUID,
@@ -266,20 +287,7 @@ async def apply_law_action(
             combo_id = _combo_for_pair(previous["rule_id"], rule_id, previous["elapsed_ms"])
 
     level = _level_config(run["level_id"])
-    configured_combos = set(level.get("required_combos", []))
-    expected_type = {
-        "COMBO-001": "PLATFORM_BRIDGE",
-        "COMBO-002": "ENERGY_NODE",
-        "COMBO-003": "MOVING_OBJECT",
-    }
-    configured_combo = state["config"].get("requires_combo") or state["config"].get(
-        "reverse_combo"
-    )
-    if (
-        combo_id not in configured_combos
-        or mechanism["mechanism_type"] != expected_type.get(combo_id)
-        or configured_combo != combo_id
-    ):
+    if not _combo_is_allowed(combo_id, level, mechanism["mechanism_type"], state):
         combo_id = None
     if combo_id:
         state["combo_completed"] = True
