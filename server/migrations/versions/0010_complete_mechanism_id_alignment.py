@@ -84,7 +84,10 @@ def upgrade() -> None:
         UPDATE level_mechanism_catalog
         SET mechanism_type = 'ENDING_CORE',
             trigger_rule = '["PLAYER_INTERACT"]'::jsonb,
-            config = jsonb_build_object('config_status', 'PENDING_POSITION_AND_ART')
+            config = config || jsonb_build_object(
+                'config_status', 'PENDING_POSITION_AND_ART',
+                'target_state', 'ENDING_REVEALED'
+            )
         WHERE level_id = 'LV-HIDDEN-01'
           AND mechanism_config_id = 'H01-END'
         """
@@ -155,6 +158,32 @@ def upgrade() -> None:
         """
     )
 
+    op.execute(
+        """
+        UPDATE player_discoveries
+        SET location = jsonb_set(
+            location,
+            '{mechanism_ids}',
+            COALESCE((
+                SELECT jsonb_agg(
+                    CASE value #>> '{}'
+                        WHEN 'MECH-ROOM01-HIDDEN-01' THEN to_jsonb('M01-HIDEABLE-01'::text)
+                        WHEN 'MECH_BRIDGE' THEN to_jsonb('M02-BRIDGE-01'::text)
+                        WHEN 'MECH_ENERGY_GATE' THEN to_jsonb('M03-ENERGY-01'::text)
+                        WHEN 'MECH_MOVING_PLATFORM' THEN to_jsonb('M04-PLATFORM-01'::text)
+                        WHEN 'MECH-ROOM01-LIGHT-01' THEN to_jsonb('M01-LIGHT-01'::text)
+                        WHEN 'MECH_ROOM03_DOOR_BARRIER' THEN to_jsonb('M03-DOOR-01'::text)
+                        WHEN 'MECH-HIDDEN-ENDING-01' THEN to_jsonb('H01-END'::text)
+                        ELSE value
+                    END
+                )
+                FROM jsonb_array_elements(COALESCE(location->'mechanism_ids', '[]'::jsonb)) AS value
+            ), '[]'::jsonb),
+            true
+        )
+        WHERE location ? 'mechanism_ids'
+        """
+    )
     op.create_foreign_key(
         "fk_level_objective_mechanism",
         "level_objectives",
