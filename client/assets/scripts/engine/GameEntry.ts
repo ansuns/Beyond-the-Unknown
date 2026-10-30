@@ -4,6 +4,8 @@
 // typecheck intentionally covers the engine-independent network/session layer.
 import {
   _decorator,
+  Camera,
+  Canvas,
   Color,
   Component,
   Graphics,
@@ -115,8 +117,15 @@ export class BeyondTheUnknownGameEntry extends Component {
 
   private buildShell(): void {
     const size = view.getVisibleSize();
+    const canvasNode = new Node("RuntimeCanvas");
+    this.node.addChild(canvasNode);
+    canvasNode.addComponent(UITransform).setContentSize(size.width, size.height);
+    const canvas = canvasNode.addComponent(Canvas);
+    canvas.cameraComponent = this.node.getComponentInChildren(Camera);
+    canvas.alignCanvasWithScreen = true;
+
     this.root = new Node("BeyondTheUnknownRuntime");
-    this.node.addChild(this.root);
+    canvasNode.addChild(this.root);
 
     const background = new Node("Background");
     this.root.addChild(background);
