@@ -435,12 +435,16 @@ flowchart TD
 
   字段           类型       必填 说明
   -------------- ---------- ------ -----------------------------
-  id             bigint     是   自增主键
+  player_reward_id uuid    是   主键
   player_id      string     是   玩家ID
   reward_id      string     是   奖励ID
+  grant_mode     enum       是   AUTO / CLAIM
   status         enum       是   OWNED / PENDING_CLAIM
-  granted_at     timestamp  是   发放/到账时间
-  claimed_at     timestamp  否   领取时间（CLAIM 类型）
+  source         string     是   发放来源
+  source_id      string     是   来源业务ID
+  idempotency_key string    是   业务幂等键
+  granted_at     timestamptz 是 UTC发放时间
+  claimed_at     timestamptz 否   UTC领取时间（CLAIM类型）
   UNIQUE KEY     (player_id, reward_id, source_id)
 
 **表 achievements（成就）：**
