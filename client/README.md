@@ -73,3 +73,15 @@ WorldPlaySession coordinates the existing MapSession, RestClient, PersonalLevelS
 - Editor import, scene serialization, WeChat DevTools build, and real-device testing still require running Cocos Creator/WeChat DevTools; those GUI tools are not available in the repository CI environment.
 
 The engine-independent TypeScript tests continue to run with `npm test` and `npm run typecheck`. The Cocos component imports the engine module `cc`, so it is excluded from the Node-side typecheck and must be compiled by the pinned Cocos Creator editor.
+
+
+## VS-5 progress and settlement API
+
+- `settleLevel(runId, idempotencyKey)` sends only the caller's run ID; the server verifies required objectives and computes the result.
+- `getPlayerProgress()` reads the latest permanent progress snapshot.
+- `listPlayerDiscoveries()` / `listPlayerCollections()` read the personal codex.
+- `listWorldArchive(limit)` reads server-owned world-first records.
+- `listRewards()` / `claimReward(playerRewardId)` read and claim owned rewards.
+- `getLeaderboard(boardType, periodType, scope, limit)` reads one of the three server-owned weekly/monthly boards.
+
+`PersonalLevelSession.settle()` and `WorldPlaySession.settleRoom()` expose the authoritative settlement flow. A successful or failed settlement clears the local active-run handle; incomplete-objective errors leave it available so the scene can refresh state and retry after the puzzle is completed.
