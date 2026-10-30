@@ -170,7 +170,10 @@ def upgrade() -> None:
         VALUES
             ('LV-ROOM-01', 'MECH-ROOM01-HIDDEN-01', 'HIDEABLE', 'HIDDEN_OBJECT',
              'INACTIVE', 'TRIGGERED', '["RULE_EFFECT"]'::jsonb,
-             '{"config_status":"PENDING_POSITION_AND_ART","visible_by_default":false}'::jsonb),
+             jsonb_build_object(
+                 'config_status', 'PENDING_POSITION_AND_ART',
+                 'visible_by_default', false
+             )),
             ('LV-ROOM-01', 'MECH-ROOM01-LIGHT-01', 'LIGHT_REVEAL', 'MECHANISM',
              'INACTIVE', 'TRIGGERED', '["RULE_EFFECT"]'::jsonb,
              '{"config_status":"PENDING_POSITION_AND_ART"}'::jsonb),
