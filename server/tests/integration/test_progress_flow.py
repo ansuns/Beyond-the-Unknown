@@ -513,6 +513,9 @@ def test_internal_season_review_requires_key_and_can_reject(monkeypatch) -> None
         assert row["reviewed_by"] == "ci-reviewer"
     finally:
         _db_exec([
-            ("DELETE FROM actions_log WHERE payload->>'season_id' = :season_id", {"season_id": season_id}),
+            (
+                "DELETE FROM actions_log WHERE payload->>'season_id' = :season_id",
+                {"season_id": season_id},
+            ),
             ("DELETE FROM seasons WHERE season_id = :season_id", {"season_id": season_id}),
         ])
