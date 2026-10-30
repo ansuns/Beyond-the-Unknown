@@ -537,7 +537,7 @@ async def record_discovery(
             catalog["score_reason"],
             discovery_id,
             run_id,
-            f"discovery:{discovery_id}",
+            f"discovery:{player_id}:{discovery_id}",
         )
     granted = await _grant_rewards_for_trigger(
         session,
@@ -831,7 +831,7 @@ async def _try_unlock_hidden_route(
                     SELECT DISTINCT level_id
                     FROM settlements
                     WHERE player_id = :player_id AND result_status = 'COMPLETED'
-                      AND level_id = ANY(:prerequisites)
+                      AND level_id = ANY(CAST(:prerequisites AS varchar[]))
                 """),
                 {"player_id": player_id, "prerequisites": prerequisites},
             )
