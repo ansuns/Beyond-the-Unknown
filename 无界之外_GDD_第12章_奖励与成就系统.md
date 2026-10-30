@@ -441,7 +441,7 @@ flowchart TD
   status         enum       是   OWNED / PENDING_CLAIM
   granted_at     timestamp  是   发放/到账时间
   claimed_at     timestamp  否   领取时间（CLAIM 类型）
-  UNIQUE KEY     (player_id, reward_id)
+  UNIQUE KEY     (player_id, reward_id, source_id)
 
 **表 achievements（成就）：**
 
@@ -465,7 +465,7 @@ flowchart TD
   status           enum       是   IN_PROGRESS / COMPLETED
   UNIQUE KEY       (player_id, achievement_id)
 
-幂等约束：`player_rewards` 对 `(player_id, reward_id)` 唯一；`player_achievements` 对 `(player_id, achievement_id)` 唯一。
+V0.2幂等约束以第17章17.3为准：`player_rewards` 使用 `(player_id, reward_id, source_id)` 唯一键，以允许不同合法来源分别授予同一奖励；同一来源重试不得重复发放。`player_achievements` 对 `(player_id, achievement_id)` 唯一。成就相关表在启用完整成就扩展后创建；奖励配置与基础奖励持有表仍为MVP。
 
 ### 【反馈（动画、音效、UI、屏幕表现）】
 
