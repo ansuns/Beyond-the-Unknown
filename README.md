@@ -8,7 +8,7 @@
 - `docs/reviews/`：GDD 审核、修订与复核报告。
 - `docs/engineering/`：API、数据库、关卡配置、实时通信协议、技术决策与纵向切片计划。
 - `server/`：Python 3.12+ / FastAPI 服务端、数据库迁移、自动化测试与容器构建。
-- `client/`：Cocos Creator 客户端工程入口与初始化约定。
+- `client/`：Cocos Creator 3.8.8 TypeScript 客户端工程、Boot 场景与网络/玩法会话层。
 - `.github/workflows/`：持续集成工作流。
 - `docker-compose.yml`：本地 PostgreSQL、RabbitMQ、API 与 Worker 编排。
 
@@ -30,6 +30,3 @@ GDD V0.2 已完成首轮跨章节规则、MVP 范围、数据字典、UI/API 映
 - 配置和密钥通过环境变量注入，禁止提交真实凭证。
 - 数据库变更必须通过 Alembic migration。
 - 每个纵向切片通过独立分支、PR 与自动化测试后再合并。
-
-
-VS-6A 已合并（PR #52）；当前后端自动化验证通过，仍需真机 Cocos 导入/微信构建、RabbitMQ 故障恢复演练和性能验证。
