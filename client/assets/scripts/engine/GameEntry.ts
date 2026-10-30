@@ -13,7 +13,6 @@ import {
   Node,
   NodeEventType,
   UITransform,
-  Vec3,
   view
 } from "cc";
 
