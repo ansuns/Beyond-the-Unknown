@@ -2,8 +2,8 @@ import asyncio
 import os
 from uuid import uuid4
 
-import pytest
 from fastapi.testclient import TestClient
+import pytest
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import create_async_engine
 
