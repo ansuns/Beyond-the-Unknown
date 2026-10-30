@@ -1,7 +1,7 @@
 # 第一阶段垂直切片开发与测试清单
 
 - 版本：VS-1.1
-- 状态：VS-0 至 VS-4 服务端基础与规则权威逻辑已合并并通过 CI；客户端 REST/WebSocket、个人关卡/法则会话编排已合并并通过客户端 CI；完整 Cocos 场景、玩法输入/表现、数值与机关坐标配置、结算闭环及真机联调仍未完成
+- 状态：VS-0 至 VS-5 服务端基础、权威法则、发现/结算/奖励/排行榜已合并并通过 CI；客户端 REST/WebSocket、个人关卡/法则/进度会话已合并或进入 CI；Cocos Creator 3.8.8 Boot 几何原型已合并。正式机关/法则数值、关卡玩法表现、Cocos 编辑器导入、微信构建与真机联调仍未完成
 - 基线：GDD V0.2；Cocos Creator 3.x + TypeScript；Python 3.12+ + FastAPI；PostgreSQL；RabbitMQ
 - 目标：端到端验证“登录—共享主地图—进入个人关卡—施放法则—机关解谜—服务端结算—永久进度恢复”。
 - 策略：先完成 ROOM-01 可玩闭环，再以配置驱动接入 ROOM-02 至 ROOM-05 与隐藏结局。
@@ -26,12 +26,12 @@
 
 | 阶段 | 交付 | 完成定义 |
 |---|---|---|
-| VS-0 工程骨架 | Python 服务端、配置/环境变量、Docker Compose（PostgreSQL、RabbitMQ、API、Worker） | 服务端骨架已完成；Cocos Creator 项目初始化仍待客户端切片 |
+| VS-0 工程骨架 | Python 服务端、配置/环境变量、Docker Compose（PostgreSQL、RabbitMQ、API、Worker） | 服务端骨架已完成；Cocos Creator 3.8.8 项目骨架与 Boot 场景已提交，编辑器导入/构建验证待完成 |
 | VS-1 身份与持久化 | 微信 code 服务端交换、players、12个角色初始化、JWT、玩家/角色 API、迁移与测试 | 服务端已完成；客户端 wx.login、玩家资料/角色目录/选角 REST 调用已完成；角色选择 UI 待做 |
 | VS-2 共享主地图 | 地图实例分配、WS鉴权、ENTER/LEAVE、MOVE_SYNC、动作广播、心跳与重连保留 | 服务端单进程原型已合并；客户端 WebSocket/MapSession/WorldPlaySession 已合并；自动重连、移动表现、精细 AOI 与 Redis 多节点仍待完成 |
 | VS-3 个人关卡 | levels目录、个人run创建/开始/放弃、进入幂等与主地图席位释放 | 后端接口与迁移已合并；客户端 PersonalLevelSession/WorldPlaySession 可进入并启动个人 run；ROOM-01 场景与结算仍待做 |
 | VS-4 核心玩法 | 法则目录、权威施法、冷却/持续效果、三组预设组合、个人机关状态机 | 服务端规则目录、权限/目标/范围校验、冷却/注视租约、机关状态隔离与三组组合已合并；客户端 LawController 已接入并通过 CI；数值/坐标仍为 TUNING_REQUIRED，场景表现待做 |
-| VS-5 发现与结算 | discovery、world_archive、settlements、score_events、进度快照、奖励与三榜 | 服务端实现已提交，等待 CI/行为验证；正式积分权重与部分内容目标仍待配置 |
+| VS-5 发现与结算 | discovery、world_archive、settlements、score_events、进度快照、奖励与三榜 | 服务端已合并并通过迁移/集成/Compose CI；积分权重、正式奖励定义和部分目标内容仍待配置 |
 | VS-6 联调验收 | 真机包、自动化报告、性能/断线测试 | 本文验收项通过或阻塞缺陷有负责人 |
 
 ## 3. 客户端任务（Cocos Creator 3.x）
@@ -43,7 +43,8 @@
 - [x] WebSocket client：AUTH 首包、单调 seq、消息 envelope 校验、心跳/移动/动作/离开命令；自动重连策略仍待实现。
 - [ ] 移动状态机；客户端预测仅用于表现，服务端位置权威。
 - [ ] 法则施放输入与冷却 UI；回声命中后显形反馈。
-- [ ] Cocos 场景/组件、目标 hit-testing、机关动画/音效与 HUD；当前只有 engine-independent TypeScript orchestration。
+- [x] Cocos Creator 3.8.8 项目结构、Boot 场景、微信登录/共享地图/远端占位角色/点击移动/个人房间进入与放弃的几何原型。
+- [ ] Cocos 编辑器实际导入、场景序列化、目标 hit-testing、机关动画/音效与 HUD；微信开发者工具构建和真机验证。
 - [ ] 关卡目标/机关表现由配置和服务端状态驱动，不硬编码完成条件。
 - [ ] 加载、断网、重连、结算与错误状态。
 
@@ -59,17 +60,17 @@
 - [x] WS 首包 AUTH、消息序列号、方向/动作白名单、MOVE/ACTION 频率限制；当前 AOI 使用同实例全可见回退，精确半径/网格待联调。
 - [x] level_run 归属检查；机关状态通过 (run_id, player_id) 复合外键隔离。
 - [x] VS-3：levels目录、入口校验、level_enter_requests业务幂等、单玩家单活跃run、CREATED/RUNNING/ABANDONED状态流转。
-- [ ] VS-4：服务端 rule_catalog / combo_catalog / player_unlocked_rules；施法必须验证 run 归属、法则权限、冷却、目标类型/范围、幂等键；机关状态按 (run_id, player_id, mechanism_config_id) 隔离。
-- [ ] VS-4：回声显形、注视维持/中断、逆流反转/超时恢复；组合顺序/时间窗校验与机关状态机联动。
-- [ ] 玩法事件由服务端推导 discovery；客户端不能直接写发现事实。
-- [ ] 结算事务：锁定 run → settlement → 发现/收藏 → world_archive INSERT ON CONFLICT → 积分流水 → progress_version + 1 → snapshot。
-- [ ] 周榜/月赛季分别写 period_id；全服首发现仅荣誉，不计分。
-- [ ] 幂等重试返回首次成功结果；同键不同请求体返回 409。
+- [x] VS-4：服务端 rule_catalog / combo_catalog / player_unlocked_rules；施法验证 run 归属、法则权限、冷却、目标类型/范围、幂等键；机关状态按 (run_id, player_id, mechanism_config_id) 隔离。
+- [x] VS-4：回声显形、注视维持/中断、逆流反转/超时恢复；组合顺序/时间窗校验与机关状态机联动（正式数值/坐标仍待配置）。
+- [x] 玩法事件由服务端推导 discovery；客户端不能直接写发现事实。
+- [x] 结算事务：锁定 run → settlement → 发现/收藏 → world_archive INSERT ON CONFLICT → 积分流水 → progress_version + 1 → snapshot。
+- [x] 周榜/月赛季分别写 period_id；全服首发现仅荣誉，不计分。
+- [x] 结算重试返回同一结果；跨 run 复用同一结算幂等键返回 409。
 
 ## 5. 测试清单
 
 ### 数据库
-- [x] 空库执行 0001、0002 成功并登记迁移版本。
+- [x] 空库执行 0001–0007 成功并登记迁移版本。
 - [ ] 外键、枚举、CHECK、唯一约束正反例测试。
 - [ ] 同一玩家重复进入同一关卡生成不同 run_id。
 - [ ] 同一机关配置在不同 run 可独立保存；同 run 重复配置被拒绝。
@@ -95,7 +96,7 @@
 - [ ] 出口前置目标未完成时拒绝开启。
 - [ ] 同一 run 客户端状态一致，不同 run 不串状态。
 - [ ] 未完成退出后重新进入创建新 run。
-- [ ] 重复结算不重复产生发现、积分、奖励。
+- [x] 重复结算不重复产生发现、积分、奖励（VS-5 集成测试）。
 - [ ] 五个 room_index 唯一且恰好 1–5；隐藏关卡 room_index=null。
 - [ ] HIDDEN-ROUTE-01 缺失、禁用、前置房间不齐或组合序列错误时不能解锁。
 - [ ] 前置条件满足且路线启用时，LV-HIDDEN-01 可进入独立 run。
