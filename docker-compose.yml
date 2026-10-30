@@ -55,6 +55,8 @@ services:
       APP_ENV: local
       DATABASE_URL: postgresql+asyncpg://beyond:beyond_dev_only@postgres:5432/beyond
       RABBITMQ_URL: amqp://beyond:beyond_dev_only@rabbitmq:5672/
+      RABBITMQ_RETRY_DELAY_MS: ${RABBITMQ_RETRY_DELAY_MS:-5000}
+      RABBITMQ_MAX_RETRIES: ${RABBITMQ_MAX_RETRIES:-3}
     command: ["uv", "run", "--no-sync", "python", "-m", "app.workers.task_worker"]
     depends_on:
       rabbitmq: { condition: service_healthy }
