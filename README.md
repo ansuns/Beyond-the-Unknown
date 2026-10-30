@@ -21,7 +21,7 @@
 
 ## 当前基线
 
-GDD V0.2 已完成首轮跨章节规则、MVP 范围、数据字典、UI/API 映射与修订复核。服务端 VS-0 至 VS-5（工程骨架、微信身份/玩家持久化、共享地图/WebSocket、个人关卡、法则权威逻辑、发现/结算/奖励/排行榜）已合并至 main；相关 Python/Ruff、PostgreSQL 迁移/集成测试和 Docker Compose smoke 检查通过。客户端已具备 TypeScript REST/WebSocket、个人关卡/法则/进度 API 会话层，以及 Cocos Creator 3.8.8 Boot 几何占位原型（微信登录、共享地图、玩家显示、点击移动、进入/放弃个人房间）。当前仍不是可发布的完整小游戏：法则数值、机关坐标、正式关卡内容/美术、场景交互与结算 UI、Cocos 编辑器导入/构建、微信开发者工具和真机验证尚未完成。Redis 多节点 presence/pub-sub、正式 AOI、RabbitMQ 有限重试/Transactional Outbox、生产部署、安全与性能压测也仍是 VS-6 发布前工作。
+GDD V0.2 已完成首轮跨章节规则、MVP 范围、数据字典、UI/API 映射与修订复核。服务端 VS-0 至 VS-5（工程骨架、微信身份/玩家持久化、共享地图/WebSocket、个人关卡、法则权威逻辑、发现/结算/奖励/排行榜）已合并至 main；相关 Python/Ruff、PostgreSQL 迁移/集成测试和 Docker Compose smoke 检查通过。客户端已具备 TypeScript REST/WebSocket、个人关卡/法则/进度 API 会话层，以及 Cocos Creator 3.8.8 Boot 几何占位原型（微信登录、共享地图、玩家显示、点击移动、进入/放弃个人房间）。当前仍不是可发布的完整小游戏：法则数值、机关坐标、正式关卡内容/美术、场景交互与结算 UI、Cocos 编辑器导入/构建、微信开发者工具和真机验证尚未完成。Redis 多节点 presence/pub-sub、正式 AOI、RabbitMQ Publisher Confirms、有限重试与 DLQ 已实现；Transactional Outbox、业务消费者、Redis 多节点 presence/pub-sub、生产部署、安全与性能压测仍是 VS-6 发布前工作。
 
 ## 工程原则
 
