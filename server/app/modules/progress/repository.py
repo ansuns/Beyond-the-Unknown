@@ -83,14 +83,7 @@ def _periods(now: datetime) -> list[dict[str, Any]]:
 async def _ensure_current_seasons(
     session: AsyncSession, now: datetime
 ) -> list[dict[str, Any]]:
-    await session.execute(
-        text("""
-            UPDATE seasons
-            SET status = 'CLOSED'
-            WHERE status = 'ACTIVE' AND end_at_utc <= :now
-        """),
-        {"now": now},
-    )
+    # Expired periods are finalized asynchronously by the outbox worker.
     periods = _periods(now)
     for period in periods:
         await session.execute(
