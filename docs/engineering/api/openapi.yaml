@@ -422,6 +422,39 @@ paths:
           content:
             application/json:
               schema: { $ref: '#/components/schemas/EnvelopeObject' }
+  /internal/seasons/{season_id}/review:
+    post:
+      tags: [Internal Operations]
+      operationId: reviewSeasonSettlement
+      parameters:
+        - name: season_id
+          in: path
+          required: true
+          schema: { type: string, maxLength: 64 }
+        - name: X-Internal-API-Key
+          in: header
+          required: true
+          schema: { type: string }
+        - name: X-Reviewer-Id
+          in: header
+          required: false
+          schema: { type: string, maxLength: 96 }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [decision]
+              properties:
+                decision: { type: string, enum: [APPROVE, REJECT] }
+                note: { type: string, maxLength: 512 }
+      responses:
+        '200': { description: Season reviewed and eligible cosmetic rank rewards granted idempotently }
+        '401': { description: Invalid internal API key }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409': { description: Season is not in review }
+        '503': { description: Internal review key is not configured }
 components:
   securitySchemes:
     bearerAuth:
