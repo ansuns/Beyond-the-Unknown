@@ -213,7 +213,7 @@ flowchart LR
 - event_id uuid PK
 - player_id uuid FK players
 - board_type enum EXPLORE/CLEAR/COLLECT
-- period_id varchar；周榜或月赛季周期ID
+- period_id varchar；周榜或月赛季周期ID，同一上游事件在当前周榜与月赛季各写一条独立流水
 - delta bigint；正常业务非负，纠错使用反向追加流水
 - reason varchar；仅EXP_DISCOVER/CLEAR_STAGE/COLLECT_NEW，不含WORLD_FIRST
 - source_event_id varchar
