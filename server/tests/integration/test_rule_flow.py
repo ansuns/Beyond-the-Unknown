@@ -312,7 +312,11 @@ def test_authoritative_laws_combos_cooldowns_and_personal_isolation() -> None:
             reversed_state = client.get(
                 f"/api/v1/level/state/{third_run}", headers=third["headers"]
             )
-            energy = reversed_state.json()["data"]["mechanisms"][0]["state"]
+            energy = next(
+                item["state"]
+                for item in reversed_state.json()["data"]["mechanisms"]
+                if item["mechanism_id"] == "M03-ENERGY-01"
+            )
             assert energy["direction"] == -1
             assert energy["reverse_active"] is True
 
@@ -320,7 +324,11 @@ def test_authoritative_laws_combos_cooldowns_and_personal_isolation() -> None:
             expired_state = client.get(
                 f"/api/v1/level/state/{third_run}", headers=third["headers"]
             )
-            energy_after = expired_state.json()["data"]["mechanisms"][0]["state"]
+            energy_after = next(
+                item["state"]
+                for item in expired_state.json()["data"]["mechanisms"]
+                if item["mechanism_id"] == "M03-ENERGY-01"
+            )
             assert energy_after["direction"] == 1
             assert energy_after["reverse_active"] is False
     finally:
