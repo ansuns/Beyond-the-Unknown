@@ -28,7 +28,7 @@
 |---|---|---|
 | VS-0 工程骨架 | Python 服务端、配置/环境变量、Docker Compose（PostgreSQL、RabbitMQ、API、Worker） | 服务端骨架已完成；Cocos Creator 3.8.8 项目骨架与 Boot 场景已提交，编辑器导入/构建验证待完成 |
 | VS-1 身份与持久化 | 微信 code 服务端交换、players、12个角色初始化、JWT、玩家/角色 API、迁移与测试 | 服务端已完成；客户端 wx.login、玩家资料/角色目录/选角 REST 调用已完成；角色选择 UI 待做 |
-| VS-2 共享主地图 | 地图实例分配、WS鉴权、ENTER/LEAVE、MOVE_SYNC、动作广播、心跳与重连保留 | 服务端单进程原型已合并；客户端 WebSocket/MapSession/WorldPlaySession 与基于原 session_id 的宽限期自动重连已合并；移动表现、精细 AOI 与 Redis 多节点仍待完成 |
+| VS-2 共享主地图 | 地图实例分配、WS鉴权、ENTER/LEAVE、MOVE_SYNC、动作广播、心跳与重连保留 | 服务端单进程原型已合并；客户端 WebSocket/MapSession/WorldPlaySession 已合并；自动重连、移动表现、精细 AOI 与 Redis 多节点仍待完成 |
 | VS-3 个人关卡 | levels目录、个人run创建/开始/放弃、进入幂等与主地图席位释放 | 后端接口与迁移已合并；客户端 PersonalLevelSession/WorldPlaySession 可进入并启动个人 run；ROOM-01 场景与结算仍待做 |
 | VS-4 核心玩法 | 法则目录、权威施法、冷却/持续效果、三组预设组合、个人机关状态机 | 服务端规则目录、权限/目标/范围校验、冷却/注视租约、机关状态隔离与三组组合已合并；客户端 LawController 已接入并通过 CI；数值/坐标仍为 TUNING_REQUIRED，场景表现待做 |
 | VS-5 发现与结算 | discovery、world_archive、settlements、score_events、进度快照、奖励与三榜 | 服务端已合并并通过迁移/集成/Compose CI；积分权重、正式奖励定义和部分目标内容仍待配置 |
@@ -40,7 +40,7 @@
 - [x] 玩家资料、角色目录与角色选择 REST API；服务端返回的解锁/当前角色为权威状态。
 - [x] WorldPlaySession：共享地图进入、角色/关卡数据加载、个人 run 启动、法则会话和地图移动/动作/心跳的应用层编排。
 - [x] LawController：根据服务端 READY/解锁状态控制施法，校验点/物体目标输入形状，按服务端 lease_timeout 维护 GAZE，并缓存个人机关状态。
-- [x] WebSocket client：AUTH 首包、单调 seq、消息 envelope 校验、心跳/移动/动作/离开命令；断线后复用原 instance/session 在服务端 grace period 内退避重连，主动离开不重连。
+- [x] WebSocket client：AUTH 首包、单调 seq、消息 envelope 校验、心跳/移动/动作/离开命令；自动重连策略仍待实现。
 - [ ] 移动状态机；客户端预测仅用于表现，服务端位置权威。
 - [ ] 法则施放输入与冷却 UI；回声命中后显形反馈。
 - [x] Cocos Creator 3.8.8 项目结构、Boot 场景、微信登录/共享地图/远端占位角色/点击移动/个人房间进入与放弃的几何原型。
@@ -53,8 +53,8 @@
 - [x] 使用 FastAPI + Uvicorn；VS-1 登录/玩家接口已更新 OpenAPI 契约。
 - [x] 使用 SQLAlchemy 2.x async + asyncpg；Alembic 0001/0002 已在 CI 干净 PostgreSQL 上执行。
 - [x] VS-2 WebSocket 处理器采用 async I/O；CPU 密集计算不得阻塞事件循环。当前连接管理器仅支持单 API 进程，水平扩展前必须接入 Redis presence/pub-sub。
-- [x] RabbitMQ durable task/retry/DLQ queues、手动 ACK、publisher confirms、TTL 延迟重试与有限重试次数；当前仅注册 worker.ping 示例任务，业务消费者尚未接入。
-- [ ] 关键业务写入与消息发布采用 Transactional Outbox；增加业务任务消费者与幂等收件记录，保证数据库提交与消息发布原子衔接。
+- [ ] 部署 RabbitMQ 与 Python Worker；定义任务消息 schema、持久化队列/消息、手动 ACK、有限重试与 dead-letter queue。
+- [ ] 仅将可异步化的耗时工作投递到队列；消费者必须幂等，消息确认发生在业务处理成功之后；关键业务写入与消息发布采用 Transactional Outbox，避免数据库提交成功但消息丢失。
 - [x] 玩家身份只从 JWT 认证上下文取得；每个受保护请求查询账号状态，封禁账号立即拒绝。
 - [ ] REST 写请求验证 schema、频率限制与幂等键。
 - [x] WS 首包 AUTH、消息序列号、方向/动作白名单、MOVE/ACTION 频率限制；当前 AOI 使用同实例全可见回退，精确半径/网格待联调。
@@ -72,7 +72,6 @@
 ### 数据库
 - [x] 空库执行 0001–0007 成功并登记迁移版本。
 - [ ] 外键、枚举、CHECK、唯一约束正反例测试。
-- [x] Worker 成功 ACK、暂时失败重试、重试耗尽进入 DLQ、无效 envelope 直接 DLQ、发布未确认时原消息 NACK/requeue。
 - [ ] 同一玩家重复进入同一关卡生成不同 run_id。
 - [ ] 同一机关配置在不同 run 可独立保存；同 run 重复配置被拒绝。
 - [ ] 玩家 A 无法读写玩家 B 的 run、发现、奖励或进度。
@@ -129,3 +128,18 @@
 - P0：跨玩家数据泄露、重复结算/奖励、客户端伪造完成、世界首发现竞争错误，任一存在均禁止推进。
 - P1：断线重连、弱网、设备性能、加载问题必须有修复计划。
 - 自动化测试、真机冒烟、迁移回滚演练通过后，才标记垂直切片完成。
+
+
+## 8. VS-6A 赛季结算与异步任务闭环（本分支）
+- [x] 赛季边界扫描：worker 按 SERVER_TIMEZONE 创建周/月周期并发现到期 ACTIVE 周期。
+- [x] Transactional Outbox：业务事务写入 task_outbox，RabbitMQ relay 使用持久化消息与 publisher confirms。
+- [x] Worker task receipt：task_id/idempotency_key 数据库去重，重复投递不重复执行结算。
+- [x] 赛季最终快照：三榜分别聚合 score_events 并写 leaderboard_snapshots。
+- [x] REVIEW 审核期：到期赛季进入 SETTLING/REVIEW，review_until_utc 可配置。
+- [x] 内部审核接口：API Key 保护 APPROVE/REJECT；无审核动作时到期自动批准。
+- [x] 排名奖励：按 SEASON_RANK 条件授予非付费外观/称号/宠物/徽章，发放幂等。
+- [x] Worker 有限指数退避重试；超过最大次数后进入 RabbitMQ DLQ，并保留 FAILED outbox 记录。
+- [ ] RabbitMQ 真实服务故障/重启、发布确认丢失、重复投递、DLQ 恢复演练。
+- [ ] 赛季审核窗口内的积分纠错流水及重算审批；当前支持批准/驳回，尚未开放纠错写接口。
+- [ ] 正式积分权重、排名奖励档位和时区配置由策划/运维确认后启用。
+- [ ] Cocos 编辑器导入、场景 hit-testing/HUD/动画、微信开发者工具与真机联调。
