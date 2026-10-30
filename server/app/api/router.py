@@ -1,8 +1,8 @@
 from fastapi import APIRouter
 
 from app.modules.auth.router import router as auth_router
-from app.modules.maps.router import router as maps_router
 from app.modules.levels.router import router as levels_router
+from app.modules.maps.router import router as maps_router
 from app.modules.players.router import router as players_router
 from app.realtime.router import router as realtime_router
 
