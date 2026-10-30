@@ -693,6 +693,9 @@ async def _match_combo(
             "M02-BRIDGE-01": "PLATFORM_BRIDGE",
             "M03-ENERGY-01": "ENERGY_NODE",
             "M04-PLATFORM-01": "MOVING_OBJECT",
+            "M05-BRIDGE-01": "PLATFORM_BRIDGE",
+            "M05-ENERGY-01": "ENERGY_NODE",
+            "M05-REVERSE-01": "MOVING_OBJECT",
         }
         if (
             mechanism is None
