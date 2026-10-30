@@ -153,9 +153,18 @@ def downgrade() -> None:
         UPDATE level_mechanism_catalog
         SET position_x = NULL,
             position_y = NULL,
-            config = config - 'content_status' - 'prototype_only'
-                    - 'interaction_radius' - 'visible_by_default'
-                    - 'requires_visible_mechanism_id'
+            config = (
+                config - 'content_status' - 'prototype_only'
+                        - 'interaction_radius' - 'visible_by_default'
+                        - 'requires_visible_mechanism_id'
+            ) || jsonb_build_object(
+                'config_status',
+                CASE
+                    WHEN mechanism_config_id IN ('M05-HIDDEN-GATE', 'H01-GATE')
+                        THEN 'PENDING_HIDDEN_ROUTE'
+                    ELSE 'PENDING_POSITION_AND_ART'
+                END
+            )
         WHERE (level_id, mechanism_config_id) IN (
             ('LV-ROOM-02', 'M02-BRIDGE-01'),
             ('LV-ROOM-03', 'M03-ENERGY-01'),

@@ -534,9 +534,6 @@ export class BeyondTheUnknownGameEntry extends Component {
         if (Number.isFinite(cooldownUntil)) {
           this.prototypeRuleCooldownUntil.set(ruleId, cooldownUntil);
         }
-        if (ruleId === "RULE_GAZE") {
-          await this.levelSession.maintainGaze(targetId);
-        }
         if (result.combo?.combo_id === comboId) matched = true;
       }
       const state = await this.levelSession.refreshState();
