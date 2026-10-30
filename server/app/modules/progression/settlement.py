@@ -200,6 +200,9 @@ async def settle_level(
         if run["started_at"] is not None
         else None
     )
+    if run["level_id"] == "LV-HIDDEN-01":
+        await record_discovery(session, player_id, run_id, "DISC-ENDING-G009")
+
     discovery_ids = (
         await session.execute(
             text("""
@@ -300,19 +303,6 @@ async def settle_level(
     if run["level_id"] not in completed_levels:
         completed_levels.append(run["level_id"])
     permanent = dict(snapshot["permanent_progress"]) if snapshot else {}
-    permanent["discovery_count"] = (
-        await session.execute(
-            text("SELECT count(*) FROM player_discoveries WHERE player_id = :player_id"),
-            {"player_id": player_id},
-        )
-    ).scalar_one()
-    permanent["collection_count"] = (
-        await session.execute(
-            text("SELECT count(*) FROM player_collections WHERE player_id = :player_id"),
-            {"player_id": player_id},
-        )
-    ).scalar_one()
-
     next_version = int(player["progress_version"]) + 1
     await session.execute(
         text("""
@@ -342,8 +332,53 @@ async def settle_level(
         },
     )
 
-    if run["level_id"] == "LV-HIDDEN-01":
-        await record_discovery(session, player_id, run_id, "DISC-ENDING-G009")
+    discovery_ids = (
+        await session.execute(
+            text("""
+                SELECT discovery_id FROM player_discoveries
+                WHERE player_id = :player_id AND run_id = :run_id
+                ORDER BY first_discovered_at
+            """),
+            {"player_id": player_id, "run_id": run_id},
+        )
+    ).scalars().all()
+    collection_ids = (
+        await session.execute(
+            text("""
+                SELECT DISTINCT pc.collection_id
+                FROM player_collections AS pc
+                WHERE pc.player_id = :player_id
+                  AND pc.source = 'DISCOVERY'
+                  AND pc.source_id = ANY(:discovery_ids)
+                ORDER BY pc.collection_id
+            """),
+            {"player_id": player_id, "discovery_ids": discovery_ids or [""]},
+        )
+    ).scalars().all()
+    permanent["discovery_count"] = (
+        await session.execute(
+            text("SELECT count(*) FROM player_discoveries WHERE player_id = :player_id"),
+            {"player_id": player_id},
+        )
+    ).scalar_one()
+    permanent["collection_count"] = (
+        await session.execute(
+            text("SELECT count(*) FROM player_collections WHERE player_id = :player_id"),
+            {"player_id": player_id},
+        )
+    ).scalar_one()
+    await session.execute(
+        text("""
+            UPDATE progress_snapshots
+            SET permanent_progress = CAST(:permanent AS jsonb)
+            WHERE player_id = :player_id AND progress_version = :version
+        """),
+        {
+            "permanent": json.dumps(permanent),
+            "player_id": player_id,
+            "version": next_version,
+        },
+    )
     await session.commit()
     return {
         "result_id": str(result_id),
