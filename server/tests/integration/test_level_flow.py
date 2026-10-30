@@ -140,3 +140,127 @@ def test_personal_level_run_entry_is_idempotent_and_isolated() -> None:
             assert cleanup.status_code == 200
     finally:
         app.dependency_overrides.clear()
+
+
+def test_personal_laws_are_authoritative_idempotent_and_combo_aware(monkeypatch) -> None:
+    from app.core.config import get_settings
+
+    monkeypatch.setattr(get_settings(), "law_combo_window_ms", 60_000)
+    app.dependency_overrides[get_wechat_code_provider] = lambda: FakeWeChatProvider()
+    try:
+        with TestClient(app) as client:
+            first = _login_and_enter_map(client)
+            second = _login_and_enter_map(client)
+
+            entered = client.post(
+                "/api/v1/level/enter",
+                headers={**first["headers"], "Idempotency-Key": "law-room-one-enter-0001"},
+                json={"level_id": "LV-ROOM-01", "entrance_id": "ENT-ROOM-01"},
+            )
+            assert entered.status_code == 200
+            run_id = entered.json()["data"]["run_id"]
+            started = client.post(
+                "/api/v1/level/start",
+                headers=first["headers"],
+                json={"run_id": run_id},
+            )
+            assert started.status_code == 200
+
+            echo_headers = {
+                **first["headers"],
+                "Idempotency-Key": "law-echo-room-one-0001",
+            }
+            echo_payload = {
+                "run_id": run_id,
+                "rule_id": "RULE_ECHO",
+                "mechanism_id": "M01-HIDEABLE-01",
+                "action": "APPLY",
+            }
+            echo = client.post(
+                "/api/v1/level/law/action",
+                headers=echo_headers,
+                json=echo_payload,
+            )
+            assert echo.status_code == 200
+            assert echo.json()["data"]["state"]["state"] == "REVEALED"
+
+            replay = client.post(
+                "/api/v1/level/law/action",
+                headers=echo_headers,
+                json=echo_payload,
+            )
+            assert replay.status_code == 200
+            assert replay.json()["data"]["idempotent_replay"] is True
+
+            conflict = client.post(
+                "/api/v1/level/law/action",
+                headers=echo_headers,
+                json={**echo_payload, "rule_id": "RULE_REVERSE"},
+            )
+            assert conflict.status_code == 409
+
+            foreign_state = client.get(
+                f"/api/v1/level/runs/{run_id}/mechanisms",
+                headers=second["headers"],
+            )
+            assert foreign_state.status_code == 404
+
+            state = client.get(
+                f"/api/v1/level/runs/{run_id}/mechanisms",
+                headers=first["headers"],
+            )
+            assert state.status_code == 200
+            assert any(
+                item["mechanism_id"] == "M01-HIDEABLE-01"
+                and item["state"]["state"] == "REVEALED"
+                for item in state.json()["data"]["mechanisms"]
+            )
+
+            abandoned = client.post(
+                "/api/v1/level/abandon",
+                headers=first["headers"],
+                json={"run_id": run_id},
+            )
+            assert abandoned.status_code == 200
+            returned = client.post("/api/v1/map/enter", headers=first["headers"])
+            assert returned.status_code == 200
+
+            room_two = client.post(
+                "/api/v1/level/enter",
+                headers={**first["headers"], "Idempotency-Key": "law-room-two-enter-0001"},
+                json={"level_id": "LV-ROOM-02", "entrance_id": "ENT-ROOM-02"},
+            )
+            assert room_two.status_code == 200
+            run_two = room_two.json()["data"]["run_id"]
+            assert client.post(
+                "/api/v1/level/start",
+                headers=first["headers"],
+                json={"run_id": run_two},
+            ).status_code == 200
+
+            echo_bridge = client.post(
+                "/api/v1/level/law/action",
+                headers={**first["headers"], "Idempotency-Key": "law-room-two-echo-0001"},
+                json={
+                    "run_id": run_two,
+                    "rule_id": "RULE_ECHO",
+                    "mechanism_id": "M02-BRIDGE-01",
+                    "action": "APPLY",
+                },
+            )
+            assert echo_bridge.status_code == 200
+            gaze_bridge = client.post(
+                "/api/v1/level/law/action",
+                headers={**first["headers"], "Idempotency-Key": "law-room-two-gaze-0001"},
+                json={
+                    "run_id": run_two,
+                    "rule_id": "RULE_GAZE",
+                    "mechanism_id": "M02-BRIDGE-01",
+                    "action": "APPLY",
+                },
+            )
+            assert gaze_bridge.status_code == 200
+            assert gaze_bridge.json()["data"]["combo_id"] == "COMBO-001"
+            assert gaze_bridge.json()["data"]["state"]["state"] == "OPEN"
+    finally:
+        app.dependency_overrides.clear()
