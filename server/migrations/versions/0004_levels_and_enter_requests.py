@@ -137,7 +137,10 @@ def upgrade() -> None:
             '["COMBO-001","COMBO-002","COMBO-003"]'::jsonb,
             '["ROOM05_TARGET_A","ROOM05_TARGET_B"]'::jsonb,
             false, true,
-            '{"config_status":"PROTOTYPE_PENDING_LEVEL_ART","mechanism_count_min":2}'::jsonb
+            jsonb_build_object(
+                'config_status', 'PROTOTYPE_PENDING_LEVEL_ART',
+                'mechanism_count_min', 2
+            )
         ),
         (
             'LV-HIDDEN-01', '隐藏结局', 'MAP_MAIN_001', 'ENT-HIDDEN-01', NULL,
