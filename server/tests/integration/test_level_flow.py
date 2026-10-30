@@ -128,5 +128,15 @@ def test_personal_level_run_entry_is_idempotent_and_isolated() -> None:
             assert [
                 room["room_index"] for room in rooms if not room["is_hidden"]
             ] == [1, 2, 3, 4, 5]
+
+            cleanup = client.post(
+                "/api/v1/level/enter",
+                headers={
+                    **first["headers"],
+                    "Idempotency-Key": "level-enter-cleanup-0001",
+                },
+                json={"level_id": "LV-ROOM-02", "entrance_id": "ENT-ROOM-02"},
+            )
+            assert cleanup.status_code == 200
     finally:
         app.dependency_overrides.clear()
