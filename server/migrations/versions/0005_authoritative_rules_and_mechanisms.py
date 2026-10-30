@@ -120,7 +120,11 @@ def upgrade() -> None:
             name="fk_rule_cast_event_run_owner",
         ),
         sa.UniqueConstraint("run_id", "player_id", "idempotency_key", name="uq_rule_cast_idempotency"),
-        sa.Index("idx_rule_cast_events_run_time", "run_id", "player_id", "created_at"),
+    )
+    op.create_index(
+        "idx_rule_cast_events_run_time",
+        "rule_cast_events",
+        ["run_id", "player_id", "created_at"],
     )
 
     op.execute(
