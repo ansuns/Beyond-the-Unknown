@@ -1,4 +1,4 @@
-# Python service (VS-1)
+# Python service (VS-0 to VS-6A)
 
 ## Layout
 
@@ -13,7 +13,7 @@ server/
 │   │   └── characters/      # Character catalog and ownership rules
 │   ├── realtime/            # WebSocket auth, connection manager and broadcasts
 │   ├── schemas/             # Shared response envelopes
-│   ├── workers/             # RabbitMQ consumers
+│   ├── workers/             # RabbitMQ consumer, outbox relay and season scheduler
 │   └── main.py              # FastAPI composition root
 ├── migrations/              # Alembic history
 ├── schema/                  # Initial SQL snapshot for migration 0001
@@ -25,7 +25,7 @@ server/
 Requires Docker Compose and Python 3.12+ with uv.
 
 1. Copy `.env.example` to `.env` inside this directory.
-2. Configure WeChat Mini Program `WECHAT_APP_ID` and `WECHAT_APP_SECRET` for real login.
+2. Configure the WeChat Mini Game `WECHAT_APP_ID` and `WECHAT_APP_SECRET` for real login. Keep the AppSecret only in the backend environment; never put it in the Cocos client or Git.
 3. Replace JWT and OpenID HMAC secrets with separate random values (at least 32 characters) outside local development.
 4. From repository root, run `docker compose --env-file server/.env up --build -d`, then apply migrations with `docker compose --env-file server/.env run --rm api uv run --no-sync alembic -c alembic.ini upgrade head`.
 
