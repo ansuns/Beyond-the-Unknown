@@ -21,7 +21,7 @@
 
 ## 当前基线
 
-GDD V0.2 已完成首轮跨章节规则、MVP 范围、数据字典、UI/API 映射与修订复核。服务端 VS-0 至 VS-5（工程骨架、微信身份/玩家持久化、共享地图/WebSocket、个人关卡、法则权威逻辑、发现/结算/奖励/排行榜）已合并至 main；相关 Python/Ruff、PostgreSQL 迁移/集成测试和 Docker Compose smoke 检查通过。客户端已具备 TypeScript REST/WebSocket、个人关卡/法则/进度 API 会话层，以及 Cocos Creator 3.8.8 Boot 几何占位原型（微信登录、共享地图、玩家显示、点击移动、进入/放弃个人房间）。当前仍不是可发布的完整小游戏：法则数值、机关坐标、正式关卡内容/美术、场景交互与结算 UI、Cocos 编辑器导入/构建、微信开发者工具和真机验证尚未完成。Redis 多节点 presence/pub-sub、正式 AOI、RabbitMQ 有限重试/Transactional Outbox、生产部署、安全与性能压测也仍是 VS-6 发布前工作。
+GDD V0.2 已完成首轮跨章节规则、MVP 范围、数据字典、UI/API 映射与修订复核。服务端 VS-0 至 VS-5 已合并至 main；VS-6A（赛季周期调度、三榜快照、审核窗口、内部 APPROVE/REJECT、超时自动批准、非付费外观类赛季奖励、RabbitMQ task_outbox、Publisher Confirms、有限重试、Worker 幂等收件与 DLQ）也已合并，Python/Ruff、PostgreSQL 迁移/集成测试和 Docker Compose smoke 全部通过。客户端已具备 TypeScript REST/WebSocket、个人关卡/法则/进度 API 会话层、断线后在服务端宽限期内自动重连，以及 Cocos Creator 3.8.8 Boot 几何占位原型（微信登录、共享地图、玩家显示、点击移动、进入/放弃个人房间）。当前仍不是可发布的完整小游戏：法则数值、机关坐标、正式关卡内容/美术、场景交互与结算 UI、Cocos 编辑器实际导入/构建、微信开发者工具和真机验证尚未完成。RabbitMQ 真实故障/恢复演练、更多业务异步任务接入、Redis 多节点 presence/pub-sub、正式 AOI、生产部署、安全与性能压测仍是发布前工作。
 
 ## 工程原则
 
@@ -32,4 +32,4 @@ GDD V0.2 已完成首轮跨章节规则、MVP 范围、数据字典、UI/API 映
 - 每个纵向切片通过独立分支、PR 与自动化测试后再合并。
 
 
-当前 VS-6A 分支正在实现赛季审核工作流、RabbitMQ Transactional Outbox 与 Worker 幂等处理；仍需真机 Cocos 导入/微信构建和性能验证。
+VS-6A 已合并（PR #52）；当前后端自动化验证通过，仍需真机 Cocos 导入/微信构建、RabbitMQ 故障恢复演练和性能验证。

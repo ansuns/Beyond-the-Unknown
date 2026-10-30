@@ -40,7 +40,7 @@
 - [x] 玩家资料、角色目录与角色选择 REST API；服务端返回的解锁/当前角色为权威状态。
 - [x] WorldPlaySession：共享地图进入、角色/关卡数据加载、个人 run 启动、法则会话和地图移动/动作/心跳的应用层编排。
 - [x] LawController：根据服务端 READY/解锁状态控制施法，校验点/物体目标输入形状，按服务端 lease_timeout 维护 GAZE，并缓存个人机关状态。
-- [x] WebSocket client：AUTH 首包、单调 seq、消息 envelope 校验、心跳/移动/动作/离开命令；自动重连策略仍待实现。
+- [x] WebSocket client：AUTH 首包、单调 seq、消息 envelope 校验、心跳/移动/动作/离开命令；意外断线后复用原 instance/session，在服务端 grace period 内指数退避重连；主动离开不重连。
 - [ ] 移动状态机；客户端预测仅用于表现，服务端位置权威。
 - [ ] 法则施放输入与冷却 UI；回声命中后显形反馈。
 - [x] Cocos Creator 3.8.8 项目结构、Boot 场景、微信登录/共享地图/远端占位角色/点击移动/个人房间进入与放弃的几何原型。
@@ -53,8 +53,9 @@
 - [x] 使用 FastAPI + Uvicorn；VS-1 登录/玩家接口已更新 OpenAPI 契约。
 - [x] 使用 SQLAlchemy 2.x async + asyncpg；Alembic 0001/0002 已在 CI 干净 PostgreSQL 上执行。
 - [x] VS-2 WebSocket 处理器采用 async I/O；CPU 密集计算不得阻塞事件循环。当前连接管理器仅支持单 API 进程，水平扩展前必须接入 Redis presence/pub-sub。
-- [ ] 部署 RabbitMQ 与 Python Worker；定义任务消息 schema、持久化队列/消息、手动 ACK、有限重试与 dead-letter queue。
-- [ ] 仅将可异步化的耗时工作投递到队列；消费者必须幂等，消息确认发生在业务处理成功之后；关键业务写入与消息发布采用 Transactional Outbox，避免数据库提交成功但消息丢失。
+- [x] RabbitMQ 与 Python Worker：版本化任务 envelope、持久化队列/消息、Publisher Confirms、手动 ACK、数据库记录的有限指数退避重试与 DLQ（VS-6A）。
+- [x] 赛季周期到期与结算任务通过 PostgreSQL task_outbox 同事务写入；Relay 仅在 RabbitMQ publisher confirm 后标记 PUBLISHED；Worker 使用 worker_task_receipts 幂等处理（VS-6A）。
+- [ ] 其他未来异步业务副作用按需接入同一 Outbox/幂等消费者模式；当前关卡结算主体仍在 API 数据库事务内同步完成。
 - [x] 玩家身份只从 JWT 认证上下文取得；每个受保护请求查询账号状态，封禁账号立即拒绝。
 - [ ] REST 写请求验证 schema、频率限制与幂等键。
 - [x] WS 首包 AUTH、消息序列号、方向/动作白名单、MOVE/ACTION 频率限制；当前 AOI 使用同实例全可见回退，精确半径/网格待联调。
@@ -70,7 +71,7 @@
 ## 5. 测试清单
 
 ### 数据库
-- [x] 空库执行 0001–0007 成功并登记迁移版本。
+- [x] 空库执行 0001–0008 成功并登记迁移版本；0008 增加赛季审核字段、task_outbox 与 worker_task_receipts。
 - [ ] 外键、枚举、CHECK、唯一约束正反例测试。
 - [ ] 同一玩家重复进入同一关卡生成不同 run_id。
 - [ ] 同一机关配置在不同 run 可独立保存；同 run 重复配置被拒绝。
@@ -130,7 +131,7 @@
 - 自动化测试、真机冒烟、迁移回滚演练通过后，才标记垂直切片完成。
 
 
-## 8. VS-6A 赛季结算与异步任务闭环（本分支）
+## 8. VS-6A 赛季结算与异步任务闭环（已合并 PR #52）
 - [x] 赛季边界扫描：worker 按 SERVER_TIMEZONE 创建周/月周期并发现到期 ACTIVE 周期。
 - [x] Transactional Outbox：业务事务写入 task_outbox，RabbitMQ relay 使用持久化消息与 publisher confirms。
 - [x] Worker task receipt：task_id/idempotency_key 数据库去重，重复投递不重复执行结算。
