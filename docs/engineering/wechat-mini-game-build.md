@@ -76,13 +76,14 @@ docker compose --env-file server/.env ps
 
 ## 5. 首轮联调顺序
 
-1. 启动 PostgreSQL、RabbitMQ、API、Worker，确认 readiness 正常。
+1. 启动 PostgreSQL、RabbitMQ、Redis、API、Worker，确认 readiness 正常。
 2. 微信开发者工具运行小游戏，确认 `wx.login` 返回 code，服务端完成 code 换取 openid，客户端获得 JWT。
 3. 让两个测试客户端登录，确认同一主地图中的玩家互相可见。
 4. 移动一个玩家，确认另一个客户端收到服务端位置同步。
 5. 断开一个客户端网络，在服务端 reconnect grace period 内恢复，确认复用原 instance/session。
-6. 进入个人关卡，再放弃返回主地图，确认共享地图席位释放。
-7. 调用进度、图鉴、奖励和排行榜接口，确认玩家数据隔离。
+6. 如使用多 API 节点，确认两个节点连接同一 Redis，跨节点在线快照和事件广播正常；Redis Pub/Sub 是瞬时消息，断线后仍以 PostgreSQL 成员关系和重连握手恢复状态。
+7. 进入个人关卡，再放弃返回主地图，确认共享地图席位释放。
+8. 调用进度、图鉴、奖励和排行榜接口，确认玩家数据隔离。
 
 ## 6. 当前不能误判为已完成的玩法
 
