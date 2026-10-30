@@ -9,8 +9,8 @@
 ## Implemented client foundation
 
 - WeChat login is isolated behind `WeChatPlatform`; only the temporary `wx.login` code is sent to the backend.
-- REST client attaches Bearer access token, `X-Request-Id`, timeout and typed API errors.
-- Map WebSocket client follows protocol v1: AUTH must be first (seq 0), then ENTER/RECONNECT; client messages use monotonic sequence numbers.
+- REST client attaches Bearer access token, `X-Request-Id`, timeout and typed API errors; `createWeChatFetch(wx)` adapts native `wx.request`.
+- Map WebSocket client follows protocol v1: AUTH must be first (seq 0), then ENTER/RECONNECT; client messages use monotonic sequence numbers. `createWeChatWebSocketFactory(wx)` adapts native `wx.connectSocket`.
 - Map session orchestration performs login → map enter → WebSocket connect and exposes authoritative server events.
 - Access tokens are held in memory by default. Never persist WeChat `session_key` or secrets in the client.
 
@@ -28,4 +28,4 @@ npm run typecheck
 npm test
 ```
 
-This is a TypeScript client foundation, not yet a complete playable Cocos scene project. Scene assets, prefabs, input bindings, art resources and WeChat DevTools packaging are subsequent client integration work. Import the source into the pinned Cocos Creator 3.x project; do not commit editor caches or generated build output.
+This is a TypeScript client foundation, not yet a complete playable Cocos scene project. Scene assets, prefabs, input bindings, art resources and WeChat DevTools packaging are subsequent client integration work. Construct `RestClient` with `createWeChatFetch(wx)` and `MapSession` with `createWeChatWebSocketFactory(wx)` in the WeChat runtime. Import the source into the pinned Cocos Creator 3.x project; do not commit editor caches or generated build output.
