@@ -300,8 +300,8 @@ characters、maps、map_instances、actions_log沿用本章原字段建议。地
 -   **风格：** REST（建议，待最终确认）。
 -   **Base Path：** `/api/v1`。
 -   **认证：** JWT 或会话令牌（建议，待最终确认）；除登录外所有接口需携带有效令牌。
--   **通用响应：** 统一返回 `{ code, message, data, request_id }`。
--   **幂等：** 写接口建议携带 `request_id`，服务端据此去重（第5章/第11章）。
+-   **通用响应：** 统一返回 `{ code, message, data, request_id }`；request_id用于单次请求追踪与日志关联。
+-   **业务幂等：** 结算、积分入账、奖励发放、发现等有副作用的业务操作必须携带独立的 `idempotency_key`；同一业务事件重试必须复用该键。request_id每次网络重试可变化，不得单独作为业务去重依据。积分键唯一约束见17.3，第11章结算与奖励键也按17.3执行。
 -   **频率限制：** 关键写接口服务端限流，具体阈值待压测确定。
 
 ### 【主要接口示例】
@@ -314,7 +314,7 @@ characters、maps、map_instances、actions_log沿用本章原字段建议。地
   地图实例进入              POST   /api/v1/map/enter               分配/恢复实例
   关卡进入                  POST   /api/v1/level/enter             创建个人关卡运行
   关卡结算                  POST   /api/v1/level/settle            提交通关结算
-  发现上报                  POST   /api/v1/discovery/report        上报隐藏发现
+  玩法事件/发现校验          内部   /internal/v1/discovery/event    服务端玩法事件触发；客户端不得直接写入发现
   排行榜查询                GET    /api/v1/leaderboard/{type}      三榜查询
   赛季查询                  GET    /api/v1/season                  周/月赛季信息
   奖励列表                  GET    /api/v1/reward                 已拥有/待领取奖励
