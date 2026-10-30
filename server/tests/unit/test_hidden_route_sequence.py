@@ -86,6 +86,7 @@ def test_hidden_route_unlocks_for_canonical_room05_sequence(monkeypatch):
         _Result(values=[run_id]),
         _Result(rows=_combo_rows(["COMBO-001", "COMBO-002", "COMBO-003"])),
         _Result(scalar="HIDDEN-ROUTE-01"),
+        _Result(),
     ]
     discovery_calls = []
 
@@ -101,7 +102,7 @@ def test_hidden_route_unlocks_for_canonical_room05_sequence(monkeypatch):
         "result_level_id": "LV-HIDDEN-01",
         "newly_unlocked": True,
     }
-    assert session.execute.await_count == 5
+    assert session.execute.await_count == 6
     assert len(discovery_calls) == 1
     assert discovery_calls[0][0][2] == "DISC-HIDDEN-ROUTE-01"
 

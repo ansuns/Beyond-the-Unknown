@@ -17,7 +17,7 @@ import {
 } from "cc";
 
 import { RestClient } from "../network/rest-client";
-import type { MapServerEvent } from "../network/types";
+import type { LawRuleId, MapServerEvent, PersonalLevelState } from "../network/types";
 import { createWeChatFetch, createWeChatWebSocketFactory } from "../platform/wechat-network";
 import { WeChatPlatform } from "../platform/wechat-platform";
 import { SessionStore } from "../player/session-store";
@@ -71,6 +71,14 @@ export class BeyondTheUnknownGameEntry extends Component {
   private levelPositionSyncPromise?: Promise<void>;
   private readonly roomControlNodes: Node[] = [];
   private roomMechanismStates = new Map<string, Record<string, unknown>>();
+  private roomMechanismCatalog = new Map<string, {
+    mechanism_type: string;
+    position_x: number | null;
+    position_y: number | null;
+    target_type: string | null;
+    config: Record<string, unknown>;
+  }>();
+  private readonly prototypeRuleCooldownUntil = new Map<string, number>();
   private levelRoomScale = 40;
   private readonly worldPixelsPerUnit = 40;
   private readonly moveSpeedPixelsPerSecond = 160;
@@ -503,6 +511,89 @@ export class BeyondTheUnknownGameEntry extends Component {
     }
   }
 
+  private async castPrototypeCombo(
+    comboId: string,
+    targetId: string,
+    ruleIds: LawRuleId[]
+  ): Promise<void> {
+    if (!this.levelSession) return;
+    try {
+      await this.flushLevelPosition();
+      let matched = false;
+      for (const ruleId of ruleIds) {
+        const waitMs = (this.prototypeRuleCooldownUntil.get(ruleId) ?? 0) - Date.now();
+        if (waitMs > 0) {
+          await new Promise<void>((resolve) => setTimeout(resolve, waitMs));
+        }
+        const result = await this.levelSession.castRule(
+          ruleId,
+          { targetId },
+          this.makeIdempotencyKey(`prototype-${comboId}-${ruleId}`)
+        );
+        const cooldownUntil = Date.parse(result.cooldown_until);
+        if (Number.isFinite(cooldownUntil)) {
+          this.prototypeRuleCooldownUntil.set(ruleId, cooldownUntil);
+        }
+        if (ruleId === "RULE_GAZE") {
+          await this.levelSession.maintainGaze(targetId);
+        }
+        if (result.combo?.combo_id === comboId) matched = true;
+      }
+      const state = await this.levelSession.refreshState();
+      this.applyRoomMechanismStates(state);
+      this.drawPersonalRoom(this.pendingLevelName);
+      this.setStatus(
+        matched
+          ? `${comboId} 已触发，目标机关状态已同步`
+          : `${comboId} 的法则已施放；组合未匹配，请检查顺序、冷却和目标`
+      );
+    } catch (error) {
+      this.setStatus(`组合施放失败：${error instanceof Error ? error.message : "请稍后重试"}`);
+    }
+  }
+
+  private async settlePrototypeRoom(): Promise<void> {
+    if (!this.levelSession) return;
+    try {
+      await this.flushLevelPosition();
+      const result = await this.levelSession.settle(
+        this.makeIdempotencyKey(`prototype-settle-${this.pendingLevelId}`)
+      );
+      this.levelSession = undefined;
+      this.currentMode = "MENU";
+      this.moveTarget = undefined;
+      this.drawPersonalRoom("探索完成", true);
+      this.setStatus(
+        result.result_status === "COMPLETED"
+          ? `${this.pendingLevelId} 完成 · 用时 ${Math.round(result.completion_time_ms / 1000)} 秒`
+          : `${this.pendingLevelId} 未完成 · ${result.result_status}`
+      );
+    } catch (error) {
+      this.setStatus(`暂不能结算：${error instanceof Error ? error.message : "必要目标尚未完成"}`);
+    }
+  }
+
+  private async interactHiddenEnding(): Promise<void> {
+    if (!this.levelSession) return;
+    try {
+      await this.flushLevelPosition();
+      const result = await this.levelSession.interact(
+        "H01-END",
+        this.makeIdempotencyKey("hidden-ending-interact")
+      );
+      this.roomMechanismStates.set(result.mechanism_id, result.state);
+      this.applyRoomMechanismStates(await this.levelSession.refreshState());
+      if (result.state.status === "TRIGGERED") {
+        await this.settlePrototypeRoom();
+      } else {
+        this.drawPersonalRoom(this.pendingLevelName);
+        this.setStatus("结局核心尚未完成");
+      }
+    } catch (error) {
+      this.setStatus(`结局核心交互失败：${error instanceof Error ? error.message : "请靠近机关后重试"}`);
+    }
+  }
+
   private async interactRoomExit(): Promise<void> {
     if (!this.levelSession) return;
     try {
@@ -587,6 +678,8 @@ export class BeyondTheUnknownGameEntry extends Component {
     this.levelMoveSendElapsed = 0;
     this.levelPositionSyncPromise = undefined;
     this.roomMechanismStates.clear();
+    this.roomMechanismCatalog.clear();
+    this.prototypeRuleCooldownUntil.clear();
     const state = await this.levelSession.refreshState();
     this.applyRoomMechanismStates(state);
     this.setStatus(
@@ -595,11 +688,21 @@ export class BeyondTheUnknownGameEntry extends Component {
     this.drawPersonalRoom(levelName);
   }
 
-  private applyRoomMechanismStates(
-    state: { mechanisms: Array<{ mechanism_id: string; state: Record<string, unknown> }> }
-  ): void {
+  private applyRoomMechanismStates(state: PersonalLevelState): void {
     this.roomMechanismStates = new Map(
       state.mechanisms.map((item) => [item.mechanism_id, item.state])
+    );
+    this.roomMechanismCatalog = new Map(
+      state.mechanisms.map((item) => [
+        item.mechanism_id,
+        {
+          mechanism_type: item.mechanism_type,
+          position_x: item.position_x,
+          position_y: item.position_y,
+          target_type: item.target_type,
+          config: item.config ?? {}
+        }
+      ])
     );
   }
 
@@ -635,57 +738,168 @@ export class BeyondTheUnknownGameEntry extends Component {
     this.worldRoot.removeAllChildren();
     const size = this.worldRoot.getComponent(UITransform).contentSize;
     if (this.pendingLevelId !== "LV-ROOM-01") {
+      const room = new Node(`RoomPrototype-${this.pendingLevelId}`);
+      this.worldRoot.addChild(room);
+      room.addComponent(UITransform).setContentSize(480, 320);
+      const background = room.addComponent(Graphics);
+      background.lineWidth = 3;
+      background.strokeColor = new Color(105, 169, 190, 255);
+      background.fillColor = new Color(18, 39, 55, 255);
+      background.rect(-240, -160, 480, 320);
+      background.fill();
+      background.stroke();
+
+      for (const [mechanismId, descriptor] of this.roomMechanismCatalog.entries()) {
+        if (descriptor.position_x === null || descriptor.position_y === null) continue;
+        const state = this.roomMechanismStates.get(mechanismId) ?? {};
+        const status = String(state.status ?? "INACTIVE");
+        const activated = status === "TRIGGERED" || state.visible === true;
+        const locked = status === "LOCKED" || status === "SEALED";
+        const color = activated
+          ? new Color(122, 204, 151, 255)
+          : locked
+            ? new Color(220, 170, 104, 255)
+            : new Color(117, 185, 220, 255);
+        const markerNode = new Node(`Mechanism-${mechanismId}`);
+        room.addChild(markerNode);
+        markerNode.setPosition(
+          -240 + descriptor.position_x * this.levelRoomScale,
+          -160 + descriptor.position_y * this.levelRoomScale,
+          0
+        );
+        markerNode.addComponent(UITransform).setContentSize(22, 22);
+        const marker = markerNode.addComponent(Graphics);
+        marker.fillColor = color;
+        marker.strokeColor = color;
+        marker.lineWidth = 2;
+        marker.circle(0, 0, 10);
+        if (activated) marker.fill();
+        else marker.stroke();
+
+        const labelNode = new Node(`Label-${mechanismId}`);
+        markerNode.addChild(labelNode);
+        labelNode.setPosition(0, 20, 0);
+        labelNode.addComponent(UITransform).setContentSize(170, 20);
+        const label = labelNode.addComponent(Label);
+        label.string = `${mechanismId} · ${status}`;
+        label.fontSize = 10;
+        label.color = new Color(226, 237, 246, 255);
+        label.horizontalAlign = Label.HorizontalAlign.CENTER;
+      }
+
+      if (!completed) {
+        this.levelAvatar = new Node("PersonalLevelAvatar");
+        room.addChild(this.levelAvatar);
+        this.levelAvatar.addComponent(UITransform).setContentSize(30, 30);
+        const avatarGraphics = this.levelAvatar.addComponent(Graphics);
+        avatarGraphics.fillColor = new Color(247, 220, 137, 255);
+        avatarGraphics.circle(0, 0, 13);
+        avatarGraphics.fill();
+        this.levelAvatar.setPosition(
+          -240 + this.levelPosition.x * this.levelRoomScale,
+          -160 + this.levelPosition.y * this.levelRoomScale,
+          0
+        );
+      }
+
       const titleNode = new Node("RoomTitle");
       this.worldRoot.addChild(titleNode);
       titleNode.setPosition(0, size.height / 2 - 30, 0);
       titleNode.addComponent(UITransform).setContentSize(size.width - 40, 28);
       const title = titleNode.addComponent(Label);
-      title.string = `${levelName} · ${this.pendingLevelId} 原型状态`;
+      title.string = `${levelName} · ${this.pendingLevelId} 几何原型`;
       title.fontSize = 16;
       title.color = new Color(226, 237, 246, 255);
       title.horizontalAlign = Label.HorizontalAlign.CENTER;
 
-      const stateLines = [...this.roomMechanismStates.entries()].map(([id, state]) => {
-        const status = String(state.status ?? state.combo_applied ?? "未触发");
-        return `${id}  ·  ${status}`;
-      });
-      const summaryNode = new Node("MechanismStateSummary");
-      this.worldRoot.addChild(summaryNode);
-      summaryNode.setPosition(0, 18, 0);
-      summaryNode.addComponent(UITransform).setContentSize(size.width - 48, 150);
-      const summary = summaryNode.addComponent(Label);
-      summary.string = stateLines.length ? stateLines.join("\n") : "服务端尚未返回机关状态";
-      summary.fontSize = 13;
-      summary.lineHeight = 22;
-      summary.color = new Color(194, 215, 229, 255);
-      summary.horizontalAlign = Label.HorizontalAlign.CENTER;
-      summary.verticalAlign = Label.VerticalAlign.CENTER;
-
       const hintNode = new Node("RoomPrototypeHint");
       this.worldRoot.addChild(hintNode);
-      hintNode.setPosition(0, -size.height / 2 + 158, 0);
-      hintNode.addComponent(UITransform).setContentSize(size.width - 40, 46);
+      hintNode.setPosition(0, -size.height / 2 + 178, 0);
+      hintNode.addComponent(UITransform).setContentSize(size.width - 40, 34);
       const hint = hintNode.addComponent(Label);
       hint.string = completed
         ? "本次探索已结算"
-        : "该房间的空间坐标与正式交互配置尚未验收；当前仅展示服务端机关状态";
-      hint.fontSize = 12;
-      hint.lineHeight = 18;
+        : "服务器权威原型坐标 · 正式美术、数值平衡与真机验收仍待完成";
+      hint.fontSize = 11;
       hint.color = new Color(230, 190, 135, 255);
       hint.horizontalAlign = Label.HorizontalAlign.CENTER;
-      hint.verticalAlign = Label.VerticalAlign.CENTER;
 
-      this.roomControlNodes.push(
-        this.createButton(
-          completed ? "BackToWorldButton" : "RoomAbandonButton",
-          completed ? "返回共享世界" : "放弃并返回",
+      if (!completed) {
+        const comboDefinitions: Array<{
+          comboId: string;
+          targetId: string;
+          ruleIds: LawRuleId[];
+          title: string;
+        }> = this.pendingLevelId === "LV-ROOM-02"
+          ? [{ comboId: "COMBO-001", targetId: "M02-BRIDGE-01", ruleIds: ["RULE_ECHO", "RULE_GAZE"], title: "施放组合一" }]
+          : this.pendingLevelId === "LV-ROOM-03"
+            ? [{ comboId: "COMBO-002", targetId: "M03-ENERGY-01", ruleIds: ["RULE_ECHO", "RULE_REVERSE"], title: "施放组合二" }]
+            : this.pendingLevelId === "LV-ROOM-04"
+              ? [{ comboId: "COMBO-003", targetId: "M04-PLATFORM-01", ruleIds: ["RULE_GAZE", "RULE_REVERSE"], title: "施放组合三" }]
+              : this.pendingLevelId === "LV-ROOM-05"
+                ? [
+                    { comboId: "COMBO-001", targetId: "M05-BRIDGE-01", ruleIds: ["RULE_ECHO", "RULE_GAZE"], title: "组合一·桥梁" },
+                    { comboId: "COMBO-002", targetId: "M05-ENERGY-01", ruleIds: ["RULE_ECHO", "RULE_REVERSE"], title: "组合二·能量" },
+                    { comboId: "COMBO-003", targetId: "M05-REVERSE-01", ruleIds: ["RULE_GAZE", "RULE_REVERSE"], title: "组合三·逆流" }
+                  ]
+                : [];
+
+        const buttonWidth = Math.min(170, (size.width - 48) / Math.max(1, comboDefinitions.length));
+        const totalWidth = comboDefinitions.length * buttonWidth + Math.max(0, comboDefinitions.length - 1) * 8;
+        comboDefinitions.forEach((definition, index) => {
+          const x = -totalWidth / 2 + buttonWidth / 2 + index * (buttonWidth + 8);
+          this.roomControlNodes.push(this.createButton(
+            `Cast-${definition.comboId}-${index}`,
+            definition.title,
+            x,
+            -size.height / 2 + 112,
+            buttonWidth,
+            42,
+            () => this.castPrototypeCombo(definition.comboId, definition.targetId, definition.ruleIds)
+          ));
+        });
+
+        if (this.pendingLevelId === "LV-HIDDEN-01") {
+          this.roomControlNodes.push(this.createButton(
+            "InteractEndingCore",
+            "交互结局核心",
+            0,
+            -size.height / 2 + 112,
+            180,
+            42,
+            () => this.interactHiddenEnding()
+          ));
+        } else {
+          this.roomControlNodes.push(this.createButton(
+            "SettlePrototypeRoom",
+            "完成并结算",
+            0,
+            -size.height / 2 + 60,
+            150,
+            40,
+            () => this.settlePrototypeRoom()
+          ));
+        }
+        this.roomControlNodes.push(this.createButton(
+          "RoomAbandonButton",
+          "放弃并返回",
+          size.width / 2 - 88,
+          size.height / 2 - 145,
+          150,
+          40,
+          () => this.returnToWorld()
+        ));
+      } else {
+        this.roomControlNodes.push(this.createButton(
+          "BackToWorldButton",
+          "返回共享世界",
           0,
-          -size.height / 2 + 105,
+          -size.height / 2 + 70,
           170,
           42,
-          () => completed ? this.loginAndEnterWorld() : this.returnToWorld()
-        )
-      );
+          () => this.loginAndEnterWorld()
+        ));
+      }
       return;
     }
 
@@ -773,6 +987,9 @@ export class BeyondTheUnknownGameEntry extends Component {
       await this.levelSession.abandon();
       this.levelSession = undefined;
       this.pendingLevelName = "";
+      this.pendingLevelId = "";
+      this.roomMechanismCatalog.clear();
+      this.prototypeRuleCooldownUntil.clear();
       this.moveTarget = undefined;
       this.mapSession = undefined;
       this.currentMode = "MENU";

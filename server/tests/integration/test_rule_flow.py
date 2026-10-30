@@ -435,7 +435,8 @@ def test_mechanism_catalog_and_references_match_canonical_gdd_ids() -> None:
                 catalog = await connection.execute(
                     text(
                         """
-                        SELECT level_id, mechanism_config_id, mechanism_type, is_enabled
+                        SELECT level_id, mechanism_config_id, mechanism_type, is_enabled,
+                               position_x, position_y, config
                         FROM level_mechanism_catalog
                         """
                     )
@@ -539,6 +540,28 @@ def test_mechanism_catalog_and_references_match_canonical_gdd_ids() -> None:
         "M03-ENERGY-01",
         "M04-PLATFORM-01",
     } & enabled_room5_ids
+    prototype_ids = {
+        ("LV-ROOM-02", "M02-BRIDGE-01"),
+        ("LV-ROOM-03", "M03-ENERGY-01"),
+        ("LV-ROOM-03", "M03-DOOR-01"),
+        ("LV-ROOM-04", "M04-PLATFORM-01"),
+        ("LV-ROOM-04", "M04-PLATFORM-02"),
+        ("LV-ROOM-05", "M05-BRIDGE-01"),
+        ("LV-ROOM-05", "M05-ENERGY-01"),
+        ("LV-ROOM-05", "M05-REVERSE-01"),
+        ("LV-ROOM-05", "M05-HIDDEN-GATE"),
+        ("LV-HIDDEN-01", "H01-GATE"),
+        ("LV-HIDDEN-01", "H01-END"),
+    }
+    configured_prototypes = {
+        (row["level_id"], row["mechanism_config_id"])
+        for row in contract["catalog"]
+        if row["is_enabled"]
+        and row["position_x"] is not None
+        and row["position_y"] is not None
+        and row["config"].get("prototype_only") is True
+    }
+    assert prototype_ids <= configured_prototypes
     assert contract["combo_targets"] == [
         "M02-BRIDGE-01",
         "M03-ENERGY-01",

@@ -890,12 +890,20 @@ async def get_level_state(
     rows = (
         await session.execute(
             text("""
-                SELECT mechanism_config_id, mechanism_type, state, updated_at
-                FROM mechanism_states
-                WHERE run_id = :run_id AND player_id = :player_id
-                ORDER BY mechanism_config_id
+                SELECT s.mechanism_config_id, s.mechanism_type, s.state, s.updated_at,
+                       c.position_x, c.position_y, c.target_type, c.config
+                FROM mechanism_states AS s
+                LEFT JOIN level_mechanism_catalog AS c
+                  ON c.level_id = :level_id
+                 AND c.mechanism_config_id = s.mechanism_config_id
+                WHERE s.run_id = :run_id AND s.player_id = :player_id
+                ORDER BY s.mechanism_config_id
             """),
-            {"run_id": run_id, "player_id": player_id},
+            {
+                "run_id": run_id,
+                "player_id": player_id,
+                "level_id": run["level_id"],
+            },
         )
     ).mappings().all()
     await session.commit()
@@ -907,6 +915,10 @@ async def get_level_state(
                 "mechanism_id": row["mechanism_config_id"],
                 "mechanism_type": row["mechanism_type"],
                 "state": row["state"],
+                "position_x": row["position_x"],
+                "position_y": row["position_y"],
+                "target_type": row["target_type"],
+                "config": row["config"] or {},
                 "updated_at": row["updated_at"].isoformat(),
             }
             for row in rows
