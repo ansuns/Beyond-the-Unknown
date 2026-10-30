@@ -2,7 +2,6 @@ import sqlalchemy as sa
 from alembic import op
 from sqlalchemy.dialects.postgresql import JSONB
 
-
 revision = "0004_levels_and_enter_requests"
 down_revision = "0003_map_instance_members"
 branch_labels = None
