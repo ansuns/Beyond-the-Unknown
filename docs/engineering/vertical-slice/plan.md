@@ -1,7 +1,7 @@
 # 第一阶段垂直切片开发与测试清单
 
 - 版本：VS-1.1
-- 状态：VS-0/VS-1 已合并并通过 CI；VS-2 服务端共享地图/WebSocket 单进程原型已合并并通过 CI；Cocos TypeScript 网络基础正在独立 PR 验证，完整 Cocos 场景与真机联调未完成
+- 状态：VS-0 至 VS-4 服务端基础与规则权威逻辑已合并并通过 CI；客户端 REST/WebSocket、个人关卡/法则会话编排已合并并通过客户端 CI；完整 Cocos 场景、玩法输入/表现、数值与机关坐标配置、结算闭环及真机联调仍未完成
 - 基线：GDD V0.2；Cocos Creator 3.x + TypeScript；Python 3.12+ + FastAPI；PostgreSQL；RabbitMQ
 - 目标：端到端验证“登录—共享主地图—进入个人关卡—施放法则—机关解谜—服务端结算—永久进度恢复”。
 - 策略：先完成 ROOM-01 可玩闭环，再以配置驱动接入 ROOM-02 至 ROOM-05 与隐藏结局。
@@ -27,19 +27,19 @@
 | 阶段 | 交付 | 完成定义 |
 |---|---|---|
 | VS-0 工程骨架 | Python 服务端、配置/环境变量、Docker Compose（PostgreSQL、RabbitMQ、API、Worker） | 服务端骨架已完成；Cocos Creator 项目初始化仍待客户端切片 |
-| VS-1 身份与持久化 | 微信 code 服务端交换、players、12个角色初始化、JWT、玩家/角色 API、迁移与测试 | 服务端已完成并 CI 验证：重复/并发登录幂等、12角色解锁、选角、JWT；客户端 wx.login 接入待做 |
-| VS-2 共享主地图 | 地图实例分配、WS鉴权、ENTER/LEAVE、MOVE_SYNC、动作广播、心跳与重连保留 | 服务端双连接集成测试通过并已合并；客户端网络基础进行中；AOI精细化和Redis多节点仍待完成 |
-| VS-3 个人关卡 | levels目录、个人run创建/开始/放弃、进入幂等与主地图席位释放 | 后端接口与迁移进入CI；ROOM-01场景和机关状态待VS-4/客户端接入 |
-| VS-4 核心玩法 | 法则目录、权威施法、冷却/持续效果、三组预设组合、个人机关状态机 | 后端逻辑进入CI；法则数值与机关坐标仍待联调配置 |
+| VS-1 身份与持久化 | 微信 code 服务端交换、players、12个角色初始化、JWT、玩家/角色 API、迁移与测试 | 服务端已完成；客户端 wx.login、玩家资料/角色目录/选角 REST 调用已完成；角色选择 UI 待做 |
+| VS-2 共享主地图 | 地图实例分配、WS鉴权、ENTER/LEAVE、MOVE_SYNC、动作广播、心跳与重连保留 | 服务端单进程原型已合并；客户端 WebSocket/MapSession/WorldPlaySession 已合并；自动重连、移动表现、精细 AOI 与 Redis 多节点仍待完成 |
+| VS-3 个人关卡 | levels目录、个人run创建/开始/放弃、进入幂等与主地图席位释放 | 后端接口与迁移已合并；客户端 PersonalLevelSession/WorldPlaySession 可进入并启动个人 run；ROOM-01 场景与结算仍待做 |
+| VS-4 核心玩法 | 法则目录、权威施法、冷却/持续效果、三组预设组合、个人机关状态机 | 服务端规则目录、权限/目标/范围校验、冷却/注视租约、机关状态隔离与三组组合已合并；客户端 LawController 已接入并通过 CI；数值/坐标仍为 TUNING_REQUIRED，场景表现待做 |
 | VS-5 发现与结算 | discovery、world_archive、settlements、score_events、进度快照 | 结算幂等；重登后永久进度可见 |
 | VS-6 联调验收 | 真机包、自动化报告、性能/断线测试 | 本文验收项通过或阻塞缺陷有负责人 |
 
 ## 3. 客户端任务（Cocos Creator 3.x）
 - [x] 建立 TypeScript core/network/player/world 基础模块；level/rules/ui 随后续玩法切片增加。
-- [x] REST client：Bearer 鉴权、X-Request-Id、超时、错误映射（客户端基础）。
+- [x] REST client：Bearer 鉴权、X-Request-Id、超时、错误映射（客户端基础）。\n- [x] 玩家资料、角色目录与角色选择 REST API；服务端返回的解锁/当前角色为权威状态。\n- [x] WorldPlaySession：共享地图进入、角色/关卡数据加载、个人 run 启动、法则会话和地图移动/动作/心跳的应用层编排。\n- [x] LawController：根据服务端 READY/解锁状态控制施法，校验点/物体目标输入形状，按服务端 lease_timeout 维护 GAZE，并缓存个人机关状态。
 - [x] WebSocket client：AUTH 首包、单调 seq、消息 envelope 校验、心跳/移动/动作/离开命令；自动重连策略仍待实现。
 - [ ] 移动状态机；客户端预测仅用于表现，服务端位置权威。
-- [ ] 法则施放输入与冷却 UI；回声命中后显形反馈。
+- [ ] 法则施放输入与冷却 UI；回声命中后显形反馈。\n- [ ] Cocos 场景/组件、目标 hit-testing、机关动画/音效与 HUD；当前只有 engine-independent TypeScript orchestration。
 - [ ] 关卡目标/机关表现由配置和服务端状态驱动，不硬编码完成条件。
 - [ ] 加载、断网、重连、结算与错误状态。
 
@@ -53,7 +53,7 @@
 - [x] 玩家身份只从 JWT 认证上下文取得；每个受保护请求查询账号状态，封禁账号立即拒绝。
 - [ ] REST 写请求验证 schema、频率限制与幂等键。
 - [x] WS 首包 AUTH、消息序列号、方向/动作白名单、MOVE/ACTION 频率限制；当前 AOI 使用同实例全可见回退，精确半径/网格待联调。
-- [ ] level_run 归属检查；机关状态通过 (run_id, player_id) 复合外键隔离。
+- [x] level_run 归属检查；机关状态通过 (run_id, player_id) 复合外键隔离。
 - [x] VS-3：levels目录、入口校验、level_enter_requests业务幂等、单玩家单活跃run、CREATED/RUNNING/ABANDONED状态流转。
 - [ ] VS-4：服务端 rule_catalog / combo_catalog / player_unlocked_rules；施法必须验证 run 归属、法则权限、冷却、目标类型/范围、幂等键；机关状态按 (run_id, player_id, mechanism_config_id) 隔离。
 - [ ] VS-4：回声显形、注视维持/中断、逆流反转/超时恢复；组合顺序/时间窗校验与机关状态机联动。
@@ -80,7 +80,7 @@
 - [ ] 副作用请求缺少 Idempotency-Key 时被拒绝。
 - [ ] 同键同请求体重试返回同一结果；同键不同请求体返回 409。
 - [x] WebSocket AUTH 后才允许 ENTER/MOVE/ACTION；双连接集成测试覆盖同实例广播。
-- [ ] C2S 伪造 MECH_STATE 被拒绝。
+- [x] C2S 伪造 MECH_STATE 被拒绝（服务端只接受白名单协议消息，不接受客户端写入机关状态）。
 - [x] MOVE_SYNC 非法坐标/方向、超速、超频和乱序输入由服务端拒绝或丢弃；逻辑地图边界仍待地图资源确定。
 - [ ] AOI 半径/网格与边界测试（当前原型采用同实例全可见回退，不代表最终 AOI）。
 - [x] 重连重新鉴权并校验 membership session；保留期内获得同实例在线快照。未完成谜题临时状态不恢复。
