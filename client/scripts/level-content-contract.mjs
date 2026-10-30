@@ -3,6 +3,9 @@ export function validateLevelContentConfig(config) {
   const add = (message) => errors.push(message);
   const levels = Array.isArray(config?.levels) ? config.levels : [];
   const levelById = new Map(levels.map((level) => [level.level_id, level]));
+  const hasPrototypeComboContract = levels.some((level) =>
+    Object.prototype.hasOwnProperty.call(level, "prototype_combos")
+  );
 
   if (config?.schema_version !== 1) add("schema_version must be 1");
   if (levels.length !== 6) add(`expected 5 normal rooms + 1 hidden room, found ${levels.length}`);
@@ -89,34 +92,36 @@ export function validateLevelContentConfig(config) {
       add(`${level.level_id}: duplicate required_combos`);
     }
 
-    const prototypeCombos = Array.isArray(level.prototype_combos) ? level.prototype_combos : [];
-    if (!Array.isArray(level.prototype_combos)) {
-      add(`${level.level_id}: prototype_combos must be an array`);
-    }
-    const prototypeComboIds = prototypeCombos.map((combo) => combo.combo_id);
-    if (!level.is_hidden && (level.room_index ?? 0) > 1 &&
-        [...prototypeComboIds].sort().join("|") !== [...requiredCombos].sort().join("|")) {
-      add(`${level.level_id}: every required combo must have exactly one prototype control definition`);
-    }
-    if (new Set(prototypeComboIds).size !== prototypeComboIds.length) {
-      add(`${level.level_id}: duplicate prototype combo_id`);
-    }
-    for (const combo of prototypeCombos) {
-      if (!requiredCombos.includes(combo.combo_id)) {
-        add(`${level.level_id}: prototype combo ${combo.combo_id} is not listed in required_combos`);
+    if (hasPrototypeComboContract) {
+      const prototypeCombos = Array.isArray(level.prototype_combos) ? level.prototype_combos : [];
+      if (!Array.isArray(level.prototype_combos)) {
+        add(`${level.level_id}: prototype_combos must be an array`);
       }
-      if (!localMechanisms.has(combo.target_mechanism_id)) {
-        add(`${level.level_id}: prototype combo ${combo.combo_id} references missing target ${combo.target_mechanism_id}`);
+      const prototypeComboIds = prototypeCombos.map((combo) => combo.combo_id);
+      if (!level.is_hidden && (level.room_index ?? 0) > 1 &&
+          [...prototypeComboIds].sort().join("|") !== [...requiredCombos].sort().join("|")) {
+        add(`${level.level_id}: every required combo must have exactly one prototype control definition`);
       }
-      if (!Array.isArray(combo.rule_sequence) || combo.rule_sequence.length !== 2 ||
-          combo.rule_sequence.some((rule) => !["RULE_ECHO", "RULE_GAZE", "RULE_REVERSE"].includes(rule))) {
-        add(`${level.level_id}: prototype combo ${combo.combo_id} must define exactly two known law rules`);
+      if (new Set(prototypeComboIds).size !== prototypeComboIds.length) {
+        add(`${level.level_id}: duplicate prototype combo_id`);
       }
-      if (typeof combo.display_name !== "string" || !combo.display_name.trim()) {
-        add(`${level.level_id}: prototype combo ${combo.combo_id} requires a display_name`);
-      }
-      if (typeof combo.maintain_gaze !== "boolean") {
-        add(`${level.level_id}: prototype combo ${combo.combo_id} requires a maintain_gaze boolean`);
+      for (const combo of prototypeCombos) {
+        if (!requiredCombos.includes(combo.combo_id)) {
+          add(`${level.level_id}: prototype combo ${combo.combo_id} is not listed in required_combos`);
+        }
+        if (!localMechanisms.has(combo.target_mechanism_id)) {
+          add(`${level.level_id}: prototype combo ${combo.combo_id} references missing target ${combo.target_mechanism_id}`);
+        }
+        if (!Array.isArray(combo.rule_sequence) || combo.rule_sequence.length !== 2 ||
+            combo.rule_sequence.some((rule) => !["RULE_ECHO", "RULE_GAZE", "RULE_REVERSE"].includes(rule))) {
+          add(`${level.level_id}: prototype combo ${combo.combo_id} must define exactly two known law rules`);
+        }
+        if (typeof combo.display_name !== "string" || !combo.display_name.trim()) {
+          add(`${level.level_id}: prototype combo ${combo.combo_id} requires a display_name`);
+        }
+        if (typeof combo.maintain_gaze !== "boolean") {
+          add(`${level.level_id}: prototype combo ${combo.combo_id} requires a maintain_gaze boolean`);
+        }
       }
     }
   }
