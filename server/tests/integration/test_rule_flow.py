@@ -408,6 +408,19 @@ def test_room_five_supports_all_three_preset_combos() -> None:
             )
             assert reverse_platform.status_code == 200, reverse_platform.text
             assert reverse_platform.json()["data"]["combo"]["combo_id"] == "COMBO-003"
+
+            # The settlement objectives must point at these same ROOM-05
+            # mechanisms; otherwise combo state can never satisfy the clear.
+            settled = client.post(
+                "/api/v1/level/settle",
+                headers={
+                    **player["headers"],
+                    "Idempotency-Key": "room5-settle-after-three-combos",
+                },
+                json={"run_id": run_id},
+            )
+            assert settled.status_code == 200, settled.text
+            assert settled.json()["data"]["result_status"] == "COMPLETED"
     finally:
         _set_rule_tuning(False)
         app.dependency_overrides.clear()
@@ -422,7 +435,7 @@ def test_mechanism_catalog_and_references_match_canonical_gdd_ids() -> None:
                 catalog = await connection.execute(
                     text(
                         """
-                        SELECT level_id, mechanism_config_id, mechanism_type
+                        SELECT level_id, mechanism_config_id, mechanism_type, is_enabled
                         FROM level_mechanism_catalog
                         """
                     )
@@ -448,6 +461,16 @@ def test_mechanism_catalog_and_references_match_canonical_gdd_ids() -> None:
                         """
                     )
                 )
+                room5_objectives = await connection.execute(
+                    text(
+                        """
+                        SELECT objective_id, mechanism_config_id
+                        FROM level_objectives
+                        WHERE level_id = 'LV-ROOM-05'
+                        ORDER BY objective_id
+                        """
+                    )
+                )
                 combo_targets = await connection.execute(
                     text(
                         """
@@ -469,6 +492,7 @@ def test_mechanism_catalog_and_references_match_canonical_gdd_ids() -> None:
             return {
                 "catalog": [dict(row._mapping) for row in catalog],
                 "objectives_without_mechanisms": objectives_without_mechanisms,
+                "room5_objectives": [dict(row._mapping) for row in room5_objectives],
                 "route": route,
                 "combo_targets": [row[0] for row in combo_targets],
                 "hidden_discovery": hidden_discovery,
@@ -489,10 +513,32 @@ def test_mechanism_catalog_and_references_match_canonical_gdd_ids() -> None:
     assert ("LV-HIDDEN-01", "H01-END") in ids
     assert contract["objectives_without_mechanisms"] == 0
     assert contract["route"] == [
+        "M05-BRIDGE-01",
+        "M05-ENERGY-01",
+        "M05-REVERSE-01",
+    ]
+    assert {
+        row["mechanism_config_id"] for row in contract["room5_objectives"]
+    } == {
+        "M05-BRIDGE-01",
+        "M05-ENERGY-01",
+        "M05-REVERSE-01",
+    }
+    enabled_room5_ids = {
+        row["mechanism_config_id"]
+        for row in contract["catalog"]
+        if row["level_id"] == "LV-ROOM-05" and row["is_enabled"]
+    }
+    assert {
+        "M05-BRIDGE-01",
+        "M05-ENERGY-01",
+        "M05-REVERSE-01",
+    } <= enabled_room5_ids
+    assert not {
         "M02-BRIDGE-01",
         "M03-ENERGY-01",
         "M04-PLATFORM-01",
-    ]
+    } & enabled_room5_ids
     assert contract["combo_targets"] == [
         "M02-BRIDGE-01",
         "M03-ENERGY-01",
