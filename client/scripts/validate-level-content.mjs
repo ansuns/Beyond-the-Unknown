@@ -54,8 +54,17 @@ for (const level of levels) {
     }
   }
 
-  const prototypeCombos = level.prototype_combos ?? [];
+  if (!Array.isArray(level.prototype_combos)) {
+    add(`${level.level_id}: prototype_combos must be an array`);
+  }
+  const prototypeCombos = Array.isArray(level.prototype_combos) ? level.prototype_combos : [];
   const prototypeComboIds = prototypeCombos.map((combo) => combo.combo_id);
+  if (!level.is_hidden && (level.room_index ?? 0) > 1) {
+    const requiredComboIds = [...(level.required_combos ?? [])].sort();
+    if ([...prototypeComboIds].sort().join("|") !== requiredComboIds.join("|")) {
+      add(`${level.level_id}: every required combo must have exactly one prototype control definition`);
+    }
+  }
   if (new Set(prototypeComboIds).size !== prototypeComboIds.length) {
     add(`${level.level_id}: duplicate prototype combo_id`);
   }
