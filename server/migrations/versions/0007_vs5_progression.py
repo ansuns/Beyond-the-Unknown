@@ -171,6 +171,7 @@ def downgrade() -> None:
         )
         """
     )
+    op.execute("UPDATE level_mechanism_catalog SET target_state = 'TRIGGERED'")
     op.drop_constraint(
         "ck_level_mechanism_target_state",
         "level_mechanism_catalog",
