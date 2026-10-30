@@ -1,0 +1,9 @@
+# 项目内部数据，不纳入版本控制
+.workbuddy/
+
+# 默认忽略所有文件
+*
+
+# 仅保留 Markdown 文档与 .gitignore 本身
+!*.md
+!.gitignore
