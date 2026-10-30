@@ -158,6 +158,40 @@ paths:
         '200': { description: Run transitioned to ABANDONED (idempotent) }
         '404': { $ref: '#/components/responses/NotFound' }
         '409': { $ref: '#/components/responses/Conflict' }
+  /level/law/action:
+    post:
+      tags: [Level]
+      operationId: applyPersonalLaw
+      parameters: [{ $ref: '#/components/parameters/RequestId' }, { $ref: '#/components/parameters/IdempotencyKey' }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [run_id, rule_id, mechanism_id, action]
+              properties:
+                run_id: { type: string, format: uuid }
+                rule_id: { type: string, enum: [RULE_ECHO, RULE_GAZE, RULE_REVERSE] }
+                mechanism_id: { type: string, maxLength: 100 }
+                action: { type: string, enum: [APPLY, RELEASE] }
+      responses:
+        '200': { description: Authoritative personal mechanism state and optional preset combo result }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409': { $ref: '#/components/responses/Conflict' }
+        '429': { description: Configured law cooldown }
+  /level/runs/{run_id}/mechanisms:
+    get:
+      tags: [Level]
+      operationId: getPersonalRunMechanisms
+      parameters:
+        - name: run_id
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        '200': { description: Mechanism states belonging only to the authenticated player's run }
+        '404': { $ref: '#/components/responses/NotFound' }
   /level/settle:
     post:
       tags: [Level]
