@@ -6,7 +6,7 @@ from typing import Any
 
 import aio_pika
 from aio_pika import ExchangeType
-from aio_pika.abc import AbstractIncomingMessage, AbstractExchange
+from aio_pika.abc import AbstractExchange, AbstractIncomingMessage
 
 from app.core.config import get_settings
 
