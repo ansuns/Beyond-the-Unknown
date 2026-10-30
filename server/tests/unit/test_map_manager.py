@@ -12,7 +12,7 @@ class FakeWebSocket:
     async def send_json(self, message):
         self.messages.append(message)
 
-    async def close(self, code=1000):
+    async def close(self, code=1000, reason=None):
         self.closed_code = code
 
 
