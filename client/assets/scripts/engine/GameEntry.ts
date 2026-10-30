@@ -9,6 +9,7 @@ import {
   Graphics,
   Label,
   Node,
+  NodeEventType,
   UITransform,
   Vec3,
   view
@@ -302,7 +303,11 @@ export class BeyondTheUnknownGameEntry extends Component {
   private onWorldTouch(event: any): void {
     if (this.currentMode !== "WORLD" || !this.mapSession || !this.worldRoot) return;
     const transform = this.worldRoot.getComponent(UITransform);
-    const point = transform.convertToNodeSpaceAR(event.getUILocation());
+    const uiPoint = event.getUILocation();
+    const point = transform.convertToNodeSpaceAR(
+      new Vec3(),
+      new Vec3(uiPoint.x, uiPoint.y, 0)
+    );
     const x = point.x / 40;
     const y = point.y / 40;
     const current = this.localPlayerId ? this.avatars.get(this.localPlayerId) : undefined;
