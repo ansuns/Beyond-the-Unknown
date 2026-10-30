@@ -188,13 +188,19 @@ def upgrade() -> None:
              )),
             ('LV-ROOM-04', 'MECH_MOVING_PLATFORM', 'MOVING_OBJECT', 'MECHANISM',
              'INACTIVE', 'TRIGGERED', '["RULE_EFFECT","COMBO_EFFECT"]'::jsonb,
-             '{"config_status":"PENDING_POSITION_AND_ART","initial_direction":1}'::jsonb),
+             jsonb_build_object(
+                 'config_status', 'PENDING_POSITION_AND_ART',
+                 'initial_direction', 1
+             )),
             ('LV-ROOM-05', 'MECH-ROOM05-TARGET-A', 'PLATFORM_BRIDGE', 'MECHANISM',
              'INACTIVE', 'TRIGGERED', '["COMBO_EFFECT"]'::jsonb,
              '{"config_status":"PENDING_POSITION_AND_ART"}'::jsonb),
             ('LV-ROOM-05', 'MECH-ROOM05-TARGET-B', 'ENERGY_NODE', 'MECHANISM',
              'INACTIVE', 'TRIGGERED', '["COMBO_EFFECT"]'::jsonb,
-             '{"config_status":"PENDING_POSITION_AND_ART","initial_direction":1}'::jsonb)
+             jsonb_build_object(
+                 'config_status', 'PENDING_POSITION_AND_ART',
+                 'initial_direction', 1
+             ))
         ON CONFLICT (level_id, mechanism_config_id) DO NOTHING
         """
     )
