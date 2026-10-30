@@ -180,18 +180,18 @@
 
 首期 3 组预设组合：
 
-  combo_id      name             rule_ids                       order_sensitive   result_effect                         target_mechanism
+  combo_id      name             rule_ids                       order_sensitive   result_effect                         target_mechanism        is_hidden
   ------------- ---------------- ----------------------------- ----------------- -------------------------------------- ------------------
-  COMBO-001     回声·注视         [RULE_ECHO, RULE_GAZE]        是                显形并维持桥梁显形态直至解谜完成        MECH_BRIDGE
-  COMBO-002     回声·逆流         [RULE_ECHO, RULE_REVERSE]     否                显形能量节点并反转其流向开启通路        MECH_ENERGY_GATE
-  COMBO-003     注视·逆流         [RULE_GAZE, RULE_REVERSE]      是                维持平台存在并反转其移动方向抵达终点    MECH_MOVING_PLATFORM
+  COMBO-001     回声·注视         [RULE_ECHO, RULE_GAZE]        是                显形并维持桥梁显形态直至解谜完成        MECH_BRIDGE             false
+  COMBO-002     回声·逆流         [RULE_ECHO, RULE_REVERSE]     否                显形能量节点并反转其流向开启通路        MECH_ENERGY_GATE        false
+  COMBO-003     注视·逆流         [RULE_GAZE, RULE_REVERSE]      是                维持平台存在并反转其移动方向抵达终点    MECH_MOVING_PLATFORM     false
 
 规则：
 
 1.  `combo_id` 全局唯一。
 2.  组合结果仅通过 `result_effect` 描述并作用于 `target_mechanism`，不产生配置外效果。
 3.  组合触发后，按第9章机关状态机推动目标机关至目标态。
-4.  隐藏组合 `is_hidden=true` 首期不配置（见 8.5）。
+4.  首期三组预设组合的 `is_hidden` 必须全部为 `false`；隐藏结局触发路线是独立的 `hidden_route` 配置，不得将三组基础组合标记为隐藏。
 
 ### 【反馈（动画、音效、UI、屏幕表现）】
 
@@ -206,7 +206,7 @@
 
 ### 【验收标准】
 
-1.  3 组预设组合配置完整且 `combo_id` 唯一。
+1.  3 组预设组合配置完整、`combo_id`唯一且`is_hidden=false`。
 2.  组合结果可经机关状态机推动目标机关。
 3.  未登记组合不生效。
 4.  字段缺失组合被校验拦截。
@@ -303,7 +303,17 @@
 4.  隐藏内容命中同样记入第10章发现系统（可能标记 `is_hidden_discovery`）。
 5.  隐藏组合不可破坏首期 3 组预设组合的确定性。
 
-**隐藏路线配置字段建议：**
+**首期唯一隐藏路线配置（MVP固定ID）：
+
+| 字段 | 值 |
+|---|---|
+| hidden_route_id | HIDDEN-ROUTE-01 |
+| prerequisite_levels | LV-ROOM-01至LV-ROOM-05均已完成 |
+| trigger_combo | [COMBO-001, COMBO-002, COMBO-003]（在LV-ROOM-05内按关卡脚本定义顺序完成关联目标） |
+| result | LV-HIDDEN-01 |
+| is_enabled | true |
+
+额外隐藏路线可继续使用以下通用配置字段：**
 
   字段             类型          说明
   ---------------- ------------ ------------------------------------
@@ -329,6 +339,7 @@
 1.  首期至少一条隐藏路线配置完整且is_enabled=true。
 2.  按配置完成特定组合与机关序列后，唯一隐藏结局可实际开启。
 3.  隐藏发现正确记入第10章发现系统。
+4.  隐藏路线ID固定为HIDDEN-ROUTE-01，解锁条件为玩家已完成LV-ROOM-01至LV-ROOM-05并在LV-ROOM-05按配置顺序触发COMBO-001、COMBO-002、COMBO-003关联机关；服务端读取玩家永久进度校验，成功后开放LV-HIDDEN-01。
 4.  缺少路线、关闭路线或错误配置均被构建校验拦截；额外路线可关闭。
 
 ------------------------------------------------------------------------
