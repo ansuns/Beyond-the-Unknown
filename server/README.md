@@ -74,3 +74,14 @@ The map instance capacity and movement/reconnect limits are configurable through
 - At most one `CREATED` or `RUNNING` run may exist per player. The database partial unique index is the final concurrency guard.
 - The five room catalog entries and the hidden ending use stable IDs from GDD V0.2. Spatial layout, art, exact mechanism instances and hidden-route unlock conditions remain configuration/content work.
 - Settlement, score/discovery/reward writes and permanent progress are not implemented in VS-3; they belong to the later authoritative gameplay/settlement slices.
+
+
+## VS-4 authoritative laws and mechanisms (in review)
+
+- `GET /api/v1/level/rules`: returns the caller's server-owned rule permissions and tuning status. The three default laws are provisioned at player login.
+- `POST /api/v1/level/rule/cast`: authoritative rule validation and effect calculation. Requires an active player-owned run and `Idempotency-Key`.
+- `POST /api/v1/level/rule/maintain` and `POST /api/v1/level/rule/stop`: maintain or stop the caller's continuous Gaze effect.
+- `GET /api/v1/level/state/{run_id}`: reads caller-owned mechanism states and lazily expires timed/lease-based effects.
+- The first three preset combos are catalogued exactly as COMBO-001..003; matching checks target identity, order sensitivity and configured time window.
+- Mechanism states are stored by `(run_id, player_id, mechanism_config_id)`; rule cooldowns and active effects are isolated by `(run_id, player_id, rule_id)`.
+- GDD V0.2 leaves cooldowns, effect radii, timed durations, gaze lease and combo time windows pending. The migration deliberately stores these values as NULL and marks the catalog `TUNING_REQUIRED`; rule casting returns HTTP 503 until reviewed tuning values and actual mechanism positions are supplied. No unapproved gameplay numbers are hardcoded.
