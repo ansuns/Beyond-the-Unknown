@@ -1,0 +1,47 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://example.invalid/schemas/btu-websocket-message.schema.json",
+  "title": "Beyond the Unknown WebSocket Message",
+  "type": "object",
+  "required": ["v", "cmd", "seq", "ts", "payload"],
+  "properties": {
+    "v": { "const": 1 },
+    "cmd": {
+      "type": "string",
+      "enum": ["AUTH", "AUTH_OK", "AUTH_FAIL", "ENTER", "LEAVE", "MOVE_SYNC", "ACTION_BROADCAST", "MECH_STATE", "RECONNECT", "PING", "PONG", "ERROR"]
+    },
+    "seq": { "type": "integer", "minimum": 0 },
+    "ack": { "type": "integer", "minimum": 0 },
+    "ts": { "type": "integer", "description": "Server/client epoch milliseconds; server timestamp is authoritative." },
+    "request_id": { "type": "string", "maxLength": 128 },
+    "payload": { "type": "object" }
+  },
+  "allOf": [
+    {
+      "if": { "properties": { "cmd": { "const": "AUTH" } } },
+      "then": { "properties": { "payload": { "type": "object", "required": ["token"], "properties": { "token": { "type": "string" } }, "additionalProperties": false } } }
+    },
+    {
+      "if": { "properties": { "cmd": { "const": "MOVE_SYNC" } } },
+      "then": { "properties": { "payload": { "type": "object", "required": ["x", "y", "dir", "client_tick"], "properties": { "x": { "type": "number" }, "y": { "type": "number" }, "dir": { "type": "string", "enum": ["N","NE","E","SE","S","SW","W","NW"] }, "client_tick": { "type": "integer", "minimum": 0 } }, "additionalProperties": false } } }
+    },
+    {
+      "if": { "properties": { "cmd": { "const": "ACTION_BROADCAST" } } },
+      "then": { "properties": { "payload": { "type": "object", "required": ["action_id"], "properties": { "action_id": { "type": "string", "maxLength": 64 }, "target_player_id": { "type": "string", "format": "uuid" } }, "additionalProperties": false } } }
+    },
+    {
+      "if": { "properties": { "cmd": { "const": "MECH_STATE" } } },
+      "then": { "properties": { "payload": { "type": "object", "required": ["run_id", "mechanism_config_id", "state", "revision"], "properties": { "run_id": { "type": "string", "format": "uuid" }, "mechanism_config_id": { "type": "string" }, "state": { "type": "object" }, "revision": { "type": "integer", "minimum": 0 } }, "additionalProperties": false } } }
+    }
+  ],
+  "additionalProperties": false,
+  "x-protocol-rules": [
+    "Client must send AUTH first; server closes unauthenticated connections.",
+    "C2S and S2C directions are enforced by server command allowlists.",
+    "Client movement is an input proposal, never authoritative position.",
+    "MECH_STATE is S2C only; clients cannot write authoritative mechanism state.",
+    "seq is monotonic per connection; duplicate or stale sequence numbers are ignored.",
+    "Reconnect sends last received server seq; server returns authoritative public avatar state. Unsettled puzzle/mechanism state is not restored in MVP.",
+    "Rate limits and AOI broadcast scope are server-configured and must be load-tested."
+  ]
+}
