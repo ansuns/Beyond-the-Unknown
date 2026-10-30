@@ -69,16 +69,25 @@ export class WorldPlaySession {
   }
 
   async enterRoom(levelId: string, entranceId: string): Promise<RoomEntryData> {
-    const { entry, run } = await this.level.enterAndStart(
-      levelId,
-      entranceId,
-      this.createIdempotencyKey()
-    );
-    const [rules, state] = await Promise.all([
-      this.laws.refreshCatalog(),
-      this.laws.refreshState()
-    ]);
-    return { entry, run, rules, state };
+    try {
+      const { entry, run } = await this.level.enterAndStart(
+        levelId,
+        entranceId,
+        this.createIdempotencyKey()
+      );
+      // The server removes the player from the shared-map membership when the
+      // personal run is created; close the now-stale map socket before room play.
+      this.map.leave();
+      const [rules, state] = await Promise.all([
+        this.laws.refreshCatalog(),
+        this.laws.refreshState()
+      ]);
+      return { entry, run, rules, state };
+    } catch (error) {
+      // enterAndStart may have created a run before the start request failed.
+      if (this.level.activeRun()) this.map.leave();
+      throw error;
+    }
   }
 
   castLaw(
