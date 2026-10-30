@@ -141,7 +141,7 @@ def _apply_single_rule(
         state["gaze_active"] = True
         if rule_id not in state["active_rules"]:
             state["active_rules"].append(rule_id)
-        if state["state"] in {"INVISIBLE", "UNSTABLE", "HIDDEN"}:
+        if mechanism_type in {"PLATFORM_BRIDGE", "HIDEABLE"}:
             state["state"] = "VISIBLE_HELD"
     elif rule_id == "RULE_REVERSE":
         if mechanism_type not in {"MOVING_OBJECT", "ENERGY_NODE", "PLATFORM_BRIDGE"}:
