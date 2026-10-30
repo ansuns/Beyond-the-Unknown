@@ -107,7 +107,7 @@ async def enter_main_map(
 
     map_row = (
         await session.execute(
-            text("SELECT config FROM maps WHERE map_id = :map_id AND is_enabled = true"),
+            text("SELECT config FROM maps WHERE map_id = :map_id AND is_enabled = true FOR UPDATE"),
             {"map_id": MAIN_MAP_ID},
         )
     ).mappings().one_or_none()
@@ -125,9 +125,9 @@ async def enter_main_map(
                 SELECT instance_id, current_players, max_players
                 FROM map_instances
                 WHERE map_id = :map_id AND status = 'ACTIVE' AND current_players < max_players
-                ORDER BY current_players ASC, created_at ASC
+                ORDER BY current_players DESC, created_at ASC
                 LIMIT 1
-                FOR UPDATE SKIP LOCKED
+                FOR UPDATE
             """),
             {"map_id": MAIN_MAP_ID},
         )
