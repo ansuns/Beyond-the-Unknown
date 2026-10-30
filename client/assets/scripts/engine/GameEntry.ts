@@ -626,8 +626,6 @@ export class BeyondTheUnknownGameEntry extends Component {
     if (!this.worldRoot) return;
     this.clearRoomControls();
     this.worldRoot.removeAllChildren();
-    for (const control of this.roomControlNodes) control.destroy();
-    this.roomControlNodes.length = 0;
     const size = this.worldRoot.getComponent(UITransform).contentSize;
     const room = new Node("Room01Prototype");
     this.worldRoot.addChild(room);
@@ -709,6 +707,7 @@ export class BeyondTheUnknownGameEntry extends Component {
     }
     try {
       this.setStatus("正在保存并放弃当前关卡…");
+      if (this.levelPositionSyncPromise) await this.levelPositionSyncPromise;
       await this.levelSession.abandon();
       this.levelSession = undefined;
       this.pendingLevelName = "";
