@@ -122,6 +122,20 @@ async def get_leaderboard_endpoint(
     return success_envelope(data, request.state.request_id)
 
 
+@router.get("/leaderboard/{board_type}")
+async def get_leaderboard_by_path(
+    board_type: Annotated[str, Query(pattern="^(EXPLORE|CLEAR|COLLECT)$")],
+    request: Request,
+    season_type: Annotated[str, Query(pattern="^(WEEKLY|MONTHLY)$")] = "WEEKLY",
+    limit: Annotated[int, Query(ge=1, le=100)] = 50,
+    player_id=Depends(get_current_player_id),
+    session: AsyncSession = Depends(get_session),
+) -> dict:
+    data = await get_leaderboard(session, player_id, board_type, season_type, limit)
+    await session.commit()
+    return success_envelope(data, request.state.request_id)
+
+
 @router.get("/reward")
 @router.get("/reward/me")
 async def get_my_rewards(
