@@ -24,6 +24,16 @@ services:
       interval: 5s
       timeout: 5s
       retries: 20
+  redis:
+    image: redis:7-alpine
+    ports: ["6379:6379"]
+    volumes: [redis_data:/data]
+    command: ["redis-server", "--appendonly", "yes"]
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
   api:
     build:
       context: .
@@ -32,6 +42,7 @@ services:
       APP_ENV: local
       DATABASE_URL: postgresql+asyncpg://beyond:beyond_dev_only@postgres:5432/beyond
       RABBITMQ_URL: amqp://beyond:beyond_dev_only@rabbitmq:5672/
+      REDIS_URL: redis://redis:6379/0
       WECHAT_APP_ID: ${WECHAT_APP_ID:-}
       WECHAT_APP_SECRET: ${WECHAT_APP_SECRET:-}
       JWT_SECRET: ${JWT_SECRET:-local-development-jwt-secret-change-before-deploy}
@@ -50,6 +61,7 @@ services:
     depends_on:
       postgres: { condition: service_healthy }
       rabbitmq: { condition: service_healthy }
+      redis: { condition: service_healthy }
   worker:
     build:
       context: .
@@ -69,3 +81,4 @@ services:
 volumes:
   postgres_data:
   rabbitmq_data:
+  redis_data:
