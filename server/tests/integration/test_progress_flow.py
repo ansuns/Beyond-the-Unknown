@@ -10,6 +10,7 @@ from sqlalchemy import text
 from sqlalchemy.ext.asyncio import create_async_engine
 
 from app.core.config import get_settings
+from app.core.database import engine
 from app.main import app
 from app.modules.auth.provider import get_wechat_code_provider
 
@@ -283,9 +284,17 @@ def test_discovery_world_archive_rewards_settlement_and_leaderboard() -> None:
         app.dependency_overrides.clear()
 
 
-def test_outbox_finalizes_season_and_grants_rank_reward_once() -> None:
+def _run_outbox_task(envelope: dict) -> None:
     from app.workers.task_worker import _process_outbox_task
 
+    async def execute() -> None:
+        await _process_outbox_task(envelope)
+        await engine.dispose()
+
+    asyncio.run(execute())
+
+
+def test_outbox_finalizes_season_and_grants_rank_reward_once() -> None:
     app.dependency_overrides[get_wechat_code_provider] = lambda: FakeWeChatProvider()
     season_id = "WEEKLY-19990104"
     reward_id = "TEST-SEASON-BADGE"
@@ -368,7 +377,7 @@ def test_outbox_finalizes_season_and_grants_rank_reward_once() -> None:
             "idempotency_key": f"season-finalize:{season_id}",
             "payload": {"season_id": season_id},
         }
-        asyncio.run(_process_outbox_task(finalize_envelope))
+        _run_outbox_task(finalize_envelope)
         review = _db_fetch(
             "SELECT status::text AS status, settlement_status, review_until_utc "
             "FROM seasons WHERE season_id = :season_id",
@@ -389,7 +398,7 @@ def test_outbox_finalizes_season_and_grants_rank_reward_once() -> None:
             "idempotency_key": auto_task["idempotency_key"],
             "payload": auto_task["payload"],
         }
-        asyncio.run(_process_outbox_task(early_envelope))
+        _run_outbox_task(early_envelope)
         retry_task = _db_fetch(
             "SELECT task_id, idempotency_key, payload FROM task_outbox "
             "WHERE task_type = 'season.auto_approve' AND status = 'PENDING' "
@@ -414,8 +423,8 @@ def test_outbox_finalizes_season_and_grants_rank_reward_once() -> None:
             "idempotency_key": retry_task["idempotency_key"],
             "payload": retry_task["payload"],
         }
-        asyncio.run(_process_outbox_task(approve_envelope))
-        asyncio.run(_process_outbox_task(approve_envelope))
+        _run_outbox_task(approve_envelope)
+        _run_outbox_task(approve_envelope)
 
         final = _db_fetch(
             "SELECT status::text AS status, settlement_status, reviewed_by "
