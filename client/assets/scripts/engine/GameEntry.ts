@@ -651,9 +651,12 @@ export class BeyondTheUnknownGameEntry extends Component {
       this.currentMode = "MENU";
       this.moveTarget = undefined;
       this.drawPersonalRoom("探索完成", true);
+      const unlockMessage = result.unlocked_hidden_level_id
+        ? ` · 隐藏结局已解锁（${result.unlocked_hidden_level_id}），返回后可进入`
+        : "";
       this.setStatus(
         result.result_status === "COMPLETED"
-          ? `${this.pendingLevelId} 完成 · 用时 ${Math.round(result.completion_time_ms / 1000)} 秒`
+          ? `${this.pendingLevelId} 完成 · 用时 ${Math.round(result.completion_time_ms / 1000)} 秒${unlockMessage}`
           : `${this.pendingLevelId} 未完成 · ${result.result_status}`
       );
     } catch (error) {
