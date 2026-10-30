@@ -21,7 +21,7 @@
 
 ## 当前基线
 
-GDD V0.2 已完成首轮跨章节规则、MVP 范围、数据字典、UI/API 映射与修订复核。服务端 VS-0 基础设施与 VS-1 身份/玩家持久化后端已进入 main，并通过 CI 的 PostgreSQL 集成测试和 Docker Compose smoke test。微信真凭证联调、客户端工程、共享地图/WebSocket、玩法闭环、生产消息重试/Outbox、设备压测及生产部署仍属于后续工作。
+GDD V0.2 已完成首轮跨章节规则、MVP 范围、数据字典、UI/API 映射与修订复核。服务端 VS-0 基础设施与 VS-1 身份/玩家持久化已进入 main 并通过 CI。VS-2 共享地图/WebSocket 单进程原型正在 PR #10 中审查；其数据库迁移与 Docker Compose smoke 检查已通过，Python lint 尚待修复后重新验证，尚未合并。Cocos 客户端接入、Redis 多节点 presence/pub-sub、正式 AOI、玩法闭环、生产消息重试/Outbox、设备压测及生产部署仍属于后续工作。
 
 ## 工程原则
 
