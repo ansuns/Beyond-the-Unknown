@@ -176,6 +176,8 @@ async def record_discovery(
     ).mappings().one_or_none()
     if catalog is None:
         raise ValueError("Discovery is not configured or enabled")
+    event_level_id = catalog["level_id"]
+    event_location = dict(catalog["location"] or {})
     if run_id is not None:
         run = (
             await session.execute(
@@ -192,6 +194,9 @@ async def record_discovery(
             raise ProgressionRunNotFound
         if run["status"] not in {"RUNNING", "COMPLETED"}:
             raise ProgressionRunNotActive
+        event_level_id = run["level_id"]
+        if not catalog["level_id"]:
+            event_location = {"level_id": run["level_id"]}
 
     personal = (
         await session.execute(
@@ -210,9 +215,9 @@ async def record_discovery(
                 "player_id": player_id,
                 "discovery_id": discovery_id,
                 "discovery_type": catalog["discovery_type"],
-                "level_id": catalog["level_id"],
+                "level_id": event_level_id,
                 "run_id": run_id,
-                "location": json.dumps(catalog["location"]),
+                "location": json.dumps(event_location),
                 "related_rule": catalog["related_rule"],
             },
         )
@@ -249,7 +254,7 @@ async def record_discovery(
                 "discovery_id": discovery_id,
                 "player_id": player_id,
                 "first_at": personal["first_discovered_at"],
-                "location": json.dumps(catalog["location"]),
+                "location": json.dumps(event_location),
                 "related_rule": catalog["related_rule"],
             },
         )
