@@ -23,9 +23,9 @@ from app.modules.rules.repository import (
     stop_gaze,
 )
 from app.modules.rules.schemas import (
+    MechanismInteractRequest,
     RuleCastRequest,
     RuleMaintainRequest,
-    MechanismInteractRequest,
     RuleRunRequest,
 )
 from app.schemas.envelope import success_envelope
