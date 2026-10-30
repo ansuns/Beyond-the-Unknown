@@ -1,5 +1,6 @@
 from alembic import op
 import sqlalchemy as sa
+from sqlalchemy.dialects.postgresql import JSONB
 
 
 revision = "0004_levels_and_enter_requests"
@@ -23,7 +24,7 @@ def upgrade() -> None:
         sa.Column("repeatable", sa.Boolean(), nullable=False, server_default=sa.true()),
         sa.Column("repeat_reward_mode", sa.String(16), nullable=False, server_default="NONE"),
         sa.Column("is_hidden", sa.Boolean(), nullable=False, server_default=sa.false()),
-        sa.Column("required_laws", sa.dialects.postgresql.JSONB(), nullable=False, server_default="[]"),
+        sa.Column("required_laws", JSONB(), nullable=False, server_default="[]"),
         sa.Column(
             "necessary_objectives",
             sa.dialects.postgresql.JSONB(),
