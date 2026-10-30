@@ -231,6 +231,8 @@ async def apply_law_action(
         await session.rollback()
         return {**prior["result"], "idempotent_replay": True}
 
+    await initialize_mechanisms(session, run_id, player_id, run["level_id"])
+
     mechanism = (
         await session.execute(
             text("""
@@ -398,6 +400,8 @@ async def get_run_mechanisms(
     ).mappings().one_or_none()
     if run is None:
         raise LevelRunNotFound
+    await initialize_mechanisms(session, run_id, player_id, run["level_id"])
+    await session.commit()
     rows = (
         await session.execute(
             text("""
