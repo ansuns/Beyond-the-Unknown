@@ -536,6 +536,9 @@ export class BeyondTheUnknownGameEntry extends Component {
         }
         if (result.combo?.combo_id === comboId) matched = true;
       }
+      if (ruleIds.includes("RULE_GAZE")) {
+        await this.levelSession.stopGaze();
+      }
       const state = await this.levelSession.refreshState();
       this.applyRoomMechanismStates(state);
       this.drawPersonalRoom(this.pendingLevelName);
