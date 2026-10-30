@@ -98,7 +98,7 @@ async def enter_level(
     prior = (
         await session.execute(
             text("""
-                SELECT r.run_id, r.status::text AS run_status, r.level_id,
+                SELECT r.run_id, r.instance_id, r.status::text AS run_status, r.level_id,
                        l.level_name, l.entrance_id, l.room_index,
                        l.target_duration_min, l.target_duration_max,
                        l.hard_time_limit, l.time_limit_seconds, l.repeatable,
@@ -117,6 +117,7 @@ async def enter_level(
             raise IdempotencyConflict
         return {
             "run_id": str(prior["run_id"]),
+            "map_instance_id": str(prior["instance_id"]) if prior["instance_id"] else None,
             "status": prior["run_status"],
             "level": _level_payload(prior),
             "idempotent_replay": True,
@@ -222,6 +223,7 @@ async def enter_level(
     await session.commit()
     return {
         "run_id": str(run["run_id"]),
+        "map_instance_id": str(membership["instance_id"]),
         "status": run["run_status"],
         "level": _level_payload(level),
         "idempotent_replay": False,
