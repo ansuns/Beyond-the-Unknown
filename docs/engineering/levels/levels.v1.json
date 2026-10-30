@@ -191,7 +191,8 @@
           "config": {
             "reveal_rule": "RULE_ECHO",
             "reverse_rule": "RULE_REVERSE",
-            "prototype_only": true
+            "prototype_only": true,
+            "linked_mechanism_id": "M03-DOOR-01"
           },
           "position": {
             "x": 4,
@@ -279,7 +280,8 @@
           "initial_state": "MOVING_FORWARD",
           "config": {
             "reverse_combo": "COMBO-003",
-            "prototype_only": true
+            "prototype_only": true,
+            "linked_mechanism_id": "M04-PLATFORM-02"
           },
           "position": {
             "x": 4,
