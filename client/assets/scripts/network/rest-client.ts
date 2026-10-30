@@ -14,7 +14,18 @@ import type {
   PlayerProfile,
   RuleCastData,
   RuleCatalogData,
-  RulePoint
+  RulePoint,
+  PlayerProgressData,
+  DiscoveryItem,
+  CollectionItem,
+  WorldArchiveItem,
+  RewardInboxData,
+  RewardClaimData,
+  LeaderboardData,
+  LeaderboardType,
+  LeaderboardPeriod,
+  LeaderboardScope,
+  SettlementData
 } from "./types";
 
 export class ApiError extends Error {
@@ -165,6 +176,60 @@ export class RestClient {
       "/level/state/" + encodeURIComponent(runId),
       { method: "GET" }
     );
+  }
+
+  async settleLevel(runId: string, idempotencyKey: string): Promise<SettlementData> {
+    return this.request<SettlementData>("/level/settle", {
+      method: "POST",
+      body: JSON.stringify({ run_id: runId }),
+      headers: { "Idempotency-Key": idempotencyKey }
+    });
+  }
+
+  async getPlayerProgress(): Promise<PlayerProgressData> {
+    return this.request<PlayerProgressData>("/player/progress", { method: "GET" });
+  }
+
+  async listPlayerDiscoveries(): Promise<{ discoveries: DiscoveryItem[] }> {
+    return this.request<{ discoveries: DiscoveryItem[] }>("/player/discoveries", { method: "GET" });
+  }
+
+  async listPlayerCollections(): Promise<{ collections: CollectionItem[] }> {
+    return this.request<{ collections: CollectionItem[] }>("/player/collections", { method: "GET" });
+  }
+
+  async listWorldArchive(limit = 50): Promise<{ records: WorldArchiveItem[] }> {
+    const safeLimit = Math.min(100, Math.max(1, Math.trunc(limit)));
+    return this.request<{ records: WorldArchiveItem[] }>("/world/archive?limit=" + safeLimit, {
+      method: "GET"
+    });
+  }
+
+  async listRewards(): Promise<RewardInboxData> {
+    return this.request<RewardInboxData>("/reward", { method: "GET" });
+  }
+
+  async claimReward(playerRewardId: string): Promise<RewardClaimData> {
+    return this.request<RewardClaimData>("/reward/claim", {
+      method: "POST",
+      body: JSON.stringify({ player_reward_id: playerRewardId })
+    });
+  }
+
+  async getLeaderboard(
+    boardType: LeaderboardType,
+    periodType: LeaderboardPeriod,
+    scope: LeaderboardScope = "TOP",
+    limit = 20
+  ): Promise<LeaderboardData> {
+    const safeLimit = Math.min(50, Math.max(1, Math.trunc(limit)));
+    const query = [
+      "board_type=" + encodeURIComponent(boardType),
+      "period_type=" + encodeURIComponent(periodType),
+      "scope=" + encodeURIComponent(scope),
+      "limit=" + safeLimit
+    ].join("&");
+    return this.request<LeaderboardData>("/leaderboard?" + query, { method: "GET" });
   }
 
   private async request<T>(
