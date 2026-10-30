@@ -31,7 +31,9 @@ class MapConnectionManager:
         }
 
     async def _send(self, connection: Connection, command: str, payload: dict[str, Any]) -> None:
-        connection.server_seq += 1
+        state = connection.websocket.scope.setdefault("state", {})
+        connection.server_seq = max(connection.server_seq, state.get("server_seq", 0)) + 1
+        state["server_seq"] = connection.server_seq
         await connection.websocket.send_json(
             self.message(command, payload, connection.server_seq)
         )
@@ -65,7 +67,10 @@ class MapConnectionManager:
                 for (current_instance, current_player), value in self.avatars.items()
                 if current_instance == instance_id and current_player != player_id
             ]
-            self.connections[key] = Connection(websocket, instance_id, player_id)
+            self.connections[key] = Connection(
+                websocket, instance_id, player_id,
+                server_seq=websocket.scope.setdefault("state", {}).get("server_seq", 0),
+            )
             self.avatars[key] = avatar
         if old is not None and old.websocket is not websocket:
             try:
