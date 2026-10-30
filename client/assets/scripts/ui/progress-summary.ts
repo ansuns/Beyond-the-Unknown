@@ -5,6 +5,8 @@ export interface ProgressSummarySnapshot {
   pendingRewards?: number;
   worldArchiveRecords?: number;
   weeklyExploreRank?: number | null;
+  weeklyClearRank?: number | null;
+  weeklyCollectRank?: number | null;
 }
 
 function count(value: number | undefined): string {
@@ -23,6 +25,8 @@ export function formatProgressSummary(snapshot: ProgressSummarySnapshot): string
     `收藏 ${count(snapshot.collections)}`,
     `待领奖励 ${count(snapshot.pendingRewards)}`,
     `世界档案 ${count(snapshot.worldArchiveRecords)}`,
-    `周探索榜 ${rank(snapshot.weeklyExploreRank)}`
+    `周探索榜 ${rank(snapshot.weeklyExploreRank)}`,
+    `周通关榜 ${rank(snapshot.weeklyClearRank)}`,
+    `周收藏榜 ${rank(snapshot.weeklyCollectRank)}`
   ].join("  ·  ");
 }
