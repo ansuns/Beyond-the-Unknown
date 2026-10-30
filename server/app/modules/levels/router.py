@@ -111,7 +111,9 @@ async def post_abandon_level(
     try:
         data = await abandon_level(session, player_id, payload.run_id)
     except LevelNotFound as exc:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Level run not found") from exc
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Level run not found"
+        ) from exc
     except InvalidLevelRunState as exc:
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,
