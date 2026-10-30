@@ -202,6 +202,16 @@ def test_authoritative_laws_combos_cooldowns_and_personal_isolation() -> None:
             assert bridge["status"] == "TRIGGERED"
             assert bridge["combo_applied"] == "COMBO-001"
             assert bridge["visible"] is True
+            settled_room2 = client.post(
+                "/api/v1/level/settle",
+                headers={
+                    **first["headers"],
+                    "Idempotency-Key": "room2-settle-after-combo-001",
+                },
+                json={"run_id": first_run},
+            )
+            assert settled_room2.status_code == 200, settled_room2.text
+            assert settled_room2.json()["data"]["result_status"] == "COMPLETED"
 
             second_run = _enter_level(
                 client, second["headers"], "LV-ROOM-02", "ENT-ROOM-02"
@@ -309,6 +319,100 @@ def test_authoritative_laws_combos_cooldowns_and_personal_isolation() -> None:
             )
             assert energy_after["direction"] == 1
             assert energy_after["reverse_active"] is False
+
+            door_state = client.get(
+                f"/api/v1/level/state/{third_run}", headers=third["headers"]
+            )
+            door = next(
+                item["state"]
+                for item in door_state.json()["data"]["mechanisms"]
+                if item["mechanism_id"] == "M03-DOOR-01"
+            )
+            assert door["status"] == "TRIGGERED"
+            settled_room3 = client.post(
+                "/api/v1/level/settle",
+                headers={
+                    **third["headers"],
+                    "Idempotency-Key": "room3-settle-after-combo-002",
+                },
+                json={"run_id": third_run},
+            )
+            assert settled_room3.status_code == 200, settled_room3.text
+            assert settled_room3.json()["data"]["result_status"] == "COMPLETED"
+    finally:
+        _set_rule_tuning(False)
+        app.dependency_overrides.clear()
+
+
+def test_room_four_combo_unlocks_and_settles() -> None:
+    app.dependency_overrides[get_wechat_code_provider] = lambda: FakeWeChatProvider()
+    try:
+        with TestClient(app) as client:
+            player = _login_and_enter_map(client)
+            _set_rule_tuning(True)
+            _db_update("UPDATE rule_catalog SET cooldown_ms = 1")
+            run_id = _enter_level(
+                client, player["headers"], "LV-ROOM-04", "ENT-ROOM-04"
+            )
+
+            gaze = client.post(
+                "/api/v1/level/rule/cast",
+                headers={
+                    **player["headers"],
+                    "Idempotency-Key": "room4-gaze-platform-0001",
+                },
+                json={
+                    "run_id": run_id,
+                    "rule_id": "RULE_GAZE",
+                    "target_id": "M04-PLATFORM-01",
+                },
+            )
+            assert gaze.status_code == 200, gaze.text
+
+            reverse = client.post(
+                "/api/v1/level/rule/cast",
+                headers={
+                    **player["headers"],
+                    "Idempotency-Key": "room4-reverse-platform-0001",
+                },
+                json={
+                    "run_id": run_id,
+                    "rule_id": "RULE_REVERSE",
+                    "target_id": "M04-PLATFORM-01",
+                },
+            )
+            assert reverse.status_code == 200, reverse.text
+            assert reverse.json()["data"]["combo"]["combo_id"] == "COMBO-003"
+
+            maintained = client.post(
+                "/api/v1/level/rule/maintain",
+                headers=player["headers"],
+                json={"run_id": run_id, "target_id": "M04-PLATFORM-01"},
+            )
+            assert maintained.status_code == 200, maintained.text
+
+            state = client.get(
+                f"/api/v1/level/state/{run_id}", headers=player["headers"]
+            )
+            platform = next(
+                item["state"]
+                for item in state.json()["data"]["mechanisms"]
+                if item["mechanism_id"] == "M04-PLATFORM-01"
+            )
+            assert platform["status"] == "TRIGGERED"
+            assert platform["combo_applied"] == "COMBO-003"
+            assert platform["gaze_active"] is True
+
+            settled = client.post(
+                "/api/v1/level/settle",
+                headers={
+                    **player["headers"],
+                    "Idempotency-Key": "room4-settle-after-combo-003",
+                },
+                json={"run_id": run_id},
+            )
+            assert settled.status_code == 200, settled.text
+            assert settled.json()["data"]["result_status"] == "COMPLETED"
     finally:
         _set_rule_tuning(False)
         app.dependency_overrides.clear()
@@ -459,6 +563,16 @@ def test_mechanism_catalog_and_references_match_canonical_gdd_ids() -> None:
                         """
                     )
                 )
+                room3_objectives = await connection.execute(
+                    text(
+                        """
+                        SELECT objective_id, mechanism_config_id
+                        FROM level_objectives
+                        WHERE level_id = 'LV-ROOM-03'
+                        ORDER BY objective_id
+                        """
+                    )
+                )
                 combo_targets = await connection.execute(
                     text(
                         """
@@ -477,13 +591,27 @@ def test_mechanism_catalog_and_references_match_canonical_gdd_ids() -> None:
                         """
                     )
                 )
+                level_prototype_combos = await connection.execute(
+                    text(
+                        """
+                        SELECT level_id, config->'prototype_combos' AS prototype_combos
+                        FROM levels
+                        ORDER BY level_id
+                        """
+                    )
+                )
             return {
                 "catalog": [dict(row._mapping) for row in catalog],
                 "objectives_without_mechanisms": objectives_without_mechanisms,
                 "room5_objectives": [dict(row._mapping) for row in room5_objectives],
+                "room3_objectives": [dict(row._mapping) for row in room3_objectives],
                 "route": route,
                 "combo_targets": [row[0] for row in combo_targets],
                 "hidden_discovery": hidden_discovery,
+                "level_prototype_combos": {
+                    row._mapping["level_id"]: row._mapping["prototype_combos"]
+                    for row in level_prototype_combos
+                },
             }
         finally:
             await engine.dispose()
@@ -500,6 +628,9 @@ def test_mechanism_catalog_and_references_match_canonical_gdd_ids() -> None:
     assert ("LV-HIDDEN-01", "H01-GATE") in ids
     assert ("LV-HIDDEN-01", "H01-END") in ids
     assert contract["objectives_without_mechanisms"] == 0
+    assert {
+        row["mechanism_config_id"] for row in contract["room3_objectives"]
+    } == {"M03-DOOR-01"}
     assert contract["route"] == [
         "M05-BRIDGE-01",
         "M05-ENERGY-01",
@@ -562,11 +693,16 @@ def test_mechanism_catalog_and_references_match_canonical_gdd_ids() -> None:
         for row in contract["catalog"]
     }
     for level in source_config["levels"]:
+        assert contract["level_prototype_combos"][level["level_id"]] == level["prototype_combos"]
         for mechanism in level["mechanisms"]:
             row = catalog_by_key[(level["level_id"], mechanism["mechanism_id"])]
             assert row["position_x"] == mechanism["position"]["x"]
             assert row["position_y"] == mechanism["position"]["y"]
             assert row["config"].get("prototype_only") is True
+            assert (
+                row["config"].get("linked_mechanism_id")
+                == mechanism["config"].get("linked_mechanism_id")
+            )
     assert contract["combo_targets"] == [
         "M02-BRIDGE-01",
         "M03-ENERGY-01",

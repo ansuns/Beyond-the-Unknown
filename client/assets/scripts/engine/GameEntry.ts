@@ -27,6 +27,10 @@ import { PersonalLevelSession } from "../world/personal-level-session";
 import { deriveRoom01VisualState } from "../world/room01-presentation";
 import { selectNextPlayableLevel } from "../world/level-progression";
 import { buildPrototypeRuleOptions } from "../world/prototype-rule-options";
+import {
+  parsePrototypeComboDefinitions,
+  type PrototypeComboDefinition
+} from "../world/prototype-combos";
 import { formatProgressSummary } from "../ui/progress-summary";
 
 const { ccclass, property } = _decorator;
@@ -79,6 +83,11 @@ export class BeyondTheUnknownGameEntry extends Component {
     target_type: string | null;
     config: Record<string, unknown>;
   }>();
+  private prototypeComboDefinitions: PrototypeComboDefinition[] = [];
+  private prototypeGazeTargetId: string | undefined;
+  private prototypeGazeMaintainAt = 0;
+  private prototypeGazeNextMaintainAt = 0;
+  private prototypeGazeMaintainInFlight = false;
   private readonly prototypeRuleCooldownUntil = new Map<string, number>();
   private prototypeActionInFlight = false;
   private levelRoomScale = 40;
@@ -97,6 +106,7 @@ export class BeyondTheUnknownGameEntry extends Component {
 
   update(deltaTime: number): void {
     if (this.currentMode === "PERSONAL_LEVEL") {
+      this.updatePrototypeGazeMaintain();
       this.updatePersonalLevelMovement(deltaTime);
       return;
     }
@@ -472,6 +482,44 @@ export class BeyondTheUnknownGameEntry extends Component {
     this.moveTarget = { x, y };
   }
 
+  private updatePrototypeGazeMaintain(): void {
+    const session = this.levelSession;
+    const targetId = this.prototypeGazeTargetId;
+    if (!session || !targetId || this.prototypeGazeMaintainInFlight) return;
+
+    const now = Date.now();
+    if (now >= this.prototypeGazeMaintainAt) {
+      this.prototypeGazeTargetId = undefined;
+      this.prototypeGazeMaintainAt = 0;
+      this.prototypeGazeNextMaintainAt = 0;
+      void session.stopGaze().catch((error) => {
+        this.setStatus(`注视效果结束同步失败：${error instanceof Error ? error.message : "网络错误"}`);
+      });
+      return;
+    }
+
+    if (now < this.prototypeGazeNextMaintainAt) return;
+    this.prototypeGazeNextMaintainAt = now + 1000;
+    this.prototypeGazeMaintainInFlight = true;
+    void session.maintainGaze(targetId)
+      .then(() => {
+        if (this.levelSession === session && this.prototypeGazeTargetId === targetId) {
+          // RULE_GAZE has a 5-second server lease; renew well before it expires.
+          this.prototypeGazeMaintainAt = Date.now() + 5000;
+        }
+      })
+      .catch((error) => {
+        this.setStatus(`注视维持失败：${error instanceof Error ? error.message : "网络错误"}`);
+        this.prototypeGazeTargetId = undefined;
+        this.prototypeGazeMaintainAt = 0;
+        this.prototypeGazeNextMaintainAt = 0;
+        void session.stopGaze().catch(() => undefined);
+      })
+      .finally(() => {
+        this.prototypeGazeMaintainInFlight = false;
+      });
+  }
+
   private updatePersonalLevelMovement(deltaTime: number): void {
     if (!this.moveTarget || !this.levelAvatar || !this.levelSession) return;
     const dx = this.moveTarget.x - this.levelPosition.x;
@@ -514,11 +562,10 @@ export class BeyondTheUnknownGameEntry extends Component {
   }
 
   private async castPrototypeCombo(
-    comboId: string,
-    targetId: string,
-    ruleIds: LawRuleId[]
+    definition: PrototypeComboDefinition
   ): Promise<void> {
     if (!this.levelSession || this.prototypeActionInFlight) return;
+    const { comboId, targetId, ruleIds } = definition;
     this.prototypeActionInFlight = true;
     try {
       await this.flushLevelPosition();
@@ -545,7 +592,16 @@ export class BeyondTheUnknownGameEntry extends Component {
         if (result.combo?.combo_id === comboId) matched = true;
       }
       if (ruleIds.includes("RULE_GAZE")) {
-        await this.levelSession.stopGaze();
+        if (matched && definition.maintainGaze) {
+          this.prototypeGazeTargetId = targetId;
+          this.prototypeGazeMaintainAt = Date.now() + 5000;
+          this.prototypeGazeNextMaintainAt = Date.now() + 1000;
+        } else {
+          await this.levelSession.stopGaze();
+          this.prototypeGazeTargetId = undefined;
+          this.prototypeGazeMaintainAt = 0;
+          this.prototypeGazeNextMaintainAt = 0;
+        }
       }
       const state = await this.levelSession.refreshState();
       this.applyRoomMechanismStates(state);
@@ -571,6 +627,9 @@ export class BeyondTheUnknownGameEntry extends Component {
         this.makeIdempotencyKey(`prototype-settle-${this.pendingLevelId}`)
       );
       this.levelSession = undefined;
+      this.prototypeGazeTargetId = undefined;
+      this.prototypeGazeMaintainAt = 0;
+      this.prototypeGazeNextMaintainAt = 0;
       this.currentMode = "MENU";
       this.moveTarget = undefined;
       this.drawPersonalRoom("探索完成", true);
@@ -662,6 +721,10 @@ export class BeyondTheUnknownGameEntry extends Component {
       this.levelSession = personal;
       this.pendingLevelName = entry.level.level_name;
       this.pendingLevelId = entry.level.level_id;
+      this.prototypeComboDefinitions = parsePrototypeComboDefinitions(level.config);
+      this.prototypeGazeTargetId = undefined;
+      this.prototypeGazeMaintainAt = 0;
+      this.prototypeGazeNextMaintainAt = 0;
       this.currentMode = "PERSONAL_LEVEL";
       this.moveTarget = undefined;
       this.mapSession.leave();
@@ -838,24 +901,7 @@ export class BeyondTheUnknownGameEntry extends Component {
       hint.horizontalAlign = Label.HorizontalAlign.CENTER;
 
       if (!completed) {
-        const comboDefinitions: Array<{
-          comboId: string;
-          targetId: string;
-          ruleIds: LawRuleId[];
-          title: string;
-        }> = this.pendingLevelId === "LV-ROOM-02"
-          ? [{ comboId: "COMBO-001", targetId: "M02-BRIDGE-01", ruleIds: ["RULE_ECHO", "RULE_GAZE"], title: "施放组合一" }]
-          : this.pendingLevelId === "LV-ROOM-03"
-            ? [{ comboId: "COMBO-002", targetId: "M03-ENERGY-01", ruleIds: ["RULE_ECHO", "RULE_REVERSE"], title: "施放组合二" }]
-            : this.pendingLevelId === "LV-ROOM-04"
-              ? [{ comboId: "COMBO-003", targetId: "M04-PLATFORM-01", ruleIds: ["RULE_GAZE", "RULE_REVERSE"], title: "施放组合三" }]
-              : this.pendingLevelId === "LV-ROOM-05"
-                ? [
-                    { comboId: "COMBO-001", targetId: "M05-BRIDGE-01", ruleIds: ["RULE_ECHO", "RULE_GAZE"], title: "组合一·桥梁" },
-                    { comboId: "COMBO-002", targetId: "M05-ENERGY-01", ruleIds: ["RULE_ECHO", "RULE_REVERSE"], title: "组合二·能量" },
-                    { comboId: "COMBO-003", targetId: "M05-REVERSE-01", ruleIds: ["RULE_GAZE", "RULE_REVERSE"], title: "组合三·逆流" }
-                  ]
-                : [];
+        const comboDefinitions = this.prototypeComboDefinitions;
 
         const buttonWidth = Math.min(170, (size.width - 48) / Math.max(1, comboDefinitions.length));
         const totalWidth = comboDefinitions.length * buttonWidth + Math.max(0, comboDefinitions.length - 1) * 8;
@@ -863,12 +909,12 @@ export class BeyondTheUnknownGameEntry extends Component {
           const x = -totalWidth / 2 + buttonWidth / 2 + index * (buttonWidth + 8);
           this.roomControlNodes.push(this.createButton(
             `Cast-${definition.comboId}-${index}`,
-            definition.title,
+            definition.displayName,
             x,
             -size.height / 2 + 112,
             buttonWidth,
             42,
-            () => this.castPrototypeCombo(definition.comboId, definition.targetId, definition.ruleIds)
+            () => this.castPrototypeCombo(definition)
           ));
         });
 

@@ -160,7 +160,8 @@
         "necessary_objectives",
         "discoveries",
         "entrance_id",
-        "prototype_layout"
+        "prototype_layout",
+        "prototype_combos"
       ],
       "properties": {
         "level_id": {
@@ -301,6 +302,52 @@
             }
           },
           "additionalProperties": false
+        },
+        "prototype_combos": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/prototypeCombo"
+          }
+        }
+      },
+      "additionalProperties": false
+    },
+    "prototypeCombo": {
+      "type": "object",
+      "required": [
+        "combo_id",
+        "target_mechanism_id",
+        "rule_sequence",
+        "display_name",
+        "maintain_gaze"
+      ],
+      "properties": {
+        "combo_id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "target_mechanism_id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "rule_sequence": {
+          "type": "array",
+          "minItems": 2,
+          "maxItems": 2,
+          "items": {
+            "enum": [
+              "RULE_ECHO",
+              "RULE_GAZE",
+              "RULE_REVERSE"
+            ]
+          }
+        },
+        "display_name": {
+          "type": "string",
+          "minLength": 1
+        },
+        "maintain_gaze": {
+          "type": "boolean"
         }
       },
       "additionalProperties": false
