@@ -26,6 +26,7 @@ import { MapSession } from "../world/map-session";
 import { PersonalLevelSession } from "../world/personal-level-session";
 import { deriveRoom01VisualState } from "../world/room01-presentation";
 import { selectNextPlayableLevel } from "../world/level-progression";
+import { buildPrototypeRuleOptions } from "../world/prototype-rule-options";
 import { formatProgressSummary } from "../ui/progress-summary";
 
 const { ccclass, property } = _decorator;
@@ -529,7 +530,11 @@ export class BeyondTheUnknownGameEntry extends Component {
         }
         const result = await this.levelSession.castRule(
           ruleId,
-          { targetId },
+          buildPrototypeRuleOptions(
+            ruleId,
+            targetId,
+            this.roomMechanismCatalog.get(targetId)
+          ),
           this.makeIdempotencyKey(`prototype-${comboId}-${ruleId}`)
         );
         const cooldownUntil = Date.parse(result.cooldown_until);
