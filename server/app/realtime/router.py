@@ -260,7 +260,9 @@ async def map_websocket(websocket: WebSocket) -> None:
             elif command == "LEAVE":
                 async with SessionFactory() as session:
                     await remove_membership(session, player_id, session_id)
-                await map_connections.remove_avatar(str(instance_id), str(player_id))
+                await map_connections.remove_avatar(
+                    str(instance_id), str(player_id), lease_token
+                )
                 await _send(websocket, "LEAVE", {"success": True})
                 joined = False
                 await websocket.close(code=1000)
