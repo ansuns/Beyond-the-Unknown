@@ -85,3 +85,8 @@ The engine-independent TypeScript tests continue to run with `npm test` and `npm
 - `getLeaderboard(boardType, periodType, scope, limit)` reads one of the three server-owned weekly/monthly boards.
 
 `PersonalLevelSession.settle()` and `WorldPlaySession.settleRoom()` expose the authoritative settlement flow. A successful or failed settlement clears the local active-run handle; incomplete-objective errors leave it available so the scene can refresh state and retry after the puzzle is completed.
+
+
+## WeChat Mini Game build
+
+See [微信小游戏构建与联调手册](../docs/engineering/wechat-mini-game-build.md) for the Cocos Creator 3.8.8 import/build steps, test AppID selection, server-only AppSecret configuration, HTTPS/WSS domain requirements and real-device acceptance checklist.
