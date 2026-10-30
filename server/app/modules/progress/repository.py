@@ -219,6 +219,7 @@ async def _grant_rewards_for_trigger(
     trigger_ref: str,
     source: str,
     source_id: str,
+    is_repeat: bool = False,
 ) -> list[str]:
     rows = (
         await session.execute(
@@ -236,6 +237,8 @@ async def _grant_rewards_for_trigger(
     ).mappings().all()
     granted = []
     for row in rows:
+        if trigger_type not in {"DISCOVERY", "COLLECTION", "SETTLEMENT"}:
+            continue
         condition = row["condition_config"]
         reference_key = {
             "DISCOVERY": "discovery_id",
@@ -243,6 +246,8 @@ async def _grant_rewards_for_trigger(
             "SETTLEMENT": "level_id",
         }.get(trigger_type)
         if reference_key and condition.get(reference_key) != trigger_ref:
+            continue
+        if is_repeat and not condition.get("repeatable", False):
             continue
         reward_status = (
             "PENDING_CLAIM" if row["grant_mode"] == "CLAIM" else "OWNED"
@@ -374,7 +379,11 @@ async def _snapshot_progress(
             }
             for row in scores
         ],
-        "current_character_id": player["current_character_id"],
+        "current_character_id": (
+            str(player["current_character_id"])
+            if player["current_character_id"] is not None
+            else None
+        ),
     }
     await session.execute(
         text("""
@@ -816,6 +825,7 @@ async def settle_level(
         run["level_id"],
         "SETTLEMENT",
         str(result),
+        is_repeat=prior_completion is not None,
     )
 
     unlocked_route = await _try_unlock_hidden_route(
