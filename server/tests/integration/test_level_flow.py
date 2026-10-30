@@ -1,8 +1,8 @@
 import os
 from uuid import uuid4
 
-from fastapi.testclient import TestClient
 import pytest
+from fastapi.testclient import TestClient
 
 from app.main import app
 from app.modules.auth.provider import get_wechat_code_provider
