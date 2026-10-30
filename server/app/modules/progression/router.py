@@ -5,23 +5,23 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.authentication import get_current_player_id
 from app.core.database import get_session
-from app.modules.progression.schemas import ClaimRewardRequest, SettleLevelRequest
 from app.modules.progression.repository import (
     ObjectivesIncomplete,
     ProgressionRunNotActive,
     ProgressionRunNotFound,
     RewardNotClaimable,
     RewardNotFound,
-    get_leaderboard,
+    claim_reward,
     get_current_seasons,
+    get_leaderboard,
     get_player_collections,
     get_player_discoveries,
-    get_world_archive,
     get_progress_summary,
+    get_world_archive,
     list_player_rewards,
-    claim_reward,
     settle_level,
 )
+from app.modules.progression.schemas import ClaimRewardRequest, SettleLevelRequest
 from app.schemas.envelope import success_envelope
 
 router = APIRouter()
