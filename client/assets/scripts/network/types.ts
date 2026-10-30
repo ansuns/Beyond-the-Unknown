@@ -150,3 +150,31 @@ export interface PersonalLevelState {
   level_id: string;
   mechanisms: PersonalMechanismState[];
 }
+
+
+export interface PlayerProfile {
+  player_id: string;
+  current_character_id: string | null;
+  progress_version: number;
+  status: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface CharacterItem {
+  character_id: string;
+  display_name: string;
+  config: Record<string, unknown>;
+  unlocked_at: string;
+  is_unlocked: boolean;
+}
+
+export interface CharacterCatalogData {
+  current_character_id: string | null;
+  characters: CharacterItem[];
+}
+
+export interface CharacterSelectionData {
+  success: boolean;
+  current_character_id: string;
+}

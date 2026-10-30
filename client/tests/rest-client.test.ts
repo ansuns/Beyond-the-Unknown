@@ -183,4 +183,68 @@ describe("PersonalLevelSession", () => {
     expect(session.activeRun()).toBeUndefined();
     expect(() => session.refreshState()).toThrow("No active personal level run");
   });
+
+  it("reads the player profile and owned character catalog", async () => {
+    const fetchImpl = vi.fn<typeof fetch>()
+      .mockResolvedValueOnce(new Response(JSON.stringify({
+        code: 0, message: "ok", request_id: "profile",
+        data: {
+          player_id: "player-1",
+          current_character_id: "CHR_001",
+          progress_version: 3,
+          status: "ACTIVE",
+          created_at: "2026-10-01T00:00:00Z",
+          updated_at: "2026-10-02T00:00:00Z"
+        }
+      }), { status: 200 }))
+      .mockResolvedValueOnce(new Response(JSON.stringify({
+        code: 0, message: "ok", request_id: "characters",
+        data: {
+          current_character_id: "CHR_001",
+          characters: [{
+            character_id: "CHR_001",
+            display_name: "探索者 01",
+            config: {},
+            unlocked_at: "2026-10-01T00:00:00Z",
+            is_unlocked: true
+          }]
+        }
+      }), { status: 200 }));
+    const api = new RestClient({
+      baseUrl: "https://example.test/api/v1",
+      token: () => "jwt-token",
+      fetchImpl
+    });
+
+    const profile = await api.getPlayerProfile();
+    const characters = await api.listCharacters();
+    expect(profile.player_id).toBe("player-1");
+    expect(characters.characters[0].character_id).toBe("CHR_001");
+    expect(fetchImpl.mock.calls[0][0]).toBe("https://example.test/api/v1/player/me");
+    expect(fetchImpl.mock.calls[1][0]).toBe("https://example.test/api/v1/player/characters");
+    expect((fetchImpl.mock.calls[0][1]?.headers as Record<string, string>).Authorization)
+      .toBe("Bearer jwt-token");
+  });
+
+  it("selects an unlocked character through the player API", async () => {
+    const fetchImpl = vi.fn<typeof fetch>().mockResolvedValue(new Response(JSON.stringify({
+      code: 0,
+      message: "ok",
+      request_id: "select",
+      data: { success: true, current_character_id: "CHR_002" }
+    }), { status: 200 }));
+    const api = new RestClient({
+      baseUrl: "https://example.test/api/v1",
+      token: () => "jwt-token",
+      fetchImpl
+    });
+
+    const result = await api.selectCharacter("CHR_002");
+    expect(result.current_character_id).toBe("CHR_002");
+    const [url, init] = fetchImpl.mock.calls[0];
+    expect(url).toBe("https://example.test/api/v1/player/character");
+    expect(init?.method).toBe("PUT");
+    expect(JSON.parse(String(init?.body))).toEqual({ character_id: "CHR_002" });
+  });
+
 });

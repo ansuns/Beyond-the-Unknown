@@ -1,5 +1,7 @@
 import type {
   ApiEnvelope,
+  CharacterCatalogData,
+  CharacterSelectionData,
   GazeMaintainData,
   GazeStopData,
   LawRuleId,
@@ -9,6 +11,7 @@ import type {
   LoginData,
   MapEnterData,
   PersonalLevelState,
+  PlayerProfile,
   RuleCastData,
   RuleCatalogData,
   RulePoint
@@ -69,6 +72,21 @@ export class RestClient {
       body: JSON.stringify({ wx_code: wxCode, request_id: requestId }),
       authenticated: false,
       requestId
+    });
+  }
+
+  async getPlayerProfile(): Promise<PlayerProfile> {
+    return this.request<PlayerProfile>("/player/me", { method: "GET" });
+  }
+
+  async listCharacters(): Promise<CharacterCatalogData> {
+    return this.request<CharacterCatalogData>("/player/characters", { method: "GET" });
+  }
+
+  async selectCharacter(characterId: string): Promise<CharacterSelectionData> {
+    return this.request<CharacterSelectionData>("/player/character", {
+      method: "PUT",
+      body: JSON.stringify({ character_id: characterId })
     });
   }
 
