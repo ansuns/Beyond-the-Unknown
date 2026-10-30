@@ -56,10 +56,13 @@ def _level_payload(row: Any) -> dict[str, Any]:
         "necessary_objectives": row["necessary_objectives"],
         "config": row["config"],
         "is_hidden": row["is_hidden"],
+        "is_unlocked": row.get("is_unlocked", not row["is_hidden"]),
     }
 
 
-async def list_levels(session: AsyncSession) -> list[dict[str, Any]]:
+async def list_levels(
+    session: AsyncSession, player_id: UUID
+) -> list[dict[str, Any]]:
     rows = (
         await session.execute(
             text("""
