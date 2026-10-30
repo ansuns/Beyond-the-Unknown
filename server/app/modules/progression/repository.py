@@ -289,6 +289,17 @@ async def record_discovery(
     }
 
 
+def _missing_objectives(
+    objectives: list[dict[str, Any]], states: dict[str, dict[str, Any]]
+) -> list[str]:
+    return [
+        objective["objective_id"]
+        for objective in objectives
+        if states.get(objective["mechanism_id"], {}).get("status")
+        != objective["target_state"]
+    ]
+
+
 async def settle_level(
     session: AsyncSession,
     player_id: UUID,
@@ -350,11 +361,7 @@ async def settle_level(
         )
     ).mappings().all()
     state_by_id = {row["mechanism_config_id"]: row["state"] for row in states}
-    missing = []
-    for objective in objectives:
-        current = state_by_id.get(objective["mechanism_id"], {})
-        if current.get("status") != objective["target_state"]:
-            missing.append(objective["objective_id"])
+    missing = _missing_objectives(objectives, state_by_id)
     if missing:
         raise ObjectivesIncomplete(missing)
 
