@@ -26,6 +26,8 @@ class Settings(BaseSettings):
     map_move_rate_hz: float = 10.0
     map_action_rate_limit: int = 5
     map_action_window_seconds: int = 10
+    law_combo_window_ms: int = 5000  # Prototype tuning value; override via LAW_COMBO_WINDOW_MS.
+    law_cooldown_ms: int = 0  # 0 disables cooldown until GDD tuning is approved.
 
     model_config = SettingsConfigDict(env_file=".env", extra="ignore")
 
