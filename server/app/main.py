@@ -7,14 +7,23 @@ from sqlalchemy import text
 from app.api.router import api_router
 from app.core.config import get_settings
 from app.core.database import engine
+from app.realtime.manager import map_connections
 
 settings = get_settings()
 
 
 @asynccontextmanager
 async def lifespan(_: FastAPI):
-    yield
-    await engine.dispose()
+    if settings.app_env != "test":
+        await map_connections.start(
+            settings.redis_url,
+            settings.map_presence_ttl_seconds,
+        )
+    try:
+        yield
+    finally:
+        await map_connections.close()
+        await engine.dispose()
 
 
 app = FastAPI(title=settings.app_name, version="0.2.0", lifespan=lifespan)
@@ -43,4 +52,6 @@ async def liveness() -> dict[str, str]:
 async def readiness() -> dict[str, str]:
     async with engine.connect() as connection:
         await connection.execute(text("SELECT 1"))
+    if not await map_connections.ping():
+        raise RuntimeError("Redis is not ready")
     return {"status": "ready"}
