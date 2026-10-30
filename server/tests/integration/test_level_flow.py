@@ -77,6 +77,20 @@ def test_personal_level_run_entry_is_idempotent_and_isolated() -> None:
             assert started.status_code == 200
             assert started.json()["data"]["status"] == "RUNNING"
 
+            active_conflict = client.post(
+                "/api/v1/level/enter",
+                headers={**first["headers"], "Idempotency-Key": "level-enter-active-0001"},
+                json={"level_id": "LV-ROOM-02", "entrance_id": "ENT-ROOM-02"},
+            )
+            assert active_conflict.status_code == 409
+
+            cross_player = client.post(
+                "/api/v1/level/start",
+                headers=second["headers"],
+                json={"run_id": first_data["run_id"]},
+            )
+            assert cross_player.status_code == 404
+
             abandoned = client.post(
                 "/api/v1/level/abandon",
                 headers=first["headers"],
@@ -84,6 +98,9 @@ def test_personal_level_run_entry_is_idempotent_and_isolated() -> None:
             )
             assert abandoned.status_code == 200
             assert abandoned.json()["data"]["status"] == "ABANDONED"
+
+            returned_to_map = client.post("/api/v1/map/enter", headers=first["headers"])
+            assert returned_to_map.status_code == 200
 
             second_enter = client.post(
                 "/api/v1/level/enter",
