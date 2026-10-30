@@ -20,6 +20,7 @@ def upgrade() -> None:
         sa.Column("cooldown_ms", sa.Integer(), nullable=True),
         sa.Column("radius", sa.Float(), nullable=True),
         sa.Column("duration_ms", sa.Integer(), nullable=True),
+        sa.Column("lease_timeout_ms", sa.Integer(), nullable=True),
         sa.Column("allowed_target_types", JSONB(), nullable=False),
         sa.Column("config_status", sa.String(32), nullable=False, server_default="TUNING_REQUIRED"),
         sa.Column("is_enabled", sa.Boolean(), nullable=False, server_default=sa.true()),
@@ -27,6 +28,7 @@ def upgrade() -> None:
         sa.CheckConstraint("cooldown_ms IS NULL OR cooldown_ms > 0", name="ck_rule_catalog_cooldown"),
         sa.CheckConstraint("radius IS NULL OR radius > 0", name="ck_rule_catalog_radius"),
         sa.CheckConstraint("duration_ms IS NULL OR duration_ms > 0", name="ck_rule_catalog_duration"),
+        sa.CheckConstraint("lease_timeout_ms IS NULL OR lease_timeout_ms > 0", name="ck_rule_catalog_lease_timeout"),
         sa.CheckConstraint(
             "duration_type IN ('INSTANT','WHILE_CASTING','TIMED')",
             name="ck_rule_catalog_duration_type",
@@ -125,16 +127,16 @@ def upgrade() -> None:
         """
         INSERT INTO rule_catalog
             (rule_id, display_name, duration_type, priority, scope_type,
-             cooldown_ms, radius, duration_ms, allowed_target_types, config_status)
+             cooldown_ms, radius, duration_ms, lease_timeout_ms, allowed_target_types, config_status)
         VALUES
             ('RULE_ECHO', '回声', 'INSTANT', 1, 'POINT_RADIUS',
-             NULL, NULL, NULL,
+             NULL, NULL, NULL, NULL,
              '["HIDDEN_OBJECT","MECHANISM"]'::jsonb, 'TUNING_REQUIRED'),
             ('RULE_GAZE', '注视', 'WHILE_CASTING', 2, 'OBJECT_RADIUS',
-             NULL, NULL, NULL,
+             NULL, NULL, NULL, NULL,
              '["PLATFORM","ENERGY_NODE","MECHANISM"]'::jsonb, 'TUNING_REQUIRED'),
             ('RULE_REVERSE', '逆流', 'TIMED', 3, 'OBJECT_RADIUS',
-             NULL, NULL, NULL,
+             NULL, NULL, NULL, NULL,
              '["ENERGY_NODE","PLATFORM","MOVING_OBJECT","MECHANISM"]'::jsonb, 'TUNING_REQUIRED')
         ON CONFLICT (rule_id) DO NOTHING
         """
@@ -171,16 +173,16 @@ def upgrade() -> None:
             ('LV-ROOM-02', 'MECH_BRIDGE', 'PLATFORM_BRIDGE', 'PLATFORM',
              'INACTIVE', 'TRIGGERED', '["RULE_EFFECT","COMBO_EFFECT"]'::jsonb,
              '{"config_status":"PENDING_POSITION_AND_ART"}'::jsonb),
-            ('LV-ROOM-03', 'MECH_ENERGY_GATE', 'ENERGY_NODE', 'ENERGY_NODE',
+            ('LV-ROOM-03', 'MECH_ENERGY_GATE', 'MECHANISM', 'ENERGY_NODE',
              'INACTIVE', 'TRIGGERED', '["RULE_EFFECT","COMBO_EFFECT"]'::jsonb,
              '{"config_status":"PENDING_POSITION_AND_ART","initial_direction":1}'::jsonb),
-            ('LV-ROOM-04', 'MECH_MOVING_PLATFORM', 'MOVING_OBJECT', 'MOVING_OBJECT',
+            ('LV-ROOM-04', 'MECH_MOVING_PLATFORM', 'MECHANISM', 'MOVING_OBJECT',
              'INACTIVE', 'TRIGGERED', '["RULE_EFFECT","COMBO_EFFECT"]'::jsonb,
              '{"config_status":"PENDING_POSITION_AND_ART","initial_direction":1}'::jsonb),
-            ('LV-ROOM-05', 'MECH-ROOM05-TARGET-A', 'PLATFORM_BRIDGE', 'PLATFORM',
+            ('LV-ROOM-05', 'MECH-ROOM05-TARGET-A', 'PLATFORM_BRIDGE', 'MECHANISM',
              'INACTIVE', 'TRIGGERED', '["COMBO_EFFECT"]'::jsonb,
              '{"config_status":"PENDING_POSITION_AND_ART"}'::jsonb),
-            ('LV-ROOM-05', 'MECH-ROOM05-TARGET-B', 'ENERGY_NODE', 'ENERGY_NODE',
+            ('LV-ROOM-05', 'MECH-ROOM05-TARGET-B', 'ENERGY_NODE', 'MECHANISM',
              'INACTIVE', 'TRIGGERED', '["COMBO_EFFECT"]'::jsonb,
              '{"config_status":"PENDING_POSITION_AND_ART","initial_direction":1}'::jsonb)
         ON CONFLICT (level_id, mechanism_config_id) DO NOTHING
