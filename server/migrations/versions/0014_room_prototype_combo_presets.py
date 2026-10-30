@@ -9,7 +9,7 @@ depends_on = None
 
 
 def upgrade() -> None:
-    op.execute(
+    op.get_bind().exec_driver_sql(
         """
         UPDATE levels AS level
         SET config = level.config || jsonb_build_object(
