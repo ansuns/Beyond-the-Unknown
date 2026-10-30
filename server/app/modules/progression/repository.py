@@ -84,7 +84,12 @@ async def ensure_current_periods(
                      :start_at, :end_at, 'ACTIVE')
                 ON CONFLICT (season_id) DO NOTHING
             """),
-            period,
+            {
+                "season_id": period["season_id"],
+                "season_type": period["season_type"],
+                "start_at": period["start"],
+                "end_at": period["end"],
+            },
         )
         await session.execute(
             text("""
