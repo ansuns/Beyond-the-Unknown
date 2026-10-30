@@ -640,7 +640,12 @@ export class BeyondTheUnknownGameEntry extends Component {
     try {
       await this.flushLevelPosition();
       if (this.prototypeGazeTargetId) {
-        await this.levelSession.stopGaze();
+        try {
+          await this.levelSession.stopGaze();
+        } catch (error) {
+          // Settlement ends the run; the server-side GAZE lease will expire.
+          this.setStatus(`注视效果将在租约到期后结束：${error instanceof Error ? error.message : "网络错误"}`);
+        }
         this.prototypeGazeTargetId = undefined;
         this.prototypeGazeMaintainAt = 0;
         this.prototypeGazeNextMaintainAt = 0;
@@ -1105,9 +1110,14 @@ export class BeyondTheUnknownGameEntry extends Component {
     }
     try {
       this.setStatus("正在保存并放弃当前关卡…");
-      await this.levelPositionSync?.flush({ ...this.levelPosition });
+      // Abandon is allowed to proceed even if a best-effort position sync fails.
+      await this.levelPositionSync?.waitForIdle();
       if (this.prototypeGazeTargetId) {
-        await this.levelSession.stopGaze();
+        try {
+          await this.levelSession.stopGaze();
+        } catch (error) {
+          this.setStatus(`注视效果将在租约到期后结束：${error instanceof Error ? error.message : "网络错误"}`);
+        }
       }
       this.prototypeGazeTargetId = undefined;
       this.prototypeGazeMaintainAt = 0;

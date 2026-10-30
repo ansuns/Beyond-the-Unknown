@@ -17,6 +17,11 @@ export class LatestPositionSyncQueue {
     this.startDrain(false);
   }
 
+  /** Wait for an in-flight background request without requiring it to succeed. */
+  async waitForIdle(): Promise<void> {
+    while (this.inFlight) await this.inFlight;
+  }
+
   /**
    * Wait for in-flight samples, then ensure the newest requested position has
    * been accepted by the server. Unlike background updates, flush propagates
