@@ -9,3 +9,8 @@ class LevelSettleRequest(BaseModel):
 
 class RewardClaimRequest(BaseModel):
     player_reward_id: UUID
+
+
+class SeasonReviewRequest(BaseModel):
+    decision: str
+    note: str | None = None
