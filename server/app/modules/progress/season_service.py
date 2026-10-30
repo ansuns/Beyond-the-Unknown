@@ -349,7 +349,33 @@ async def auto_approve_season(
     if season["status"] != "SETTLING" or season["settlement_status"] != "REVIEW":
         return {"season_id": season_id, "auto_approved": False, "reason": "NOT_IN_REVIEW"}
     if season["review_until_utc"] and season["review_until_utc"] > current:
-        return {"season_id": season_id, "auto_approved": False, "reason": "REVIEW_WINDOW_OPEN"}
+        next_attempt = season["review_until_utc"] + timedelta(seconds=2)
+        await session.execute(
+            text("""
+                INSERT INTO task_outbox
+                    (task_type, schema_version, payload, idempotency_key,
+                     available_at_utc)
+                VALUES
+                    ('season.auto_approve', 1,
+                     jsonb_build_object('season_id', :season_id),
+                     :idempotency_key, :available_at)
+                ON CONFLICT (idempotency_key) DO NOTHING
+            """),
+            {
+                "season_id": season_id,
+                "idempotency_key": (
+                    f"season-auto-approve:{season_id}:"
+                    f"{season['review_until_utc'].isoformat()}"
+                ),
+                "available_at": next_attempt,
+            },
+        )
+        return {
+            "season_id": season_id,
+            "auto_approved": False,
+            "reason": "REVIEW_WINDOW_OPEN",
+            "retry_at_utc": next_attempt.isoformat(),
+        }
     result = await review_season(
         session,
         season_id,
