@@ -41,7 +41,7 @@ def upgrade() -> None:
         sa.Column("idempotency_key", sa.String(200), nullable=False, unique=True),
         sa.Column("status", sa.String(16), nullable=False, server_default="PENDING"),
         sa.Column("attempts", sa.Integer(), nullable=False, server_default="0"),
-        sa.Column("max_attempts", sa.Integer(), nullable=False, server_default="5"),
+        sa.Column("max_attempts", sa.Integer(), nullable=False, server_default="4"),
         sa.Column(
             "available_at_utc",
             sa.DateTime(timezone=True),
