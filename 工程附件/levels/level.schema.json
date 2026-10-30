@@ -1,0 +1,212 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://example.invalid/schemas/btu-level.schema.json",
+  "title": "Beyond the Unknown Level Config",
+  "type": "object",
+  "required": [
+    "schema_version",
+    "world_id",
+    "levels",
+    "hidden_routes"
+  ],
+  "properties": {
+    "schema_version": {
+      "const": 1
+    },
+    "world_id": {
+      "type": "string"
+    },
+    "levels": {
+      "type": "array",
+      "minItems": 6,
+      "items": {
+        "$ref": "#/$defs/level"
+      }
+    },
+    "hidden_routes": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": [
+          "hidden_route_id",
+          "prerequisite_levels",
+          "trigger_combo",
+          "result",
+          "is_enabled"
+        ],
+        "properties": {
+          "hidden_route_id": {
+            "type": "string"
+          },
+          "prerequisite_levels": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "uniqueItems": true
+          },
+          "trigger_combo": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "minItems": 1
+          },
+          "trigger_mechanisms": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "result": {
+            "type": "string"
+          },
+          "is_enabled": {
+            "type": "boolean"
+          }
+        },
+        "additionalProperties": false
+      }
+    }
+  },
+  "$defs": {
+    "objective": {
+      "type": "object",
+      "required": [
+        "objective_id",
+        "mechanism_id",
+        "target_state"
+      ],
+      "properties": {
+        "objective_id": {
+          "type": "string"
+        },
+        "mechanism_id": {
+          "type": "string"
+        },
+        "target_state": {
+          "type": "string"
+        },
+        "required_combo": {
+          "type": [
+            "string",
+            "null"
+          ]
+        }
+      },
+      "additionalProperties": false
+    },
+    "mechanism": {
+      "type": "object",
+      "required": [
+        "mechanism_id",
+        "mechanism_type",
+        "initial_state",
+        "config"
+      ],
+      "properties": {
+        "mechanism_id": {
+          "type": "string"
+        },
+        "mechanism_type": {
+          "type": "string"
+        },
+        "initial_state": {
+          "type": "string"
+        },
+        "config": {
+          "type": "object"
+        }
+      },
+      "additionalProperties": false
+    },
+    "level": {
+      "type": "object",
+      "required": [
+        "level_id",
+        "room_index",
+        "name",
+        "is_hidden",
+        "is_enabled",
+        "estimated_duration_seconds",
+        "required_laws",
+        "required_combos",
+        "mechanisms",
+        "necessary_objectives",
+        "discoveries",
+        "entrance_id"
+      ],
+      "properties": {
+        "level_id": {
+          "type": "string"
+        },
+        "room_index": {
+          "type": [
+            "integer",
+            "null"
+          ],
+          "minimum": 1,
+          "maximum": 5
+        },
+        "name": {
+          "type": "string"
+        },
+        "is_hidden": {
+          "type": "boolean"
+        },
+        "is_enabled": {
+          "type": "boolean"
+        },
+        "entrance_id": {
+          "type": "string"
+        },
+        "estimated_duration_seconds": {
+          "type": "integer",
+          "minimum": 30,
+          "maximum": 90
+        },
+        "required_laws": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "uniqueItems": true
+        },
+        "required_combos": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "uniqueItems": true
+        },
+        "mechanisms": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/mechanism"
+          }
+        },
+        "necessary_objectives": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "$ref": "#/$defs/objective"
+          }
+        },
+        "discoveries": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "unlock": {
+          "type": "object"
+        },
+        "presentation": {
+          "type": "object"
+        }
+      },
+      "additionalProperties": false
+    }
+  },
+  "additionalProperties": false
+}

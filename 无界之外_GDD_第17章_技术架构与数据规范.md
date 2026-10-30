@@ -7,7 +7,7 @@
 | 版本 | 日期 | 变更内容 |
 |---|---|---|
 | V0.1 | 2026-10-30 | 建立技术架构与数据规范初稿 |
-| V0.2 | 2026-10-30 | 统一个人发现/收藏/机关状态/奖励/成就/积分/进度数据字典；补齐业务接口映射 |
+| V0.2 | 2026-10-30 | 统一个人发现/收藏/机关状态/奖励/成就/积分/进度数据字典；补齐业务接口映射 |\n| V0.2.1 | 2026-10-30 | 确认 Cocos Creator 3.x + TypeScript 客户端基线，工程附件转入可执行契约阶段 |\n| V0.2.2 | 2026-10-30 | 服务端技术栈调整为 Python + FastAPI；REST / WebSocket 契约保持语言无关 |
 
 -   **文档版本：** GDD V0.2
 -   **章节版本：** 第17章 V0.2
@@ -24,21 +24,26 @@
 
 本章不定义具体玩法数值（见第2–15章）、UI视觉规范（见第16章）与美术资源制作规格（见第18章）。
 
-**技术基线（建议方案，待最终确认）：**
+**技术基线（已确认）：**
 
   类别          建议方案
   ------------- ------------------------------------------------
-  客户端引擎    Cocos Creator 3.x（建议，待最终确认）
+  客户端引擎    Cocos Creator 3.x（已确认）
   客户端语言    TypeScript
-  服务端语言    Node.js + TypeScript
+  服务端语言    Python 3.12+
+  HTTP API      FastAPI
+  ORM           SQLAlchemy 2.x（async）
+  数据迁移      Alembic
+  数据校验      Pydantic 2.x
+  ASGI运行      Uvicorn
   实时通信      WebSocket
   关系数据库    PostgreSQL
   缓存          Redis
-  异步任务      BullMQ
+  异步任务      RabbitMQ + Python Worker（已确认）
   部署          Docker
   后端架构      模块化单体（建议，待最终确认）
 
-说明：以上技术选型均为建议方案，最终以技术评审与压测结论为准，不在本章固化为不可变更约束。凡涉及性能、容量、分库分表的硬指标，统一标注「待压测确定 / 待最终确认」。
+说明：Cocos Creator 3.x + TypeScript 客户端、Python + FastAPI 服务端、RabbitMQ 异步任务队列已由项目决策确认。PostgreSQL、WebSocket、Redis、Docker 与模块化单体作为工程基线。RabbitMQ 由独立 Python Worker 消费；任务需幂等、持久化投递、手动 ACK、有限重试和死信隔离。容量、性能与部署拓扑仍以技术评审和压测为准。
 
 ------------------------------------------------------------------------
 
@@ -54,14 +59,16 @@
 
 ``` mermaid
 flowchart LR
-    C["客户端 Cocos Creator 3.x / TS"] -->|HTTPS REST| GW["API网关 / 鉴权"]
-    C -->|WebSocket| WS["WebSocket网关"]
+    C["客户端 Cocos Creator 3.x / TS"] -->|HTTPS REST| GW["FastAPI / 鉴权"]
+    C -->|WebSocket| WS["FastAPI WebSocket"]
     GW --> SVC["游戏服务（模块化单体）"]
     WS --> SVC
     SVC --> PG["PostgreSQL"]
     SVC --> RD["Redis 缓存/会话"]
-    SVC --> MQ["BullMQ 异步任务"]
-    MQ --> SVC
+    SVC -->|发布异步任务| MQ["RabbitMQ（持久化队列）"]
+    MQ -->|消费| WK["Python Worker"]
+    WK --> PG
+    WK -->|结果/事件| SVC
     SVC --> OSS["对象存储（资源/CDN）"]
     PG --- BAQ["备份与审计"]
     RD --- BARD["持久化/AOF"]
@@ -77,8 +84,24 @@ flowchart LR
   游戏服务        登录、地图实例、关卡、法则、机关、发现、排行榜等
   PostgreSQL      玩家/角色/地图/关卡/排行等持久化数据
   Redis           会话、在线状态、排行榜缓存、限流计数
-  BullMQ          结算重试、赛季结算、奖励发放等异步任务
+  RabbitMQ        持久化任务队列、消息确认、重试与死信隔离
+  Python Worker   消费后台任务；任务处理必须幂等，不持有业务权威状态
+  RabbitMQ + Python Worker                    结算后处理、赛季结算、奖励发放等可靠异步任务
   对象存储        美术/音频资源与CDN分发
+
+------------------------------------------------------------------------
+
+### 【异步任务可靠性约束】
+
+**优先级：【MVP必须】**
+
+- RabbitMQ 仅承载可异步执行的后台任务，不替代 PostgreSQL 事务与业务状态存储。
+- 生产者发布持久化消息到 durable queue；消息设置 persistent delivery mode，并使用 publisher confirms。
+- Worker 使用手动 ACK；仅在业务处理成功或已可靠记录终态后 ACK。失败采用有限次数退避重试，超过上限进入 dead-letter queue，禁止无限重试。
+- 每条任务消息至少包含 `schema_version`、`task_id`、`task_type`、`created_at`、`correlation_id`、`idempotency_key` 与 `payload`。不得在消息中放入可直接信任的玩家身份；Worker 必须重新校验任务归属与状态。
+- 消费者按 `task_id`/`idempotency_key` 幂等处理；重复投递不得重复发奖、结算或写积分。
+- 对“数据库事务提交后必须发布消息”的场景，采用 Transactional Outbox：业务数据与 outbox 记录同事务提交，由发布器投递 RabbitMQ；发布成功后标记 outbox 已发送。
+- 队列深度、最老消息年龄、重试数、死信数、消费延迟和 Worker 健康状态纳入监控与告警。
 
 ------------------------------------------------------------------------
 
