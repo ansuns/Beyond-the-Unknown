@@ -138,7 +138,7 @@ async def finalize_season(
                     jsonb_build_object('season_id', CAST(:season_id AS text),
                                        'review_until_utc', CAST(:review_until AS timestamptz)))
         """),
-        {"season_id": season_id, "review_until": review_until.isoformat()},
+        {"season_id": season_id, "review_until": review_until},
     )
     return {
         "season_id": season_id,
