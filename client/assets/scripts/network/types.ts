@@ -38,7 +38,64 @@ export type MapServerEvent = WsEnvelope<Record<string, unknown>>;
 
 
 export type LawRuleId = "RULE_ECHO" | "RULE_GAZE" | "RULE_REVERSE";
-export type LawActionKind = "APPLY" | "RELEASE";
+
+export interface RuleCatalogItem {
+  rule_id: LawRuleId;
+  display_name: string;
+  duration_type: "INSTANT" | "WHILE_CASTING" | "TIMED";
+  priority: number;
+  scope_type: string;
+  cooldown_ms: number | null;
+  radius: number | null;
+  duration_ms: number | null;
+  lease_timeout_ms: number | null;
+  allowed_target_types: string[];
+  config_status: "READY" | "TUNING_REQUIRED" | string;
+  is_unlocked: boolean;
+}
+
+export interface RuleCatalogData {
+  rules: RuleCatalogItem[];
+}
+
+export interface RulePoint {
+  x: number;
+  y: number;
+}
+
+export interface RuleCastEffect {
+  mechanism_id: string;
+  state: Record<string, unknown>;
+}
+
+export interface RuleComboResult {
+  combo_id: string;
+  mechanism_id: string;
+  status: string;
+  already_applied?: boolean;
+}
+
+export interface RuleCastData {
+  run_id: string;
+  rule_id: LawRuleId;
+  target_id: string | null;
+  effects: RuleCastEffect[];
+  combo: RuleComboResult | null;
+  cooldown_until: string;
+  idempotent_replay: boolean;
+}
+
+export interface GazeMaintainData {
+  run_id: string;
+  target_id: string;
+  maintained_at: string;
+}
+
+export interface GazeStopData {
+  run_id: string;
+  stopped: boolean;
+  target_id?: string;
+}
 
 export interface LevelCatalogItem {
   level_id: string;
@@ -47,6 +104,10 @@ export interface LevelCatalogItem {
   room_index: number | null;
   target_duration_min: number;
   target_duration_max: number;
+  hard_time_limit: boolean;
+  time_limit_seconds: number | null;
+  repeatable: boolean;
+  repeat_reward_mode: "NONE" | "REDUCED" | "FULL";
   required_laws: string[];
   necessary_objectives: string[];
   is_hidden: boolean;
@@ -63,6 +124,16 @@ export interface LevelRunData {
   level_id: string;
   status: "CREATED" | "RUNNING" | "COMPLETED" | "FAILED" | "ABANDONED";
   started_at?: string | null;
+  ended_at?: string | null;
+  idempotent_replay?: boolean;
+}
+
+export interface LevelEnterData {
+  run_id: string;
+  map_instance_id: string | null;
+  status: "CREATED" | "RUNNING" | "COMPLETED" | "FAILED" | "ABANDONED";
+  level: LevelCatalogItem;
+  idempotent_replay: boolean;
 }
 
 export interface PersonalMechanismState {
@@ -72,19 +143,8 @@ export interface PersonalMechanismState {
   updated_at: string;
 }
 
-export interface PersonalMechanismList {
+export interface PersonalLevelState {
   run_id: string;
   level_id: string;
-  status: string;
   mechanisms: PersonalMechanismState[];
-}
-
-export interface LawActionData {
-  run_id: string;
-  mechanism_id: string;
-  rule_id: LawRuleId;
-  action: LawActionKind;
-  state: Record<string, unknown>;
-  combo_id: string | null;
-  idempotent_replay: boolean;
 }

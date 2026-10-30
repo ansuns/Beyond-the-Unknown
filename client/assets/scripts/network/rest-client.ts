@@ -1,13 +1,17 @@
 import type {
   ApiEnvelope,
-  LawActionData,
-  LawActionKind,
+  GazeMaintainData,
+  GazeStopData,
   LawRuleId,
   LevelCatalogData,
+  LevelEnterData,
   LevelRunData,
   LoginData,
   MapEnterData,
-  PersonalMechanismList
+  PersonalLevelState,
+  RuleCastData,
+  RuleCatalogData,
+  RulePoint
 } from "./types";
 
 export class ApiError extends Error {
@@ -15,7 +19,8 @@ export class ApiError extends Error {
     message: string,
     readonly status: number,
     readonly code?: number,
-    readonly requestId?: string
+    readonly requestId?: string,
+    readonly details?: unknown
   ) {
     super(message);
     this.name = "ApiError";
@@ -36,6 +41,10 @@ export interface RestClientOptions {
   timeoutMs?: number;
   fetchImpl?: FetchLike;
   requestId?: () => string;
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null;
 }
 
 export class RestClient {
@@ -75,8 +84,8 @@ export class RestClient {
     levelId: string,
     entranceId: string,
     idempotencyKey: string
-  ): Promise<LevelRunData> {
-    return this.request<LevelRunData>("/level/enter", {
+  ): Promise<LevelEnterData> {
+    return this.request<LevelEnterData>("/level/enter", {
       method: "POST",
       body: JSON.stringify({ level_id: levelId, entrance_id: entranceId }),
       headers: { "Idempotency-Key": idempotencyKey }
@@ -97,28 +106,45 @@ export class RestClient {
     });
   }
 
-  async applyLawAction(
+  async listRules(): Promise<RuleCatalogData> {
+    return this.request<RuleCatalogData>("/level/rules", { method: "GET" });
+  }
+
+  async castRule(
     runId: string,
     ruleId: LawRuleId,
-    mechanismId: string,
-    action: LawActionKind,
+    options: { targetId?: string; targetPoint?: RulePoint },
     idempotencyKey: string
-  ): Promise<LawActionData> {
-    return this.request<LawActionData>("/level/law/action", {
+  ): Promise<RuleCastData> {
+    return this.request<RuleCastData>("/level/rule/cast", {
       method: "POST",
       body: JSON.stringify({
         run_id: runId,
         rule_id: ruleId,
-        mechanism_id: mechanismId,
-        action
+        ...(options.targetId ? { target_id: options.targetId } : {}),
+        ...(options.targetPoint ? { target_point: options.targetPoint } : {})
       }),
       headers: { "Idempotency-Key": idempotencyKey }
     });
   }
 
-  async getRunMechanisms(runId: string): Promise<PersonalMechanismList> {
-    return this.request<PersonalMechanismList>(
-      "/level/runs/" + encodeURIComponent(runId) + "/mechanisms",
+  async maintainGaze(runId: string, targetId: string): Promise<GazeMaintainData> {
+    return this.request<GazeMaintainData>("/level/rule/maintain", {
+      method: "POST",
+      body: JSON.stringify({ run_id: runId, target_id: targetId })
+    });
+  }
+
+  async stopGaze(runId: string): Promise<GazeStopData> {
+    return this.request<GazeStopData>("/level/rule/stop", {
+      method: "POST",
+      body: JSON.stringify({ run_id: runId })
+    });
+  }
+
+  async getLevelState(runId: string): Promise<PersonalLevelState> {
+    return this.request<PersonalLevelState>(
+      "/level/state/" + encodeURIComponent(runId),
       { method: "GET" }
     );
   }
@@ -154,21 +180,32 @@ export class RestClient {
         body: options.body,
         signal: controller.signal
       });
-      const payload = (await response.json()) as ApiEnvelope<T> | { detail?: string };
+      const payload: unknown = await response.json();
       if (!response.ok) {
-        const detail = "detail" in payload ? payload.detail : undefined;
-        throw new ApiError(detail || `Request failed: ${response.status}`, response.status, undefined, requestId);
+        const detail = isRecord(payload) ? payload.detail : undefined;
+        const message =
+          typeof detail === "string"
+            ? detail
+            : isRecord(detail) && typeof detail.code === "string"
+              ? detail.code
+              : `Request failed: ${response.status}`;
+        throw new ApiError(message, response.status, undefined, requestId, detail);
       }
-      if (!("data" in payload)) {
+      if (!isRecord(payload) || !("data" in payload)) {
         throw new ApiError("Invalid API response envelope", response.status, undefined, requestId);
       }
-      return payload.data;
+      return (payload as unknown as ApiEnvelope<T>).data;
     } catch (error) {
       if (error instanceof ApiError) throw error;
       if (error instanceof Error && error.name === "AbortError") {
         throw new ApiError("Request timed out", 0, undefined, requestId);
       }
-      throw new ApiError(error instanceof Error ? error.message : "Network request failed", 0, undefined, requestId);
+      throw new ApiError(
+        error instanceof Error ? error.message : "Network request failed",
+        0,
+        undefined,
+        requestId
+      );
     } finally {
       clearTimeout(timeout);
     }
