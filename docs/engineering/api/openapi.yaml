@@ -158,16 +158,10 @@ paths:
         '200': { description: Run transitioned to ABANDONED (idempotent) }
         '404': { $ref: '#/components/responses/NotFound' }
         '409': { $ref: '#/components/responses/Conflict' }
-  /level/rules:
-    get:
-      tags: [Level]
-      operationId: listPlayerRules
-      responses:
-        '200': { description: Player-owned rule permissions and server configuration status }
-  /level/rule/cast:
+  /level/law/action:
     post:
       tags: [Level]
-      operationId: castRule
+      operationId: applyPersonalLaw
       parameters: [{ $ref: '#/components/parameters/RequestId' }, { $ref: '#/components/parameters/IdempotencyKey' }]
       requestBody:
         required: true
@@ -175,69 +169,28 @@ paths:
           application/json:
             schema:
               type: object
-              required: [run_id, rule_id]
+              required: [run_id, rule_id, mechanism_id, action]
               properties:
                 run_id: { type: string, format: uuid }
                 rule_id: { type: string, enum: [RULE_ECHO, RULE_GAZE, RULE_REVERSE] }
-                target_id: { type: [string, 'null'] }
-                target_point:
-                  oneOf:
-                    - type: object
-                      required: [x, y]
-                      properties: { x: { type: number }, y: { type: number } }
-                    - type: 'null'
+                mechanism_id: { type: string, maxLength: 100 }
+                action: { type: string, enum: [APPLY, RELEASE] }
       responses:
-        '200': { description: Authoritative rule result and any matched preset combo }
-        '403': { description: Rule is not unlocked }
+        '200': { description: Authoritative personal mechanism state and optional preset combo result }
         '404': { $ref: '#/components/responses/NotFound' }
         '409': { $ref: '#/components/responses/Conflict' }
-        '422': { description: Invalid or out-of-scope target }
-        '503': { description: Rule tuning or target configuration is incomplete }
-  /level/rule/stop:
-    post:
-      tags: [Level]
-      operationId: stopGaze
-      parameters: [{ $ref: '#/components/parameters/RequestId' }]
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              type: object
-              required: [run_id]
-              properties: { run_id: { type: string, format: uuid } }
-      responses:
-        '200': { description: Stops the caller's active gaze effect }
-        '404': { $ref: '#/components/responses/NotFound' }
-  /level/rule/maintain:
-    post:
-      tags: [Level]
-      operationId: maintainGaze
-      parameters: [{ $ref: '#/components/parameters/RequestId' }]
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              type: object
-              required: [run_id, target_id]
-              properties:
-                run_id: { type: string, format: uuid }
-                target_id: { type: string }
-      responses:
-        '200': { description: Refreshes the server-side gaze lease }
-        '409': { $ref: '#/components/responses/Conflict' }
-  /level/state/{run_id}:
+        '429': { description: Configured law cooldown }
+  /level/runs/{run_id}/mechanisms:
     get:
       tags: [Level]
-      operationId: getPersonalLevelState
+      operationId: getPersonalRunMechanisms
       parameters:
         - name: run_id
           in: path
           required: true
           schema: { type: string, format: uuid }
       responses:
-        '200': { description: Caller-owned authoritative mechanism states }
+        '200': { description: Mechanism states belonging only to the authenticated player's run }
         '404': { $ref: '#/components/responses/NotFound' }
   /level/settle:
     post:
