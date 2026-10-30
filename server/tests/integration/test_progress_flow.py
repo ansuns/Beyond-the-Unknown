@@ -1,3 +1,5 @@
+# ruff: noqa: I001
+
 import asyncio
 import os
 from uuid import uuid4
