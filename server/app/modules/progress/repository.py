@@ -679,7 +679,54 @@ async def settle_level(
         and run["time_limit_seconds"] is not None
         and completion_time_ms > run["time_limit_seconds"] * 1000
     ):
-        raise SettlementStateConflict
+        failed_payload = {"failure_reason": "HARD_TIME_LIMIT"}
+        failed_result = (
+            await session.execute(
+                text("""
+                    INSERT INTO settlements
+                        (run_id, player_id, level_id, result_status,
+                         completion_time_ms, score_payload, idempotency_key)
+                    VALUES
+                        (:run_id, :player_id, :level_id, 'FAILED',
+                         :completion_time_ms, CAST(:score_payload AS jsonb),
+                         :idempotency_key)
+                    RETURNING result_id
+                """),
+                {
+                    "run_id": run_id,
+                    "player_id": player_id,
+                    "level_id": run["level_id"],
+                    "completion_time_ms": completion_time_ms,
+                    "score_payload": json.dumps(failed_payload),
+                    "idempotency_key": stored_idempotency_key,
+                },
+            )
+        ).scalar_one()
+        await session.execute(
+            text("""
+                UPDATE level_runs
+                SET status = 'FAILED', ended_at = :now,
+                    completion_time_ms = :completion_time_ms, result_id = :result_id
+                WHERE run_id = :run_id AND player_id = :player_id
+            """),
+            {
+                "now": now,
+                "completion_time_ms": completion_time_ms,
+                "result_id": failed_result,
+                "run_id": run_id,
+                "player_id": player_id,
+            },
+        )
+        await session.commit()
+        return {
+            "result_id": str(failed_result),
+            "run_id": str(run_id),
+            "level_id": run["level_id"],
+            "result_status": "FAILED",
+            "completion_time_ms": completion_time_ms,
+            "score_payload": failed_payload,
+            "idempotent_replay": False,
+        }
 
     prior_completion = (
         await session.execute(
@@ -711,7 +758,7 @@ async def settle_level(
                 "player_id": player_id,
                 "level_id": run["level_id"],
                 "completion_time_ms": completion_time_ms,
-                "idempotency_key": idempotency_key,
+                "idempotency_key": stored_idempotency_key,
             },
         )
     ).scalar_one()
