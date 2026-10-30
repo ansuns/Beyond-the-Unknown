@@ -1,10 +1,4 @@
-"""Align persisted mechanism catalog IDs with the canonical GDD level data.
-
-The GDD level catalog is the source of truth for mechanism identifiers. This
-migration renames the early placeholder IDs and inserts mechanisms that were
-present in the GDD but absent from the original server seed catalog. Spatial
-positions and tuning remain intentionally unset until content approval.
-"""
+"""Align persisted mechanism catalog IDs with the canonical GDD level data."""
 
 from alembic import op
 
@@ -15,41 +9,33 @@ depends_on = None
 
 
 def upgrade() -> None:
-    # Keep historical per-run state rows aligned with the canonical GDD IDs.
-    op.execute(
-        """
-        UPDATE mechanism_states
-        SET mechanism_config_id = CASE mechanism_config_id
-            WHEN 'MECH-ROOM01-HIDDEN-01' THEN 'M01-HIDEABLE-01'
-            WHEN 'MECH_BRIDGE' THEN 'M02-BRIDGE-01'
-            WHEN 'MECH_ENERGY_GATE' THEN 'M03-ENERGY-01'
-            WHEN 'MECH_MOVING_PLATFORM' THEN 'M04-PLATFORM-01'
-        END
-        WHERE mechanism_config_id IN (
-            'MECH-ROOM01-HIDDEN-01', 'MECH_BRIDGE',
-            'MECH_ENERGY_GATE', 'MECH_MOVING_PLATFORM'
+    """Rename legacy IDs and add catalog entries missing from the GDD mapping."""
+    id_map = {
+        "MECH-ROOM01-HIDDEN-01": "M01-HIDEABLE-01",
+        "MECH_BRIDGE": "M02-BRIDGE-01",
+        "MECH_ENERGY_GATE": "M03-ENERGY-01",
+        "MECH_MOVING_PLATFORM": "M04-PLATFORM-01",
+    }
+    for old_id, new_id in id_map.items():
+        op.execute(
+            """
+            UPDATE level_mechanism_catalog
+            SET mechanism_config_id = :new_id
+            WHERE mechanism_config_id = :old_id
+            """,
+            {"old_id": old_id, "new_id": new_id},
         )
-        """
-    )
-    op.execute(
-        """
-        UPDATE level_mechanism_catalog
-        SET mechanism_config_id = CASE mechanism_config_id
-            WHEN 'MECH-ROOM01-HIDDEN-01' THEN 'M01-HIDEABLE-01'
-            WHEN 'MECH_BRIDGE' THEN 'M02-BRIDGE-01'
-            WHEN 'MECH_ENERGY_GATE' THEN 'M03-ENERGY-01'
-            WHEN 'MECH_MOVING_PLATFORM' THEN 'M04-PLATFORM-01'
-        END
-        WHERE mechanism_config_id IN (
-            'MECH-ROOM01-HIDDEN-01', 'MECH_BRIDGE',
-            'MECH_ENERGY_GATE', 'MECH_MOVING_PLATFORM'
+        op.execute(
+            """
+            UPDATE mechanism_states
+            SET mechanism_config_id = :new_id
+            WHERE mechanism_config_id = :old_id
+            """,
+            {"old_id": old_id, "new_id": new_id},
         )
-        """
-    )
 
-    # Fill the gaps between the GDD's six-level catalog and the original
-    # server seed. These rows are deliberately disabled from gameplay by
-    # missing positions / TUNING_REQUIRED configuration, not silently guessed.
+    # Catalog entries exist for discovery and future content work, but remain
+    # non-interactive until positions, art and rule tuning are approved.
     op.execute(
         """
         INSERT INTO level_mechanism_catalog
@@ -74,6 +60,7 @@ def upgrade() -> None:
 
 
 def downgrade() -> None:
+    """Remove only rows introduced here and restore legacy catalog identifiers."""
     op.execute(
         """
         DELETE FROM level_mechanism_catalog
@@ -85,32 +72,26 @@ def downgrade() -> None:
         )
         """
     )
-    op.execute(
-        """
-        UPDATE level_mechanism_catalog
-        SET mechanism_config_id = CASE mechanism_config_id
-            WHEN 'M01-HIDEABLE-01' THEN 'MECH-ROOM01-HIDDEN-01'
-            WHEN 'M02-BRIDGE-01' THEN 'MECH_BRIDGE'
-            WHEN 'M03-ENERGY-01' THEN 'MECH_ENERGY_GATE'
-            WHEN 'M04-PLATFORM-01' THEN 'MECH_MOVING_PLATFORM'
-        END
-        WHERE mechanism_config_id IN (
-            'M01-HIDEABLE-01', 'M02-BRIDGE-01',
-            'M03-ENERGY-01', 'M04-PLATFORM-01'
+    reverse_map = {
+        "M01-HIDEABLE-01": "MECH-ROOM01-HIDDEN-01",
+        "M02-BRIDGE-01": "MECH_BRIDGE",
+        "M03-ENERGY-01": "MECH_ENERGY_GATE",
+        "M04-PLATFORM-01": "MECH_MOVING_PLATFORM",
+    }
+    for new_id, old_id in reverse_map.items():
+        op.execute(
+            """
+            UPDATE level_mechanism_catalog
+            SET mechanism_config_id = :old_id
+            WHERE mechanism_config_id = :new_id
+            """,
+            {"old_id": old_id, "new_id": new_id},
         )
-    )
-    op.execute(
-        """
-        UPDATE mechanism_states
-        SET mechanism_config_id = CASE mechanism_config_id
-            WHEN 'M01-HIDEABLE-01' THEN 'MECH-ROOM01-HIDDEN-01'
-            WHEN 'M02-BRIDGE-01' THEN 'MECH_BRIDGE'
-            WHEN 'M03-ENERGY-01' THEN 'MECH_ENERGY_GATE'
-            WHEN 'M04-PLATFORM-01' THEN 'MECH_MOVING_PLATFORM'
-        END
-        WHERE mechanism_config_id IN (
-            'M01-HIDEABLE-01', 'M02-BRIDGE-01',
-            'M03-ENERGY-01', 'M04-PLATFORM-01'
+        op.execute(
+            """
+            UPDATE mechanism_states
+            SET mechanism_config_id = :old_id
+            WHERE mechanism_config_id = :new_id
+            """,
+            {"old_id": old_id, "new_id": new_id},
         )
-        """
-    )
