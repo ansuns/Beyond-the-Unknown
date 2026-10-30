@@ -89,6 +89,21 @@ def _set_rule_tuning(ready: bool) -> None:
             SET position_x = 1, position_y = 1
             WHERE level_id = 'LV-ROOM-03' AND mechanism_config_id = 'MECH_ENERGY_GATE'
         """)
+        _db_update("""
+            UPDATE level_mechanism_catalog
+            SET position_x = 0, position_y = 0
+            WHERE level_id = 'LV-ROOM-05' AND mechanism_config_id = 'M05-BRIDGE-01'
+        """)
+        _db_update("""
+            UPDATE level_mechanism_catalog
+            SET position_x = 1, position_y = 1
+            WHERE level_id = 'LV-ROOM-05' AND mechanism_config_id = 'M05-ENERGY-01'
+        """)
+        _db_update("""
+            UPDATE level_mechanism_catalog
+            SET position_x = 2, position_y = 2
+            WHERE level_id = 'LV-ROOM-05' AND mechanism_config_id = 'M05-REVERSE-01'
+        """)
     else:
         _db_update("""
             UPDATE rule_catalog
@@ -308,6 +323,72 @@ def test_authoritative_laws_combos_cooldowns_and_personal_isolation() -> None:
             energy_after = expired_state.json()["data"]["mechanisms"][0]["state"]
             assert energy_after["direction"] == 1
             assert energy_after["reverse_active"] is False
+    finally:
+        _set_rule_tuning(False)
+        app.dependency_overrides.clear()
+
+
+def test_room_five_supports_all_three_preset_combos() -> None:
+    app.dependency_overrides[get_wechat_code_provider] = lambda: FakeWeChatProvider()
+    try:
+        with TestClient(app) as client:
+            player = _login_and_enter_map(client)
+            _set_rule_tuning(True)
+            _db_update("UPDATE rule_catalog SET cooldown_ms = 1")
+            run_id = _enter_level(
+                client, player["headers"], "LV-ROOM-05", "ENT-ROOM-05"
+            )
+
+            def cast(rule_id: str, target_id: str, key: str, point=None):
+                payload = {
+                    "run_id": run_id,
+                    "rule_id": rule_id,
+                    "target_id": target_id,
+                }
+                if point is not None:
+                    payload["target_point"] = point
+                return client.post(
+                    "/api/v1/level/rule/cast",
+                    headers={
+                        **player["headers"],
+                        "Idempotency-Key": key,
+                    },
+                    json=payload,
+                )
+
+            echo_bridge = cast(
+                "RULE_ECHO", "M05-BRIDGE-01", "room5-echo-bridge-0001",
+                {"x": 0, "y": 0},
+            )
+            assert echo_bridge.status_code == 200, echo_bridge.text
+            gaze_bridge = cast(
+                "RULE_GAZE", "M05-BRIDGE-01", "room5-gaze-bridge-0001"
+            )
+            assert gaze_bridge.status_code == 200, gaze_bridge.text
+            assert gaze_bridge.json()["data"]["combo"]["combo_id"] == "COMBO-001"
+
+            time.sleep(0.01)
+            echo_energy = cast(
+                "RULE_ECHO", "M05-ENERGY-01", "room5-echo-energy-0001",
+                {"x": 1, "y": 1},
+            )
+            assert echo_energy.status_code == 200, echo_energy.text
+            reverse_energy = cast(
+                "RULE_REVERSE", "M05-ENERGY-01", "room5-reverse-energy-0001"
+            )
+            assert reverse_energy.status_code == 200, reverse_energy.text
+            assert reverse_energy.json()["data"]["combo"]["combo_id"] == "COMBO-002"
+
+            time.sleep(0.01)
+            gaze_platform = cast(
+                "RULE_GAZE", "M05-REVERSE-01", "room5-gaze-platform-0001"
+            )
+            assert gaze_platform.status_code == 200, gaze_platform.text
+            reverse_platform = cast(
+                "RULE_REVERSE", "M05-REVERSE-01", "room5-reverse-platform-0001"
+            )
+            assert reverse_platform.status_code == 200, reverse_platform.text
+            assert reverse_platform.json()["data"]["combo"]["combo_id"] == "COMBO-003"
     finally:
         _set_rule_tuning(False)
         app.dependency_overrides.clear()
