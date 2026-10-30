@@ -7,3 +7,10 @@
 # 仅保留 Markdown 文档与 .gitignore 本身
 !*.md
 !.gitignore
+
+# Keep the executable server scaffold and CI workflow visible to Git and tooling.
+!server/
+!server/**
+!.github/
+!.github/**
+!docker-compose.yml
