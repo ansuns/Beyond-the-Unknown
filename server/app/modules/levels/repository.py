@@ -31,6 +31,10 @@ class InvalidLevelRunState(Exception):
     pass
 
 
+class InvalidLevelPosition(Exception):
+    pass
+
+
 def _request_hash(level_id: str, entrance_id: str) -> str:
     payload = json.dumps(
         {"level_id": level_id, "entrance_id": entrance_id},
@@ -291,6 +295,15 @@ async def start_level(
         ).mappings().one()
     elif run["run_status"] != "RUNNING":
         raise InvalidLevelRunState
+    if run["level_id"] == "LV-ROOM-01":
+        await session.execute(
+            text("""
+                INSERT INTO level_run_positions (run_id, player_id, x, y)
+                VALUES (:run_id, :player_id, 1.0, 4.0)
+                ON CONFLICT (run_id, player_id) DO NOTHING
+            """),
+            {"run_id": run_id, "player_id": player_id},
+        )
     await session.commit()
     return {
         "run_id": str(run["run_id"]),
@@ -336,3 +349,47 @@ async def abandon_level(
         "level_id": run["level_id"],
         "status": run["run_status"],
     }
+
+
+async def update_level_position(
+    session: AsyncSession,
+    player_id: UUID,
+    run_id: UUID,
+    x: float,
+    y: float,
+) -> dict[str, Any]:
+    run = (
+        await session.execute(
+            text("""
+                SELECT r.level_id, r.status::text AS run_status, l.config
+                FROM level_runs AS r
+                JOIN levels AS l ON l.level_id = r.level_id
+                WHERE r.run_id = :run_id AND r.player_id = :player_id
+                FOR UPDATE OF r
+            """),
+            {"run_id": run_id, "player_id": player_id},
+        )
+    ).mappings().one_or_none()
+    if run is None:
+        raise LevelNotFound
+    if run["run_status"] != "RUNNING":
+        raise InvalidLevelRunState
+    bounds = (run["config"] or {}).get(
+        "prototype_bounds", {"min_x": 0, "max_x": 12, "min_y": 0, "max_y": 8}
+    )
+    if not (
+        bounds["min_x"] <= x <= bounds["max_x"]
+        and bounds["min_y"] <= y <= bounds["max_y"]
+    ):
+        raise InvalidLevelPosition
+    await session.execute(
+        text("""
+            INSERT INTO level_run_positions (run_id, player_id, x, y)
+            VALUES (:run_id, :player_id, :x, :y)
+            ON CONFLICT (run_id, player_id)
+            DO UPDATE SET x = EXCLUDED.x, y = EXCLUDED.y, updated_at = now()
+        """),
+        {"run_id": run_id, "player_id": player_id, "x": x, "y": y},
+    )
+    await session.commit()
+    return {"run_id": str(run_id), "x": x, "y": y}
