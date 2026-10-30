@@ -202,6 +202,16 @@ def test_authoritative_laws_combos_cooldowns_and_personal_isolation() -> None:
             assert bridge["status"] == "TRIGGERED"
             assert bridge["combo_applied"] == "COMBO-001"
             assert bridge["visible"] is True
+            settled_room2 = client.post(
+                "/api/v1/level/settle",
+                headers={
+                    **first["headers"],
+                    "Idempotency-Key": "room2-settle-after-combo-001",
+                },
+                json={"run_id": first_run},
+            )
+            assert settled_room2.status_code == 200, settled_room2.text
+            assert settled_room2.json()["data"]["result_status"] == "COMPLETED"
 
             second_run = _enter_level(
                 client, second["headers"], "LV-ROOM-02", "ENT-ROOM-02"
@@ -329,6 +339,79 @@ def test_authoritative_laws_combos_cooldowns_and_personal_isolation() -> None:
             )
             assert settled_room3.status_code == 200, settled_room3.text
             assert settled_room3.json()["data"]["result_status"] == "COMPLETED"
+    finally:
+        _set_rule_tuning(False)
+        app.dependency_overrides.clear()
+
+
+def test_room_four_combo_unlocks_and_settles() -> None:
+    app.dependency_overrides[get_wechat_code_provider] = lambda: FakeWeChatProvider()
+    try:
+        with TestClient(app) as client:
+            player = _login_and_enter_map(client)
+            _set_rule_tuning(True)
+            _db_update("UPDATE rule_catalog SET cooldown_ms = 1")
+            run_id = _enter_level(
+                client, player["headers"], "LV-ROOM-04", "ENT-ROOM-04"
+            )
+
+            gaze = client.post(
+                "/api/v1/level/rule/cast",
+                headers={
+                    **player["headers"],
+                    "Idempotency-Key": "room4-gaze-platform-0001",
+                },
+                json={
+                    "run_id": run_id,
+                    "rule_id": "RULE_GAZE",
+                    "target_id": "M04-PLATFORM-01",
+                },
+            )
+            assert gaze.status_code == 200, gaze.text
+
+            reverse = client.post(
+                "/api/v1/level/rule/cast",
+                headers={
+                    **player["headers"],
+                    "Idempotency-Key": "room4-reverse-platform-0001",
+                },
+                json={
+                    "run_id": run_id,
+                    "rule_id": "RULE_REVERSE",
+                    "target_id": "M04-PLATFORM-01",
+                },
+            )
+            assert reverse.status_code == 200, reverse.text
+            assert reverse.json()["data"]["combo"]["combo_id"] == "COMBO-003"
+
+            stopped = client.post(
+                "/api/v1/level/rule/stop",
+                headers=player["headers"],
+                json={"run_id": run_id},
+            )
+            assert stopped.status_code == 200, stopped.text
+
+            state = client.get(
+                f"/api/v1/level/state/{run_id}", headers=player["headers"]
+            )
+            platform = next(
+                item["state"]
+                for item in state.json()["data"]["mechanisms"]
+                if item["mechanism_id"] == "M04-PLATFORM-01"
+            )
+            assert platform["status"] == "TRIGGERED"
+            assert platform["combo_applied"] == "COMBO-003"
+
+            settled = client.post(
+                "/api/v1/level/settle",
+                headers={
+                    **player["headers"],
+                    "Idempotency-Key": "room4-settle-after-combo-003",
+                },
+                json={"run_id": run_id},
+            )
+            assert settled.status_code == 200, settled.text
+            assert settled.json()["data"]["result_status"] == "COMPLETED"
     finally:
         _set_rule_tuning(False)
         app.dependency_overrides.clear()
