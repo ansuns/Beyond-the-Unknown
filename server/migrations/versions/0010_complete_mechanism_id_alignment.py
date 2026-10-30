@@ -223,6 +223,39 @@ def downgrade() -> None:
         WHERE discovery_id = 'DISC-HIDDEN-OBJ-ROOM01'
         """
     )
+    op.execute(
+        """
+        UPDATE rule_cast_events
+        SET result = jsonb_set(
+            result,
+            '{effects}',
+            COALESCE((
+                SELECT jsonb_agg(
+                    CASE effect->>'mechanism_id'
+                        WHEN 'M01-HIDEABLE-01'
+                            THEN jsonb_set(effect, '{mechanism_id}', '"MECH-ROOM01-HIDDEN-01"'::jsonb)
+                        WHEN 'M02-BRIDGE-01'
+                            THEN jsonb_set(effect, '{mechanism_id}', '"MECH_BRIDGE"'::jsonb)
+                        WHEN 'M03-ENERGY-01'
+                            THEN jsonb_set(effect, '{mechanism_id}', '"MECH_ENERGY_GATE"'::jsonb)
+                        WHEN 'M04-PLATFORM-01'
+                            THEN jsonb_set(effect, '{mechanism_id}', '"MECH_MOVING_PLATFORM"'::jsonb)
+                        WHEN 'M01-LIGHT-01'
+                            THEN jsonb_set(effect, '{mechanism_id}', '"MECH-ROOM01-LIGHT-01"'::jsonb)
+                        WHEN 'M03-DOOR-01'
+                            THEN jsonb_set(effect, '{mechanism_id}', '"MECH_ROOM03_DOOR_BARRIER"'::jsonb)
+                        WHEN 'H01-END'
+                            THEN jsonb_set(effect, '{mechanism_id}', '"MECH-HIDDEN-ENDING-01"'::jsonb)
+                        ELSE effect
+                    END
+                )
+                FROM jsonb_array_elements(COALESCE(result->'effects', '[]'::jsonb)) AS effect
+            ), '[]'::jsonb),
+            true
+        )
+        WHERE result ? 'effects'
+        """
+    )
     op.create_foreign_key(
         "fk_level_objective_mechanism",
         "level_objectives",
