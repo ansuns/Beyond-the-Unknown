@@ -7,8 +7,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.authentication import get_current_player_id
 from app.core.database import get_session
 from app.modules.rules.repository import (
-    RuleCoolingDown,
     RuleConfigurationIncomplete,
+    RuleCoolingDown,
     RuleIdempotencyConflict,
     RuleNotFound,
     RuleNotUnlocked,
