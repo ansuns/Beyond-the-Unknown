@@ -297,15 +297,22 @@ async def start_level(
         ).mappings().one()
     elif run["run_status"] != "RUNNING":
         raise InvalidLevelRunState
-    if run["level_id"] == "LV-ROOM-01":
-        await session.execute(
-            text("""
-                INSERT INTO level_run_positions (run_id, player_id, x, y)
-                VALUES (:run_id, :player_id, 1.0, 4.0)
-                ON CONFLICT (run_id, player_id) DO NOTHING
-            """),
-            {"run_id": run_id, "player_id": player_id},
-        )
+    spawn = (run.get("config") or {}).get(
+        "prototype_spawn", {"x": 1.0, "y": 4.0}
+    )
+    await session.execute(
+        text("""
+            INSERT INTO level_run_positions (run_id, player_id, x, y)
+            VALUES (:run_id, :player_id, :x, :y)
+            ON CONFLICT (run_id, player_id) DO NOTHING
+        """),
+        {
+            "run_id": run_id,
+            "player_id": player_id,
+            "x": float(spawn["x"]),
+            "y": float(spawn["y"]),
+        },
+    )
     await session.commit()
     return {
         "run_id": str(run["run_id"]),
