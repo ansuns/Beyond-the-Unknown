@@ -47,6 +47,10 @@ for (const level of levels) {
     if (mechanism.config?.prototype_only !== true) {
       add(`${level.level_id}: mechanism ${mechanism.mechanism_id} config must be marked prototype_only`);
     }
+    const linkedMechanismId = mechanism.config?.linked_mechanism_id;
+    if (linkedMechanismId && !mechanismIds.includes(linkedMechanismId)) {
+      add(`${level.level_id}: mechanism ${mechanism.mechanism_id} links to missing mechanism ${linkedMechanismId}`);
+    }
   }
   for (const objective of level.necessary_objectives ?? []) {
     if (!mechanismIds.includes(objective.mechanism_id)) {
