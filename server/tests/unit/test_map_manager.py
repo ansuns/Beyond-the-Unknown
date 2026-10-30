@@ -22,7 +22,7 @@ async def test_manager_snapshots_broadcasts_and_removes_players():
     first = FakeWebSocket()
     second = FakeWebSocket()
 
-    await manager.attach(
+    first_lease = await manager.attach(
         first, "instance-1", "player-1",
         {"player_id": "player-1", "x": 0.0, "y": 0.0, "direction": "S"},
     )
@@ -48,7 +48,7 @@ async def test_manager_snapshots_broadcasts_and_removes_players():
     )
     assert second.messages[-1]["cmd"] == "ACTION_BROADCAST"
 
-    await manager.remove_avatar("instance-1", "player-1")
+    await manager.remove_avatar("instance-1", "player-1", first_lease)
     assert second.messages[-1]["cmd"] == "LEAVE"
 
 
