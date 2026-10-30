@@ -79,6 +79,7 @@ export class BeyondTheUnknownGameEntry extends Component {
     config: Record<string, unknown>;
   }>();
   private readonly prototypeRuleCooldownUntil = new Map<string, number>();
+  private prototypeActionInFlight = false;
   private levelRoomScale = 40;
   private readonly worldPixelsPerUnit = 40;
   private readonly moveSpeedPixelsPerSecond = 160;
@@ -516,7 +517,8 @@ export class BeyondTheUnknownGameEntry extends Component {
     targetId: string,
     ruleIds: LawRuleId[]
   ): Promise<void> {
-    if (!this.levelSession) return;
+    if (!this.levelSession || this.prototypeActionInFlight) return;
+    this.prototypeActionInFlight = true;
     try {
       await this.flushLevelPosition();
       let matched = false;
@@ -531,9 +533,10 @@ export class BeyondTheUnknownGameEntry extends Component {
           this.makeIdempotencyKey(`prototype-${comboId}-${ruleId}`)
         );
         const cooldownUntil = Date.parse(result.cooldown_until);
-        if (Number.isFinite(cooldownUntil)) {
-          this.prototypeRuleCooldownUntil.set(ruleId, cooldownUntil);
-        }
+        this.prototypeRuleCooldownUntil.set(
+          ruleId,
+          Number.isFinite(cooldownUntil) ? cooldownUntil : Date.now() + 1200
+        );
         if (result.combo?.combo_id === comboId) matched = true;
       }
       if (ruleIds.includes("RULE_GAZE")) {
@@ -549,11 +552,14 @@ export class BeyondTheUnknownGameEntry extends Component {
       );
     } catch (error) {
       this.setStatus(`组合施放失败：${error instanceof Error ? error.message : "请稍后重试"}`);
+    } finally {
+      this.prototypeActionInFlight = false;
     }
   }
 
   private async settlePrototypeRoom(): Promise<void> {
-    if (!this.levelSession) return;
+    if (!this.levelSession || this.prototypeActionInFlight) return;
+    this.prototypeActionInFlight = true;
     try {
       await this.flushLevelPosition();
       const result = await this.levelSession.settle(
@@ -570,6 +576,8 @@ export class BeyondTheUnknownGameEntry extends Component {
       );
     } catch (error) {
       this.setStatus(`暂不能结算：${error instanceof Error ? error.message : "必要目标尚未完成"}`);
+    } finally {
+      this.prototypeActionInFlight = false;
     }
   }
 
