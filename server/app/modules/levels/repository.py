@@ -66,14 +66,27 @@ async def list_levels(
     rows = (
         await session.execute(
             text("""
-                SELECT level_id, level_name, entrance_id, room_index,
-                       target_duration_min, target_duration_max, hard_time_limit,
-                       time_limit_seconds, repeatable, repeat_reward_mode,
-                       required_laws, necessary_objectives, config, is_hidden
-                FROM levels
-                WHERE is_enabled = true
-                ORDER BY is_hidden ASC, room_index ASC NULLS LAST
-            """)
+                SELECT l.level_id, l.level_name, l.entrance_id, l.room_index,
+                       l.target_duration_min, l.target_duration_max, l.hard_time_limit,
+                       l.time_limit_seconds, l.repeatable, l.repeat_reward_mode,
+                       l.required_laws, l.necessary_objectives, l.config, l.is_hidden,
+                       (
+                           NOT l.is_hidden OR EXISTS (
+                               SELECT 1
+                               FROM hidden_routes AS h
+                               JOIN player_unlocked_hidden_routes AS u
+                                 ON u.hidden_route_id = h.hidden_route_id
+                               WHERE u.player_id = :player_id
+                                 AND h.result_level_id = l.level_id
+                                 AND h.is_enabled = true
+                                 AND h.config_status = 'READY'
+                           )
+                       ) AS is_unlocked
+                FROM levels AS l
+                WHERE l.is_enabled = true
+                ORDER BY l.is_hidden ASC, l.room_index ASC NULLS LAST
+            """),
+            {"player_id": player_id},
         )
     ).mappings().all()
     result = []
