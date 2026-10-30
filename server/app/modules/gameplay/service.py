@@ -117,7 +117,13 @@ def _apply_single_rule(
         return
 
     if rule_id == "RULE_ECHO":
-        if mechanism_type not in {"HIDEABLE", "LIGHT_REVEAL", "ENERGY_NODE", "HIDDEN_GATE"}:
+        if mechanism_type not in {
+            "HIDEABLE",
+            "LIGHT_REVEAL",
+            "ENERGY_NODE",
+            "HIDDEN_GATE",
+            "PLATFORM_BRIDGE",
+        }:
             raise InvalidLawAction("Echo cannot affect this mechanism type")
         state["revealed"] = True
         if mechanism_type == "HIDEABLE":
@@ -125,6 +131,8 @@ def _apply_single_rule(
         elif mechanism_type == "LIGHT_REVEAL":
             state["state"] = "ACTIVE"
         elif mechanism_type == "HIDDEN_GATE" and state["base_state"] == "SEALED":
+            state["state"] = "REVEALED"
+        elif mechanism_type == "PLATFORM_BRIDGE" and state["base_state"] == "INVISIBLE":
             state["state"] = "REVEALED"
     elif rule_id == "RULE_GAZE":
         if mechanism_type not in {"PLATFORM_BRIDGE", "MOVING_OBJECT", "ENERGY_NODE", "HIDEABLE"}:
@@ -141,7 +149,7 @@ def _apply_single_rule(
         if rule_id not in state["active_rules"]:
             state["active_rules"].append(rule_id)
         state["state"] = "REVERSED" if mechanism_type == "ENERGY_NODE" else "MOVING_REVERSE"
-    state["version"] += 1
+
 
 
 def _combo_for_pair(first: str, second: str, elapsed_ms: int) -> str | None:
