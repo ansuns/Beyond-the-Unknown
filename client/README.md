@@ -54,3 +54,8 @@ The engine-independent LawController also validates point/object target shape fr
 ## Player profile and character selection API
 
 RestClient now exposes getPlayerProfile(), listCharacters(), and selectCharacter(characterId) for the existing authenticated player endpoints. Character unlock state and the selected character are read from the server; the client must not infer unlocks or treat a local selection as authoritative.
+
+
+## WorldPlaySession orchestration
+
+WorldPlaySession coordinates the existing MapSession, RestClient, PersonalLevelSession and LawController without importing Cocos engine types. A scene adapter can use it to enter the shared map, load server-owned profile/character data, select a character, list levels, enter/start a personal room, cast laws, refresh mechanism state, maintain gaze, and abandon a run. Movement/actions/ping are delegated to the existing WebSocket session. This is the application workflow layer; scene rendering, input hit-testing, prefabs and final art remain outstanding.

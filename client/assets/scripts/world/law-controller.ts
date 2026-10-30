@@ -109,6 +109,10 @@ export class LawController {
     return result;
   }
 
+  hasActiveGaze(): boolean {
+    return this.gazeTargetId !== undefined;
+  }
+
   async stopGaze(): Promise<GazeStopData> {
     // Stopping an existing effect must remain possible even if catalog tuning
     // has since been disabled by the server.
