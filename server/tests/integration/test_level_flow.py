@@ -171,6 +171,12 @@ def test_room01_echo_exit_interaction_and_settlement() -> None:
                 json={"run_id": run_id, "x": 13, "y": 4},
             )
             assert outside.status_code == 422
+            teleport = client.post(
+                "/api/v1/level/position",
+                headers=player["headers"],
+                json={"run_id": run_id, "x": 10.5, "y": 4},
+            )
+            assert teleport.status_code == 422
 
             at_exit = None
             for x in range(2, 11):
