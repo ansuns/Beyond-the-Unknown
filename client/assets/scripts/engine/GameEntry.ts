@@ -654,7 +654,7 @@ export class BeyondTheUnknownGameEntry extends Component {
       summaryNode.setPosition(0, 18, 0);
       summaryNode.addComponent(UITransform).setContentSize(size.width - 48, 150);
       const summary = summaryNode.addComponent(Label);
-      summary.string = stateLines.length ? stateLines.join("\\n") : "服务端尚未返回机关状态";
+      summary.string = stateLines.length ? stateLines.join("\n") : "服务端尚未返回机关状态";
       summary.fontSize = 13;
       summary.lineHeight = 22;
       summary.color = new Color(194, 215, 229, 255);
