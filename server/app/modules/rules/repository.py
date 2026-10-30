@@ -67,7 +67,7 @@ async def list_player_rules(
                 LEFT JOIN player_unlocked_rules AS u
                   ON u.rule_id = r.rule_id AND u.player_id = :player_id
                 WHERE r.is_enabled = true
-                ORDER BY r.priority ASC
+                ORDER BY r.priority DESC
             """),
             {"player_id": player_id},
         )
@@ -585,8 +585,6 @@ async def _match_combo(
             continue
         if now - previous["created_at"] > timedelta(milliseconds=combo["time_window_ms"]):
             continue
-        if combo["target_mechanism_id"] != target_id:
-            continue
         if combo["order_sensitive"]:
             valid = list(combo["valid_order"] or [])
             if valid != [previous["rule_id"], current_rule_id]:
@@ -603,7 +601,18 @@ async def _match_combo(
                 {"level_id": level_id, "mechanism_id": target_id},
             )
         ).mappings().one_or_none()
-        if mechanism is None or "COMBO_EFFECT" not in mechanism["trigger_rule"]:
+        expected_types = {
+            "MECH_BRIDGE": "PLATFORM_BRIDGE",
+            "MECH_ENERGY_GATE": "ENERGY_NODE",
+            "MECH_MOVING_PLATFORM": "MOVING_OBJECT",
+        }
+        if (
+            mechanism is None
+            or mechanism["mechanism_type"] != expected_types.get(
+                combo["target_mechanism_id"]
+            )
+            or "COMBO_EFFECT" not in mechanism["trigger_rule"]
+        ):
             continue
         state = await _load_mechanism_state(session, run_id, player_id, mechanism)
         if state.get("status") == "LOCKED":
