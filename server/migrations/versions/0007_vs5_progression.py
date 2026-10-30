@@ -92,6 +92,25 @@ def upgrade() -> None:
     )
     op.execute(
         """
+        INSERT INTO level_mechanism_catalog
+            (level_id, mechanism_config_id, mechanism_type, target_type,
+             initial_state, target_state, trigger_rule, config)
+        VALUES
+          ('LV-ROOM-03','M03-DOOR-01','DOOR_BARRIER','MECHANISM',
+           'INACTIVE','OPEN','["COMBO_EFFECT"]'::jsonb,
+           '{"open_on_combo":"COMBO-002"}'::jsonb),
+          ('LV-HIDDEN-01','H01-GATE','HIDDEN_GATE','MECHANISM',
+           'LOCKED','TRIGGERED','["LEVEL_EVENT"]'::jsonb,
+           '{"opened_by_route":"HIDDEN-ROUTE-01"}'::jsonb),
+          ('LV-HIDDEN-01','H01-END','ENDING_CORE','MECHANISM',
+           'INACTIVE','ENDING_REVEALED','["LEVEL_EVENT"]'::jsonb,
+           '{"target_state":"ENDING_REVEALED"}'::jsonb)
+        ON CONFLICT (level_id, mechanism_config_id) DO NOTHING
+        """
+    )
+
+    op.execute(
+        """
         INSERT INTO collection_catalog
             (collection_id, codex_category, source_discovery_id,
              display_name, description, sort_order, is_enabled)
@@ -114,6 +133,16 @@ def upgrade() -> None:
 
 
 def downgrade() -> None:
+    op.execute(
+        """
+        DELETE FROM level_mechanism_catalog
+        WHERE (level_id, mechanism_config_id) IN (
+          ('LV-ROOM-03','M03-DOOR-01'),
+          ('LV-HIDDEN-01','H01-GATE'),
+          ('LV-HIDDEN-01','H01-END')
+        )
+        """
+    )
     op.drop_table("score_rule_config")
     op.execute(
         """
