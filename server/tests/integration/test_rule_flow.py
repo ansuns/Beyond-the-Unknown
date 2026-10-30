@@ -224,6 +224,42 @@ def test_authoritative_laws_combos_cooldowns_and_personal_isolation() -> None:
             assert second_state.status_code == 200
             assert second_state.json()["data"]["mechanisms"] == []
 
+            wrong_order_gaze = client.post(
+                "/api/v1/level/rule/cast",
+                headers={
+                    **second["headers"],
+                    "Idempotency-Key": "rule-gaze-wrong-order-0001",
+                },
+                json={
+                    "run_id": second_run,
+                    "rule_id": "RULE_GAZE",
+                    "target_id": "MECH_BRIDGE",
+                },
+            )
+            assert wrong_order_gaze.status_code == 200
+            wrong_order_echo = client.post(
+                "/api/v1/level/rule/cast",
+                headers={
+                    **second["headers"],
+                    "Idempotency-Key": "rule-echo-wrong-order-0001",
+                },
+                json={
+                    "run_id": second_run,
+                    "rule_id": "RULE_ECHO",
+                    "target_id": "MECH_BRIDGE",
+                    "target_point": {"x": 0, "y": 0},
+                },
+            )
+            assert wrong_order_echo.status_code == 200
+            assert wrong_order_echo.json()["data"]["combo"] is None
+            wrong_order_state = client.get(
+                f"/api/v1/level/state/{second_run}", headers=second["headers"]
+            )
+            assert (
+                wrong_order_state.json()["data"]["mechanisms"][0]["state"]["status"]
+                == "ACTIVE"
+            )
+
             third_run = _enter_level(
                 client, third["headers"], "LV-ROOM-03", "ENT-ROOM-03"
             )
@@ -240,6 +276,24 @@ def test_authoritative_laws_combos_cooldowns_and_personal_isolation() -> None:
                 },
             )
             assert reverse.status_code == 200, reverse.text
+            echo_after_reverse = client.post(
+                "/api/v1/level/rule/cast",
+                headers={
+                    **third["headers"],
+                    "Idempotency-Key": "rule-echo-room3-0001",
+                },
+                json={
+                    "run_id": third_run,
+                    "rule_id": "RULE_ECHO",
+                    "target_id": "MECH_ENERGY_GATE",
+                    "target_point": {"x": 1, "y": 1},
+                },
+            )
+            assert echo_after_reverse.status_code == 200
+            assert (
+                echo_after_reverse.json()["data"]["combo"]["combo_id"]
+                == "COMBO-002"
+            )
             reversed_state = client.get(
                 f"/api/v1/level/state/{third_run}", headers=third["headers"]
             )
@@ -247,7 +301,7 @@ def test_authoritative_laws_combos_cooldowns_and_personal_isolation() -> None:
             assert energy["direction"] == -1
             assert energy["reverse_active"] is True
 
-            time.sleep(0.2)
+            time.sleep(1.2)
             expired_state = client.get(
                 f"/api/v1/level/state/{third_run}", headers=third["headers"]
             )
