@@ -1,7 +1,7 @@
 # 第一阶段垂直切片开发与测试清单
 
-- 版本：VS-1.1
-- 状态：VS-0 至 VS-5 服务端基础、权威法则、发现/结算/奖励/排行榜已合并并通过 CI；客户端 REST/WebSocket、个人关卡/法则/进度会话已合并或进入 CI；Cocos Creator 3.8.8 Boot 几何原型已合并。正式机关/法则数值、关卡玩法表现、Cocos 编辑器导入、微信构建与真机联调仍未完成
+- 版本：VS-6A.1
+- 状态：VS-0 至 VS-6A 服务端基础、法则、发现/结算/奖励/排行榜、赛季审核与 Transactional Outbox 已合并并通过 CI；客户端 REST/WebSocket、宽限期自动重连、个人关卡/法则/进度 API 与 Cocos Creator 3.8.8 Boot 几何原型已合并。正式机关/法则数值、关卡玩法表现、Cocos 编辑器导入、微信构建与真机联调仍未完成
 - 基线：GDD V0.2；Cocos Creator 3.x + TypeScript；Python 3.12+ + FastAPI；PostgreSQL；RabbitMQ
 - 目标：端到端验证“登录—共享主地图—进入个人关卡—施放法则—机关解谜—服务端结算—永久进度恢复”。
 - 策略：先完成 ROOM-01 可玩闭环，再以配置驱动接入 ROOM-02 至 ROOM-05 与隐藏结局。
@@ -11,7 +11,7 @@
 ### 必须包含
 - Cocos Creator 3.x 客户端：启动/登录、主地图、移动、交互、法则 UI、个人关卡、结算 UI。
 - Python FastAPI 模块化单体：Auth、Player、MapInstance、LevelRun、Rule、Mechanism、Discovery、Settlement、Progress。
-- Python 3.12+ + FastAPI；SQLAlchemy 2.x async + asyncpg；Alembic 管理 PostgreSQL 迁移 0001；Pydantic 2.x 校验契约。Redis 首阶段可暂缓，不能作为永久数据唯一来源；RabbitMQ 用于后台异步任务，Worker 独立运行。
+- Python 3.12+ + FastAPI；SQLAlchemy 2.x async + asyncpg；Alembic 管理 PostgreSQL 迁移 0001–0008；Pydantic 2.x 校验契约。Redis 首阶段可暂缓，不能作为永久数据唯一来源；RabbitMQ 用于后台异步任务，Worker 独立运行。
 - WebSocket AUTH、ENTER/LEAVE、MOVE_SYNC、PING/PONG；机关状态由服务端权威推送。
 - ROOM-01 回声显形 HIDEABLE、激活出口。
 - 幂等结算、个人发现、world_archive 原子抢占、progress_version 更新。
@@ -28,10 +28,11 @@
 |---|---|---|
 | VS-0 工程骨架 | Python 服务端、配置/环境变量、Docker Compose（PostgreSQL、RabbitMQ、API、Worker） | 服务端骨架已完成；Cocos Creator 3.8.8 项目骨架与 Boot 场景已提交，编辑器导入/构建验证待完成 |
 | VS-1 身份与持久化 | 微信 code 服务端交换、players、12个角色初始化、JWT、玩家/角色 API、迁移与测试 | 服务端已完成；客户端 wx.login、玩家资料/角色目录/选角 REST 调用已完成；角色选择 UI 待做 |
-| VS-2 共享主地图 | 地图实例分配、WS鉴权、ENTER/LEAVE、MOVE_SYNC、动作广播、心跳与重连保留 | 服务端单进程原型已合并；客户端 WebSocket/MapSession/WorldPlaySession 已合并；自动重连、移动表现、精细 AOI 与 Redis 多节点仍待完成 |
+| VS-2 共享主地图 | 地图实例分配、WS鉴权、ENTER/LEAVE、MOVE_SYNC、动作广播、心跳与重连保留 | 服务端单进程原型已合并；客户端 WebSocket/MapSession/WorldPlaySession 与原 session_id 宽限期自动重连已合并；移动表现、精细 AOI 与 Redis 多节点仍待完成 |
 | VS-3 个人关卡 | levels目录、个人run创建/开始/放弃、进入幂等与主地图席位释放 | 后端接口与迁移已合并；客户端 PersonalLevelSession/WorldPlaySession 可进入并启动个人 run；ROOM-01 场景与结算仍待做 |
 | VS-4 核心玩法 | 法则目录、权威施法、冷却/持续效果、三组预设组合、个人机关状态机 | 服务端规则目录、权限/目标/范围校验、冷却/注视租约、机关状态隔离与三组组合已合并；客户端 LawController 已接入并通过 CI；数值/坐标仍为 TUNING_REQUIRED，场景表现待做 |
 | VS-5 发现与结算 | discovery、world_archive、settlements、score_events、进度快照、奖励与三榜 | 服务端已合并并通过迁移/集成/Compose CI；积分权重、正式奖励定义和部分目标内容仍待配置 |
+| VS-6A 赛季结算与异步任务 | 周/月赛季封榜、最终三榜快照、审核/自动批准、排名奖励、Transactional Outbox、Worker receipt/重试 | 已合并并通过 CI；RabbitMQ 故障恢复演练、积分纠错接口与正式运营配置仍待完成 |
 | VS-6 联调验收 | 真机包、自动化报告、性能/断线测试 | 本文验收项通过或阻塞缺陷有负责人 |
 
 ## 3. 客户端任务（Cocos Creator 3.x）
@@ -40,7 +41,7 @@
 - [x] 玩家资料、角色目录与角色选择 REST API；服务端返回的解锁/当前角色为权威状态。
 - [x] WorldPlaySession：共享地图进入、角色/关卡数据加载、个人 run 启动、法则会话和地图移动/动作/心跳的应用层编排。
 - [x] LawController：根据服务端 READY/解锁状态控制施法，校验点/物体目标输入形状，按服务端 lease_timeout 维护 GAZE，并缓存个人机关状态。
-- [x] WebSocket client：AUTH 首包、单调 seq、消息 envelope 校验、心跳/移动/动作/离开命令；自动重连策略仍待实现。
+- [x] WebSocket client：AUTH 首包、单调 seq、消息 envelope 校验、心跳/移动/动作/离开命令；断线后复用原 instance/session 在服务端 grace period 内退避重连，主动离开不重连。
 - [ ] 移动状态机；客户端预测仅用于表现，服务端位置权威。
 - [ ] 法则施放输入与冷却 UI；回声命中后显形反馈。
 - [x] Cocos Creator 3.8.8 项目结构、Boot 场景、微信登录/共享地图/远端占位角色/点击移动/个人房间进入与放弃的几何原型。
@@ -70,7 +71,7 @@
 ## 5. 测试清单
 
 ### 数据库
-- [x] 空库执行 0001–0007 成功并登记迁移版本。
+- [x] 空库执行 0001–0008 成功并登记迁移版本。
 - [ ] 外键、枚举、CHECK、唯一约束正反例测试。
 - [ ] 同一玩家重复进入同一关卡生成不同 run_id。
 - [ ] 同一机关配置在不同 run 可独立保存；同 run 重复配置被拒绝。
@@ -130,7 +131,7 @@
 - 自动化测试、真机冒烟、迁移回滚演练通过后，才标记垂直切片完成。
 
 
-## 8. VS-6A 赛季结算与异步任务闭环（本分支）
+## 8. VS-6A 赛季结算与异步任务闭环（已合并）
 - [x] 赛季边界扫描：worker 按 SERVER_TIMEZONE 创建周/月周期并发现到期 ACTIVE 周期。
 - [x] Transactional Outbox：业务事务写入 task_outbox，RabbitMQ relay 使用持久化消息与 publisher confirms。
 - [x] Worker task receipt：task_id/idempotency_key 数据库去重，重复投递不重复执行结算。
