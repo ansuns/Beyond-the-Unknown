@@ -25,6 +25,7 @@ import { CharacterSelectionSession } from "../player/character-selection-session
 import { MapSession } from "../world/map-session";
 import { PersonalLevelSession } from "../world/personal-level-session";
 import { deriveRoom01VisualState } from "../world/room01-presentation";
+import { selectNextPlayableLevel } from "../world/level-progression";
 import { formatProgressSummary } from "../ui/progress-summary";
 
 const { ccclass, property } = _decorator;
@@ -61,6 +62,7 @@ export class BeyondTheUnknownGameEntry extends Component {
   private clientTick = 0;
   private currentMode: "MENU" | "WORLD" | "PERSONAL_LEVEL" = "MENU";
   private pendingLevelName = "";
+  private pendingLevelId = "";
   private moveTarget?: { x: number; y: number };
   private moveSendElapsed = 0;
   private levelMoveSendElapsed = 0;
@@ -537,11 +539,14 @@ export class BeyondTheUnknownGameEntry extends Component {
       return;
     }
     try {
-      this.setStatus("正在读取房间目录…");
-      const catalog = await this.api.listLevels();
-      const level = catalog.levels.find((item) => !item.is_hidden && item.is_unlocked);
+      this.setStatus("正在读取房间目录与个人进度…");
+      const [catalog, progress] = await Promise.all([
+        this.api.listLevels(),
+        this.api.getPlayerProgress()
+      ]);
+      const level = selectNextPlayableLevel(catalog.levels, progress.completed_level_ids);
       if (!level) {
-        this.setStatus("当前没有可进入的常规探索房间");
+        this.setStatus("当前没有已解锁的可进入关卡");
         return;
       }
       const personal = new PersonalLevelSession(this.api);
@@ -552,6 +557,7 @@ export class BeyondTheUnknownGameEntry extends Component {
       );
       this.levelSession = personal;
       this.pendingLevelName = entry.level.level_name;
+      this.pendingLevelId = entry.level.level_id;
       this.currentMode = "PERSONAL_LEVEL";
       this.moveTarget = undefined;
       this.mapSession.leave();
@@ -628,6 +634,61 @@ export class BeyondTheUnknownGameEntry extends Component {
     this.clearRoomControls();
     this.worldRoot.removeAllChildren();
     const size = this.worldRoot.getComponent(UITransform).contentSize;
+    if (this.pendingLevelId !== "LV-ROOM-01") {
+      const titleNode = new Node("RoomTitle");
+      this.worldRoot.addChild(titleNode);
+      titleNode.setPosition(0, size.height / 2 - 30, 0);
+      titleNode.addComponent(UITransform).setContentSize(size.width - 40, 28);
+      const title = titleNode.addComponent(Label);
+      title.string = `${levelName} · ${this.pendingLevelId} 原型状态`;
+      title.fontSize = 16;
+      title.color = new Color(226, 237, 246, 255);
+      title.horizontalAlign = Label.HorizontalAlign.CENTER;
+
+      const stateLines = [...this.roomMechanismStates.entries()].map(([id, state]) => {
+        const status = String(state.status ?? state.combo_applied ?? "未触发");
+        return `${id}  ·  ${status}`;
+      });
+      const summaryNode = new Node("MechanismStateSummary");
+      this.worldRoot.addChild(summaryNode);
+      summaryNode.setPosition(0, 18, 0);
+      summaryNode.addComponent(UITransform).setContentSize(size.width - 48, 150);
+      const summary = summaryNode.addComponent(Label);
+      summary.string = stateLines.length ? stateLines.join("\\n") : "服务端尚未返回机关状态";
+      summary.fontSize = 13;
+      summary.lineHeight = 22;
+      summary.color = new Color(194, 215, 229, 255);
+      summary.horizontalAlign = Label.HorizontalAlign.CENTER;
+      summary.verticalAlign = Label.VerticalAlign.CENTER;
+
+      const hintNode = new Node("RoomPrototypeHint");
+      this.worldRoot.addChild(hintNode);
+      hintNode.setPosition(0, -size.height / 2 + 158, 0);
+      hintNode.addComponent(UITransform).setContentSize(size.width - 40, 46);
+      const hint = hintNode.addComponent(Label);
+      hint.string = completed
+        ? "本次探索已结算"
+        : "该房间的空间坐标与正式交互配置尚未验收；当前仅展示服务端机关状态";
+      hint.fontSize = 12;
+      hint.lineHeight = 18;
+      hint.color = new Color(230, 190, 135, 255);
+      hint.horizontalAlign = Label.HorizontalAlign.CENTER;
+      hint.verticalAlign = Label.VerticalAlign.CENTER;
+
+      this.roomControlNodes.push(
+        this.createButton(
+          completed ? "BackToWorldButton" : "RoomAbandonButton",
+          completed ? "返回共享世界" : "放弃并返回",
+          0,
+          -size.height / 2 + 105,
+          170,
+          42,
+          () => completed ? this.loginAndEnterWorld() : this.returnToWorld()
+        )
+      );
+      return;
+    }
+
     const room = new Node("Room01Prototype");
     this.worldRoot.addChild(room);
     room.addComponent(UITransform).setContentSize(480, 320);
