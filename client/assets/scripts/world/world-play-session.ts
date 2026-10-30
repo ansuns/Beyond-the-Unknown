@@ -1,4 +1,3 @@
-import type { ApiError } from "../network/rest-client";
 import type { RestClient } from "../network/rest-client";
 import type {
   CharacterCatalogData,
