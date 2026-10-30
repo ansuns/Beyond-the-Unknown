@@ -31,6 +31,10 @@ import {
   parsePrototypeComboDefinitions,
   type PrototypeComboDefinition
 } from "../world/prototype-combos";
+import {
+  parsePrototypeLayoutConfig,
+  type PrototypeLayoutConfig
+} from "../world/prototype-layout";
 import { formatProgressSummary } from "../ui/progress-summary";
 
 const { ccclass, property } = _decorator;
@@ -84,6 +88,13 @@ export class BeyondTheUnknownGameEntry extends Component {
     config: Record<string, unknown>;
   }>();
   private prototypeComboDefinitions: PrototypeComboDefinition[] = [];
+  private prototypeLayout: PrototypeLayoutConfig = {
+    bounds: { minX: 0, maxX: 12, minY: 0, maxY: 8 },
+    spawn: { x: 1, y: 4 },
+    movementSpeed: 3,
+    interactionRadius: 1.5,
+    positionSyncIntervalMs: 120
+  };
   private prototypeGazeTargetId: string | undefined;
   private prototypeGazeMaintainAt = 0;
   private prototypeGazeNextMaintainAt = 0;
@@ -462,11 +473,7 @@ export class BeyondTheUnknownGameEntry extends Component {
     const localX = uiPoint.x - visible.width / 2 - this.worldRoot.position.x;
     const localY = uiPoint.y - visible.height / 2 - this.worldRoot.position.y;
     if (this.currentMode === "PERSONAL_LEVEL") {
-      // ROOM-01 artwork is centered and occupies 480 × 320 px (12 × 8 units).
-      this.moveTarget = {
-        x: Math.max(0, Math.min(12, (localX + 240) / this.levelRoomScale)),
-        y: Math.max(0, Math.min(8, (localY + 160) / this.levelRoomScale))
-      };
+      this.moveTarget = this.prototypeLocalToLevel(localX, localY);
       return;
     }
     if (this.currentMode !== "WORLD" || !this.mapSession) return;
@@ -525,18 +532,18 @@ export class BeyondTheUnknownGameEntry extends Component {
     const dx = this.moveTarget.x - this.levelPosition.x;
     const dy = this.moveTarget.y - this.levelPosition.y;
     const distance = Math.hypot(dx, dy);
-    const step = 3 * Math.max(0, deltaTime);
+    const step = this.prototypeLayout.movementSpeed * Math.max(0, deltaTime);
     const reached = distance <= step || distance < 0.001;
     this.levelPosition = reached
       ? { ...this.moveTarget }
       : { x: this.levelPosition.x + dx / distance * step, y: this.levelPosition.y + dy / distance * step };
-    this.levelAvatar.setPosition(
-      -240 + this.levelPosition.x * this.levelRoomScale,
-      -160 + this.levelPosition.y * this.levelRoomScale,
-      0
-    );
+    const avatarPosition = this.prototypeLevelToLocal(this.levelPosition.x, this.levelPosition.y);
+    this.levelAvatar.setPosition(avatarPosition.x, avatarPosition.y, 0);
     this.levelMoveSendElapsed += deltaTime;
-    if (this.levelMoveSendElapsed >= 0.12 || reached) {
+    if (
+      this.levelMoveSendElapsed >= this.prototypeLayout.positionSyncIntervalMs / 1000 ||
+      reached
+    ) {
       this.sendLevelPosition({ ...this.levelPosition });
       this.levelMoveSendElapsed = 0;
     }
@@ -547,9 +554,13 @@ export class BeyondTheUnknownGameEntry extends Component {
     if (!this.levelSession) return;
     try {
       await this.flushLevelPosition();
+      const hiddenTarget = this.roomMechanismCatalog.get("M01-HIDEABLE-01");
+      if (hiddenTarget?.position_x === null || hiddenTarget?.position_y === null || !hiddenTarget) {
+        throw new Error("服务端未提供隐藏目标的有效坐标");
+      }
       const result = await this.levelSession.castRule(
         "RULE_ECHO",
-        { targetId: "M01-HIDEABLE-01", targetPoint: { x: 5, y: 4 } },
+        buildPrototypeRuleOptions("RULE_ECHO", "M01-HIDEABLE-01", hiddenTarget),
         this.makeIdempotencyKey("room01-echo")
       );
       const state = await this.levelSession.refreshState();
@@ -722,6 +733,7 @@ export class BeyondTheUnknownGameEntry extends Component {
       this.pendingLevelName = entry.level.level_name;
       this.pendingLevelId = entry.level.level_id;
       this.prototypeComboDefinitions = parsePrototypeComboDefinitions(level.config);
+      this.prototypeLayout = parsePrototypeLayoutConfig(level.config);
       this.prototypeGazeTargetId = undefined;
       this.prototypeGazeMaintainAt = 0;
       this.prototypeGazeNextMaintainAt = 0;
@@ -750,7 +762,7 @@ export class BeyondTheUnknownGameEntry extends Component {
         .map((rule) => `${rule.display_name}：${rule.config_status}`)
         .join("  ·  ");
     }
-    this.levelPosition = { x: 1, y: 4 };
+    this.levelPosition = { ...this.prototypeLayout.spawn };
     this.levelMoveSendElapsed = 0;
     this.levelPositionSyncPromise = undefined;
     this.roomMechanismStates.clear();
@@ -780,6 +792,46 @@ export class BeyondTheUnknownGameEntry extends Component {
         }
       ])
     );
+  }
+
+  private prototypeRoomDimensions(): { width: number; height: number } {
+    const { bounds } = this.prototypeLayout;
+    return {
+      width: (bounds.maxX - bounds.minX) * this.levelRoomScale,
+      height: (bounds.maxY - bounds.minY) * this.levelRoomScale
+    };
+  }
+
+  private prototypeLevelToLocal(x: number, y: number): { x: number; y: number } {
+    const room = this.prototypeRoomDimensions();
+    const { bounds } = this.prototypeLayout;
+    return {
+      x: -room.width / 2 + (x - bounds.minX) * this.levelRoomScale,
+      y: -room.height / 2 + (y - bounds.minY) * this.levelRoomScale
+    };
+  }
+
+  private prototypeLocalToLevel(x: number, y: number): { x: number; y: number } {
+    const room = this.prototypeRoomDimensions();
+    const { bounds } = this.prototypeLayout;
+    return {
+      x: Math.max(
+        bounds.minX,
+        Math.min(bounds.maxX, (x + room.width / 2) / this.levelRoomScale + bounds.minX)
+      ),
+      y: Math.max(
+        bounds.minY,
+        Math.min(bounds.maxY, (y + room.height / 2) / this.levelRoomScale + bounds.minY)
+      )
+    };
+  }
+
+  private updatePrototypeRoomScale(size: { width: number; height: number }): void {
+    const spanX = this.prototypeLayout.bounds.maxX - this.prototypeLayout.bounds.minX;
+    const spanY = this.prototypeLayout.bounds.maxY - this.prototypeLayout.bounds.minY;
+    const availableWidth = Math.max(160, size.width - 64);
+    const availableHeight = Math.max(120, size.height - 240);
+    this.levelRoomScale = Math.min(40, availableWidth / spanX, availableHeight / spanY);
   }
 
   private sendLevelPosition(position: { x: number; y: number }): void {
@@ -813,15 +865,17 @@ export class BeyondTheUnknownGameEntry extends Component {
     this.clearRoomControls();
     this.worldRoot.removeAllChildren();
     const size = this.worldRoot.getComponent(UITransform).contentSize;
+    this.updatePrototypeRoomScale(size);
+    const roomSize = this.prototypeRoomDimensions();
     if (this.pendingLevelId !== "LV-ROOM-01") {
       const room = new Node(`RoomPrototype-${this.pendingLevelId}`);
       this.worldRoot.addChild(room);
-      room.addComponent(UITransform).setContentSize(480, 320);
+      room.addComponent(UITransform).setContentSize(roomSize.width, roomSize.height);
       const background = room.addComponent(Graphics);
       background.lineWidth = 3;
       background.strokeColor = new Color(105, 169, 190, 255);
       background.fillColor = new Color(18, 39, 55, 255);
-      background.rect(-240, -160, 480, 320);
+      background.rect(-roomSize.width / 2, -roomSize.height / 2, roomSize.width, roomSize.height);
       background.fill();
       background.stroke();
 
@@ -838,11 +892,11 @@ export class BeyondTheUnknownGameEntry extends Component {
             : new Color(117, 185, 220, 255);
         const markerNode = new Node(`Mechanism-${mechanismId}`);
         room.addChild(markerNode);
-        markerNode.setPosition(
-          -240 + descriptor.position_x * this.levelRoomScale,
-          -160 + descriptor.position_y * this.levelRoomScale,
-          0
+        const markerPosition = this.prototypeLevelToLocal(
+          descriptor.position_x,
+          descriptor.position_y
         );
+        markerNode.setPosition(markerPosition.x, markerPosition.y, 0);
         markerNode.addComponent(UITransform).setContentSize(22, 22);
         const marker = markerNode.addComponent(Graphics);
         marker.fillColor = color;
@@ -871,11 +925,11 @@ export class BeyondTheUnknownGameEntry extends Component {
         avatarGraphics.fillColor = new Color(247, 220, 137, 255);
         avatarGraphics.circle(0, 0, 13);
         avatarGraphics.fill();
-        this.levelAvatar.setPosition(
-          -240 + this.levelPosition.x * this.levelRoomScale,
-          -160 + this.levelPosition.y * this.levelRoomScale,
-          0
+        const avatarPosition = this.prototypeLevelToLocal(
+          this.levelPosition.x,
+          this.levelPosition.y
         );
+        this.levelAvatar.setPosition(avatarPosition.x, avatarPosition.y, 0);
       }
 
       const titleNode = new Node("RoomTitle");
@@ -964,19 +1018,20 @@ export class BeyondTheUnknownGameEntry extends Component {
 
     const room = new Node("Room01Prototype");
     this.worldRoot.addChild(room);
-    room.addComponent(UITransform).setContentSize(480, 320);
+    room.addComponent(UITransform).setContentSize(roomSize.width, roomSize.height);
     const graphics = room.addComponent(Graphics);
     graphics.lineWidth = 3;
     graphics.strokeColor = new Color(105, 169, 190, 255);
     graphics.fillColor = new Color(18, 39, 55, 255);
-    graphics.rect(-240, -160, 480, 320);
+    graphics.rect(-roomSize.width / 2, -roomSize.height / 2, roomSize.width, roomSize.height);
     graphics.fill();
     graphics.stroke();
 
     const drawMarker = (name: string, x: number, y: number, color: Color, radius: number, visible: boolean) => {
       const node = new Node(name);
       room.addChild(node);
-      node.setPosition(-240 + x * this.levelRoomScale, -160 + y * this.levelRoomScale, 0);
+      const markerPosition = this.prototypeLevelToLocal(x, y);
+      node.setPosition(markerPosition.x, markerPosition.y, 0);
       node.addComponent(UITransform).setContentSize(radius * 2, radius * 2);
       const marker = node.addComponent(Graphics);
       marker.fillColor = color;
@@ -992,12 +1047,34 @@ export class BeyondTheUnknownGameEntry extends Component {
     const roomVisualState = deriveRoom01VisualState(this.roomMechanismStates);
     const hiddenVisible = roomVisualState.hiddenTargetVisible;
     const exitOpen = roomVisualState.exitOpen;
-    drawMarker("HiddenObject", 5, 4, new Color(125, 207, 236, 255), 14, hiddenVisible);
-    drawMarker("LightMarker", 7.5, 4, new Color(236, 211, 132, 255), 11, hiddenVisible);
-    drawMarker(
+    const drawCatalogMarker = (
+      nodeName: string,
+      mechanismId: string,
+      color: Color,
+      radius: number,
+      visible: boolean
+    ) => {
+      const descriptor = this.roomMechanismCatalog.get(mechanismId);
+      if (descriptor?.position_x === null || descriptor?.position_y === null || !descriptor) return;
+      drawMarker(nodeName, descriptor.position_x, descriptor.position_y, color, radius, visible);
+    };
+    drawCatalogMarker(
+      "HiddenObject",
+      "M01-HIDEABLE-01",
+      new Color(125, 207, 236, 255),
+      14,
+      hiddenVisible
+    );
+    drawCatalogMarker(
+      "LightMarker",
+      "M01-LIGHT-01",
+      new Color(236, 211, 132, 255),
+      11,
+      hiddenVisible
+    );
+    drawCatalogMarker(
       "ExitGate",
-      10.5,
-      4,
+      "M01-EXIT-01",
       exitOpen ? new Color(155, 214, 174, 255) : new Color(180, 105, 105, 255),
       17,
       exitOpen
