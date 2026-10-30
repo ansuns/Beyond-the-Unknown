@@ -324,6 +324,14 @@ export class BeyondTheUnknownGameEntry extends Component {
 
   private async loginAndEnterWorld(): Promise<void> {
     try {
+      for (const name of [
+        "RoomEchoButton",
+        "RoomExitButton",
+        "RoomAbandonButton",
+        "BackToWorldButton"
+      ]) {
+        this.root?.getChildByName(name)?.destroy();
+      }
       this.worldRoot?.removeAllChildren();
       this.clearAvatars();
       this.moveTarget = undefined;
