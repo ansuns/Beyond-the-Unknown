@@ -9,7 +9,6 @@ import {
   Graphics,
   Label,
   Node,
-  NodeEventType,
   UITransform,
   Vec3,
   view
@@ -103,7 +102,7 @@ export class BeyondTheUnknownGameEntry extends Component {
     );
     worldGraphics.fill();
     worldGraphics.stroke();
-    this.worldRoot.on(NodeEventType.TOUCH_END, this.onWorldTouch, this);
+    this.worldRoot.on(Node.EventType.TOUCH_END, this.onWorldTouch, this);
 
     this.createButton(
       "LoginButton",
