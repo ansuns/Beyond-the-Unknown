@@ -1,6 +1,5 @@
 import sqlalchemy as sa
 from alembic import op
-from sqlalchemy.dialects.postgresql import JSONB
 
 revision = "0007_vs5_progression"
 down_revision = "0006_mech_catalog_align"
@@ -9,8 +8,6 @@ depends_on = None
 
 
 def upgrade() -> None:
-    # Objectives use concrete terminal states. The original constraint only
-    # allowed generic states and made the GDD's objective checks impossible.
     op.drop_constraint(
         "ck_level_mechanism_target_state",
         "level_mechanism_catalog",
@@ -19,8 +16,91 @@ def upgrade() -> None:
     op.create_check_constraint(
         "ck_level_mechanism_target_state",
         "level_mechanism_catalog",
-        "target_state IN ('ACTIVE','LOCKED','TRIGGERED','OPEN','REVERSED',"
-        "'ENDPOINT_LOCKED','ENDING_REVEALED')",
+        "target_state IN ('ACTIVE','LOCKED','TRIGGERED','REVEALED','OPEN',"
+        "'REVERSED','ENDPOINT_LOCKED','ENDING_REVEALED')",
+    )
+
+    # Align the database catalog IDs with the versioned client/level contract.
+    id_pairs = (
+        ("LV-ROOM-01", "MECH-ROOM01-HIDDEN-01", "M01-HIDEABLE-01"),
+        ("LV-ROOM-01", "MECH-ROOM01-LIGHT-01", "M01-LIGHT-01"),
+        ("LV-ROOM-02", "MECH_BRIDGE", "M02-BRIDGE-01"),
+        ("LV-ROOM-03", "MECH_ENERGY_GATE", "M03-ENERGY-01"),
+        ("LV-ROOM-04", "MECH_MOVING_PLATFORM", "M04-PLATFORM-01"),
+    )
+    for level_id, old_id, new_id in id_pairs:
+        op.execute(
+            sa.text("""
+                UPDATE level_mechanism_catalog
+                SET mechanism_config_id = :new_id
+                WHERE level_id = :level_id AND mechanism_config_id = :old_id
+            """),
+            {"level_id": level_id, "old_id": old_id, "new_id": new_id},
+        )
+        op.execute(
+            sa.text("""
+                UPDATE mechanism_states AS s
+                SET mechanism_config_id = :new_id
+                FROM level_runs AS r
+                WHERE s.run_id = r.run_id
+                  AND r.level_id = :level_id
+                  AND s.mechanism_config_id = :old_id
+            """),
+            {"level_id": level_id, "old_id": old_id, "new_id": new_id},
+        )
+
+    # Replace legacy string objective IDs with the structured objective
+    # contract from docs/engineering/levels/levels.v1.json.
+    objectives = {
+        "LV-ROOM-01": [
+            {"objective_id": "OBJ-01-REVEAL", "mechanism_id": "M01-HIDEABLE-01", "target_state": "REVEALED"},
+            {"objective_id": "OBJ-01-EXIT", "mechanism_id": "M01-EXIT-01", "target_state": "OPEN"},
+        ],
+        "LV-ROOM-02": [
+            {"objective_id": "OBJ-02-BRIDGE", "mechanism_id": "M02-BRIDGE-01", "target_state": "OPEN", "required_combo": "COMBO-001"},
+        ],
+        "LV-ROOM-03": [
+            {"objective_id": "OBJ-03-DOOR", "mechanism_id": "M03-DOOR-01", "target_state": "OPEN", "required_combo": "COMBO-002"},
+        ],
+        "LV-ROOM-04": [
+            {"objective_id": "OBJ-04-PLATFORM", "mechanism_id": "M04-PLATFORM-01", "target_state": "ENDPOINT_LOCKED", "required_combo": "COMBO-003"},
+        ],
+        "LV-ROOM-05": [
+            {"objective_id": "OBJ-05-BRIDGE", "mechanism_id": "M05-BRIDGE-01", "target_state": "OPEN", "required_combo": "COMBO-001"},
+            {"objective_id": "OBJ-05-ENERGY", "mechanism_id": "M05-ENERGY-01", "target_state": "REVERSED", "required_combo": "COMBO-002"},
+            {"objective_id": "OBJ-05-REVERSE", "mechanism_id": "M05-REVERSE-01", "target_state": "ENDPOINT_LOCKED", "required_combo": "COMBO-003"},
+        ],
+        "LV-HIDDEN-01": [
+            {"objective_id": "OBJ-HIDDEN-END", "mechanism_id": "H01-END", "target_state": "ENDING_REVEALED"},
+        ],
+    }
+    for level_id, required in objectives.items():
+        op.execute(
+            sa.text("""
+                UPDATE levels
+                SET necessary_objectives = CAST(:objectives AS jsonb)
+                WHERE level_id = :level_id
+            """),
+            {"level_id": level_id, "objectives": __import__("json").dumps(required)},
+        )
+
+    op.execute(
+        """
+        INSERT INTO level_mechanism_catalog
+            (level_id, mechanism_config_id, mechanism_type, target_type,
+             initial_state, target_state, trigger_rule, config)
+        VALUES
+          ('LV-ROOM-03','M03-DOOR-01','DOOR_BARRIER','MECHANISM',
+           'INACTIVE','OPEN','["COMBO_EFFECT"]'::jsonb,
+           '{"open_on_combo":"COMBO-002"}'::jsonb),
+          ('LV-HIDDEN-01','H01-GATE','HIDDEN_GATE','MECHANISM',
+           'LOCKED','TRIGGERED','["LEVEL_EVENT"]'::jsonb,
+           '{"opened_by_route":"HIDDEN-ROUTE-01"}'::jsonb),
+          ('LV-HIDDEN-01','H01-END','ENDING_CORE','MECHANISM',
+           'INACTIVE','ENDING_REVEALED','["LEVEL_EVENT"]'::jsonb,
+           '{"target_state":"ENDING_REVEALED"}'::jsonb)
+        ON CONFLICT (level_id, mechanism_config_id) DO NOTHING
+        """
     )
     op.execute(
         """
@@ -72,14 +152,11 @@ def upgrade() -> None:
           ('DIS_RULE_ECHO','DIS_RULE_EFFECT','LV-ROOM-01',
            '{"world_id":"WORLD-01","room_index":1}'::jsonb,
            'RULE_ECHO','回声法则发现',true),
-          ('DIS_COMBO_001','DIS_COMBO',NULL,
-           '{}'::jsonb,
+          ('DIS_COMBO_001','DIS_COMBO',NULL,'{}'::jsonb,
            NULL,'回声·注视组合发现',true),
-          ('DIS_COMBO_002','DIS_COMBO',NULL,
-           '{}'::jsonb,
+          ('DIS_COMBO_002','DIS_COMBO',NULL,'{}'::jsonb,
            NULL,'回声·逆流组合发现',true),
-          ('DIS_COMBO_003','DIS_COMBO',NULL,
-           '{}'::jsonb,
+          ('DIS_COMBO_003','DIS_COMBO',NULL,'{}'::jsonb,
            NULL,'注视·逆流组合发现',true),
           ('DIS_HIDDEN_ROUTE_CLUE','DIS_HIDDEN_AREA','LV-ROOM-05',
            '{"world_id":"WORLD-01","room_index":5}'::jsonb,
@@ -90,25 +167,6 @@ def upgrade() -> None:
         ON CONFLICT (discovery_id) DO NOTHING
         """
     )
-    op.execute(
-        """
-        INSERT INTO level_mechanism_catalog
-            (level_id, mechanism_config_id, mechanism_type, target_type,
-             initial_state, target_state, trigger_rule, config)
-        VALUES
-          ('LV-ROOM-03','M03-DOOR-01','DOOR_BARRIER','MECHANISM',
-           'INACTIVE','OPEN','["COMBO_EFFECT"]'::jsonb,
-           '{"open_on_combo":"COMBO-002"}'::jsonb),
-          ('LV-HIDDEN-01','H01-GATE','HIDDEN_GATE','MECHANISM',
-           'LOCKED','TRIGGERED','["LEVEL_EVENT"]'::jsonb,
-           '{"opened_by_route":"HIDDEN-ROUTE-01"}'::jsonb),
-          ('LV-HIDDEN-01','H01-END','ENDING_CORE','MECHANISM',
-           'INACTIVE','ENDING_REVEALED','["LEVEL_EVENT"]'::jsonb,
-           '{"target_state":"ENDING_REVEALED"}'::jsonb)
-        ON CONFLICT (level_id, mechanism_config_id) DO NOTHING
-        """
-    )
-
     op.execute(
         """
         INSERT INTO collection_catalog
@@ -172,6 +230,45 @@ def downgrade() -> None:
         """
     )
     op.execute("UPDATE level_mechanism_catalog SET target_state = 'TRIGGERED'")
+    for level_id, old_id, new_id in (
+        ("LV-ROOM-01", "MECH-ROOM01-HIDDEN-01", "M01-HIDEABLE-01"),
+        ("LV-ROOM-01", "MECH-ROOM01-LIGHT-01", "M01-LIGHT-01"),
+        ("LV-ROOM-02", "MECH_BRIDGE", "M02-BRIDGE-01"),
+        ("LV-ROOM-03", "MECH_ENERGY_GATE", "M03-ENERGY-01"),
+        ("LV-ROOM-04", "MECH_MOVING_PLATFORM", "M04-PLATFORM-01"),
+    ):
+        op.execute(
+            sa.text("""
+                UPDATE level_mechanism_catalog
+                SET mechanism_config_id = :old_id
+                WHERE level_id = :level_id AND mechanism_config_id = :new_id
+            """),
+            {"level_id": level_id, "old_id": old_id, "new_id": new_id},
+        )
+        op.execute(
+            sa.text("""
+                UPDATE mechanism_states AS s
+                SET mechanism_config_id = :old_id
+                FROM level_runs AS r
+                WHERE s.run_id = r.run_id
+                  AND r.level_id = :level_id
+                  AND s.mechanism_config_id = :new_id
+            """),
+            {"level_id": level_id, "old_id": old_id, "new_id": new_id},
+        )
+    op.execute(
+        """
+        UPDATE levels SET necessary_objectives = CASE level_id
+          WHEN 'LV-ROOM-01' THEN '["HIDDEN_TARGET_REVEALED","EXIT_ACTIVATED"]'::jsonb
+          WHEN 'LV-ROOM-02' THEN '["BRIDGE_OPEN"]'::jsonb
+          WHEN 'LV-ROOM-03' THEN '["ENERGY_DOOR_OPEN"]'::jsonb
+          WHEN 'LV-ROOM-04' THEN '["MOVING_PLATFORM_LOCKED"]'::jsonb
+          WHEN 'LV-ROOM-05' THEN '["ROOM05_TARGET_A","ROOM05_TARGET_B"]'::jsonb
+          WHEN 'LV-HIDDEN-01' THEN '["ENDING_COMPLETE"]'::jsonb
+          ELSE necessary_objectives
+        END
+        """
+    )
     op.drop_constraint(
         "ck_level_mechanism_target_state",
         "level_mechanism_catalog",
