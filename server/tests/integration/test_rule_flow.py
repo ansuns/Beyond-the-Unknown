@@ -309,6 +309,26 @@ def test_authoritative_laws_combos_cooldowns_and_personal_isolation() -> None:
             )
             assert energy_after["direction"] == 1
             assert energy_after["reverse_active"] is False
+
+            door_state = client.get(
+                f"/api/v1/level/state/{third_run}", headers=third["headers"]
+            )
+            door = next(
+                item["state"]
+                for item in door_state.json()["data"]["mechanisms"]
+                if item["mechanism_id"] == "M03-DOOR-01"
+            )
+            assert door["status"] == "TRIGGERED"
+            settled_room3 = client.post(
+                "/api/v1/level/settle",
+                headers={
+                    **third["headers"],
+                    "Idempotency-Key": "room3-settle-after-combo-002",
+                },
+                json={"run_id": third_run},
+            )
+            assert settled_room3.status_code == 200, settled_room3.text
+            assert settled_room3.json()["data"]["result_status"] == "COMPLETED"
     finally:
         _set_rule_tuning(False)
         app.dependency_overrides.clear()
@@ -581,6 +601,7 @@ def test_mechanism_catalog_and_references_match_canonical_gdd_ids() -> None:
             assert row["position_x"] == mechanism["position"]["x"]
             assert row["position_y"] == mechanism["position"]["y"]
             assert row["config"].get("prototype_only") is True
+            assert row["config"].get("linked_mechanism_id") == mechanism["config"].get("linked_mechanism_id")
     assert contract["combo_targets"] == [
         "M02-BRIDGE-01",
         "M03-ENERGY-01",
