@@ -1,4 +1,14 @@
-import type { ApiEnvelope, LoginData, MapEnterData } from "./types";
+import type {
+  ApiEnvelope,
+  LawActionData,
+  LawActionKind,
+  LawRuleId,
+  LevelCatalogData,
+  LevelRunData,
+  LoginData,
+  MapEnterData,
+  PersonalMechanismList
+} from "./types";
 
 export class ApiError extends Error {
   constructor(
@@ -57,9 +67,71 @@ export class RestClient {
     return this.request<MapEnterData>("/map/enter", { method: "POST" });
   }
 
+  async listLevels(): Promise<LevelCatalogData> {
+    return this.request<LevelCatalogData>("/level/", { method: "GET" });
+  }
+
+  async enterLevel(
+    levelId: string,
+    entranceId: string,
+    idempotencyKey: string
+  ): Promise<LevelRunData> {
+    return this.request<LevelRunData>("/level/enter", {
+      method: "POST",
+      body: JSON.stringify({ level_id: levelId, entrance_id: entranceId }),
+      headers: { "Idempotency-Key": idempotencyKey }
+    });
+  }
+
+  async startLevel(runId: string): Promise<LevelRunData> {
+    return this.request<LevelRunData>("/level/start", {
+      method: "POST",
+      body: JSON.stringify({ run_id: runId })
+    });
+  }
+
+  async abandonLevel(runId: string): Promise<LevelRunData> {
+    return this.request<LevelRunData>("/level/abandon", {
+      method: "POST",
+      body: JSON.stringify({ run_id: runId })
+    });
+  }
+
+  async applyLawAction(
+    runId: string,
+    ruleId: LawRuleId,
+    mechanismId: string,
+    action: LawActionKind,
+    idempotencyKey: string
+  ): Promise<LawActionData> {
+    return this.request<LawActionData>("/level/law/action", {
+      method: "POST",
+      body: JSON.stringify({
+        run_id: runId,
+        rule_id: ruleId,
+        mechanism_id: mechanismId,
+        action
+      }),
+      headers: { "Idempotency-Key": idempotencyKey }
+    });
+  }
+
+  async getRunMechanisms(runId: string): Promise<PersonalMechanismList> {
+    return this.request<PersonalMechanismList>(
+      "/level/runs/" + encodeURIComponent(runId) + "/mechanisms",
+      { method: "GET" }
+    );
+  }
+
   private async request<T>(
     path: string,
-    options: { method: string; body?: string; authenticated?: boolean; requestId?: string }
+    options: {
+      method: string;
+      body?: string;
+      authenticated?: boolean;
+      requestId?: string;
+      headers?: Record<string, string>;
+    }
   ): Promise<T> {
     const requestId = options.requestId ?? this.requestId();
     const headers: Record<string, string> = {
@@ -67,6 +139,7 @@ export class RestClient {
       "Content-Type": "application/json",
       "X-Request-Id": requestId
     };
+    Object.assign(headers, options.headers);
     const accessToken = this.token();
     if (options.authenticated !== false && accessToken) {
       headers.Authorization = `Bearer ${accessToken}`;
