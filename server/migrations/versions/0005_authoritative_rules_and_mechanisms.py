@@ -179,7 +179,10 @@ def upgrade() -> None:
              '{"config_status":"PENDING_POSITION_AND_ART"}'::jsonb),
             ('LV-ROOM-03', 'MECH_ENERGY_GATE', 'ENERGY_NODE', 'MECHANISM',
              'INACTIVE', 'TRIGGERED', '["RULE_EFFECT","COMBO_EFFECT"]'::jsonb,
-             '{"config_status":"PENDING_POSITION_AND_ART","initial_direction":1}'::jsonb),
+             jsonb_build_object(
+                 'config_status', 'PENDING_POSITION_AND_ART',
+                 'initial_direction', 1
+             )),
             ('LV-ROOM-04', 'MECH_MOVING_PLATFORM', 'MOVING_OBJECT', 'MECHANISM',
              'INACTIVE', 'TRIGGERED', '["RULE_EFFECT","COMBO_EFFECT"]'::jsonb,
              '{"config_status":"PENDING_POSITION_AND_ART","initial_direction":1}'::jsonb),
