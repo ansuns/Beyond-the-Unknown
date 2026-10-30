@@ -83,4 +83,65 @@ describe("LawController", () => {
     await controller.stopGaze();
     expect(session.stopGaze).toHaveBeenCalledOnce();
   });
+
+  it("validates point and object target shapes before calling the backend", async () => {
+    const pointCatalog = catalog("READY");
+    pointCatalog.rules[0].scope_type = "POINT_RADIUS";
+    const pointSession = makeSession(pointCatalog);
+    const pointController = new LawController(pointSession);
+    await pointController.refreshCatalog();
+    await expect(
+      pointController.cast("RULE_ECHO", {}, "echo-point-0001")
+    ).rejects.toMatchObject({ name: "LawTargetError" });
+    expect(pointSession.castRule).not.toHaveBeenCalled();
+
+    const objectCatalog = catalog("READY");
+    objectCatalog.rules[0].scope_type = "OBJECT_RADIUS";
+    const objectSession = makeSession(objectCatalog);
+    const objectController = new LawController(objectSession);
+    await objectController.refreshCatalog();
+    await expect(
+      objectController.cast("RULE_ECHO", { targetPoint: { x: 0, y: 0 } }, "echo-object-0001")
+    ).rejects.toMatchObject({ name: "LawTargetError" });
+    expect(objectSession.castRule).not.toHaveBeenCalled();
+  });
+
+  it("renews a gaze lease at one-third of the server timeout and stops it", async () => {
+    const ruleCatalog = catalog("READY");
+    ruleCatalog.rules[0].rule_id = "RULE_GAZE";
+    ruleCatalog.rules[0].scope_type = "OBJECT_RADIUS";
+    ruleCatalog.rules[0].duration_type = "WHILE_CASTING";
+    ruleCatalog.rules[0].lease_timeout_ms = 6000;
+    const session = makeSession(ruleCatalog);
+    let clock = 10_000;
+    const controller = new LawController(session, () => clock);
+    await controller.refreshCatalog();
+
+    await controller.cast("RULE_GAZE", { targetId: "MECH_BRIDGE" }, "gaze-cast-0001");
+    expect(await controller.maintainGazeIfDue()).toBeUndefined();
+
+    clock += 2000;
+    await controller.maintainGazeIfDue();
+    expect(session.maintainGaze).toHaveBeenCalledTimes(1);
+
+    clock += 1000;
+    expect(await controller.maintainGazeIfDue()).toBeUndefined();
+    clock += 1000;
+    await controller.maintainGazeIfDue();
+    expect(session.maintainGaze).toHaveBeenCalledTimes(2);
+
+    await controller.stopGaze();
+    clock += 10_000;
+    expect(await controller.maintainGazeIfDue()).toBeUndefined();
+    expect(session.stopGaze).toHaveBeenCalledOnce();
+  });
+
+  it("caches the latest authoritative personal mechanism state", async () => {
+    const session = makeSession(catalog("READY"));
+    const controller = new LawController(session);
+    expect(controller.currentState()).toBeUndefined();
+    const state = await controller.refreshState();
+    expect(controller.currentState()).toEqual(state);
+  });
+
 });
