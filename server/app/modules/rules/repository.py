@@ -701,6 +701,29 @@ async def _match_combo(
         await _save_mechanism_state(
             session, run_id, player_id, target_id, state
         )
+        if combo["combo_id"] == "COMBO-002" and level_id == "LV-ROOM-03":
+            linked_door = (
+                await session.execute(
+                    text("""
+                        SELECT mechanism_config_id, mechanism_type, initial_state,
+                               target_state, trigger_rule, config
+                        FROM level_mechanism_catalog
+                        WHERE level_id = :level_id
+                          AND mechanism_config_id = 'M03-DOOR-01'
+                          AND is_enabled = true
+                    """),
+                    {"level_id": level_id},
+                )
+            ).mappings().one_or_none()
+            if linked_door is not None:
+                door_state = await _load_mechanism_state(
+                    session, run_id, player_id, linked_door
+                )
+                door_state["status"] = linked_door["target_state"]
+                door_state["opened_by_combo"] = "COMBO-002"
+                await _save_mechanism_state(
+                    session, run_id, player_id, "M03-DOOR-01", door_state
+                )
         return {
             "combo_id": combo["combo_id"],
             "mechanism_id": target_id,
