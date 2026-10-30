@@ -38,7 +38,7 @@ for (const level of levels) {
   }
   for (const mechanism of mechanisms) {
     const position = mechanism.position;
-    if (!mechanism.prototype_only || !position ||
+    if (!mechanism.prototype_only || !position || !bounds ||
         !Number.isFinite(position.x) || !Number.isFinite(position.y) ||
         position.x < bounds.min_x || position.x > bounds.max_x ||
         position.y < bounds.min_y || position.y > bounds.max_y) {
