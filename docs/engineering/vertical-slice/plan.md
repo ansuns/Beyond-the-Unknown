@@ -1,6 +1,7 @@
 # 第一阶段垂直切片开发与测试清单
 
-- 版本：VS-0.1
+- 版本：VS-1.1
+- 状态：VS-0 服务端骨架已合并；VS-1 服务端身份与玩家持久化已合并并通过 CI；Cocos 客户端与 VS-2 共享地图尚未开始
 - 基线：GDD V0.2；Cocos Creator 3.x + TypeScript；Python 3.12+ + FastAPI；PostgreSQL；RabbitMQ
 - 目标：端到端验证“登录—共享主地图—进入个人关卡—施放法则—机关解谜—服务端结算—永久进度恢复”。
 - 策略：先完成 ROOM-01 可玩闭环，再以配置驱动接入 ROOM-02 至 ROOM-05 与隐藏结局。
@@ -25,8 +26,8 @@
 
 | 阶段 | 交付 | 完成定义 |
 |---|---|---|
-| VS-0 工程骨架 | Cocos 项目、Python 服务端、配置/日志/环境变量、Docker Compose（PostgreSQL、RabbitMQ、API、Worker） | 本地启动、健康检查通过 |
-| VS-1 身份与持久化 | 登录适配、players、角色初始化、数据库迁移 | 新玩家创建幂等；重复登录同一玩家 |
+| VS-0 工程骨架 | Python 服务端、配置/环境变量、Docker Compose（PostgreSQL、RabbitMQ、API、Worker） | 服务端骨架已完成；Cocos Creator 项目初始化仍待客户端切片 |
+| VS-1 身份与持久化 | 微信 code 服务端交换、players、12个角色初始化、JWT、玩家/角色 API、迁移与测试 | 服务端已完成并 CI 验证：重复/并发登录幂等、12角色解锁、选角、JWT；客户端 wx.login 接入待做 |
 | VS-2 共享主地图 | 地图实例、WS鉴权、进入/离开、移动同步 | 两客户端互相看到移动；断线可重新进入 |
 | VS-3 个人关卡 | level enter/run、ROOM-01 场景、个人机关状态 | 两玩家同时进入独立 run，互不影响 |
 | VS-4 核心玩法 | 回声法则、显形目标、出口机关状态机 | 服务端校验输入并广播权威状态 |
@@ -43,13 +44,13 @@
 - [ ] 加载、断网、重连、结算与错误状态。
 
 ## 4. 服务端任务
-- [ ] 建立 Python 模块化单体：app/api、core、schemas、services、repositories、realtime、workers、tests。
-- [ ] 使用 FastAPI + Uvicorn；Pydantic 2.x 模型与 OpenAPI 契约保持一致。
-- [ ] 使用 SQLAlchemy 2.x async + asyncpg；Alembic 管理迁移，事务边界显式定义。
+- [x] 建立 Python 模块化单体基础：app/api、core、modules/auth、modules/players、modules/characters、schemas、workers、tests。后续按领域增加 map、level、rules 等模块。
+- [x] 使用 FastAPI + Uvicorn；VS-1 登录/玩家接口已更新 OpenAPI 契约。
+- [x] 使用 SQLAlchemy 2.x async + asyncpg；Alembic 0001/0002 已在 CI 干净 PostgreSQL 上执行。
 - [ ] WebSocket 处理器采用 async I/O；CPU 密集计算不得阻塞事件循环，必要时移交进程池/后台任务。
 - [ ] 部署 RabbitMQ 与 Python Worker；定义任务消息 schema、持久化队列/消息、手动 ACK、有限重试与 dead-letter queue。
 - [ ] 仅将可异步化的耗时工作投递到队列；消费者必须幂等，消息确认发生在业务处理成功之后；关键业务写入与消息发布采用 Transactional Outbox，避免数据库提交成功但消息丢失。
-- [ ] 玩家身份只从认证上下文取得；校验账号状态。
+- [x] 玩家身份只从 JWT 认证上下文取得；每个受保护请求查询账号状态，封禁账号立即拒绝。
 - [ ] REST 写请求验证 schema、频率限制与幂等键。
 - [ ] WS 方向白名单、序列号、速率限制、AOI 广播。
 - [ ] level_run 归属检查；机关状态通过 (run_id, player_id) 复合外键隔离。
@@ -61,7 +62,7 @@
 ## 5. 测试清单
 
 ### 数据库
-- [ ] 空库执行 0001 成功并登记迁移版本。
+- [x] 空库执行 0001、0002 成功并登记迁移版本。
 - [ ] 外键、枚举、CHECK、唯一约束正反例测试。
 - [ ] 同一玩家重复进入同一关卡生成不同 run_id。
 - [ ] 同一机关配置在不同 run 可独立保存；同 run 重复配置被拒绝。
@@ -72,7 +73,7 @@
 - [ ] 结算失败时事务回滚，不留下部分副作用。
 
 ### REST / WebSocket
-- [ ] 无 token、封禁玩家的请求被拒绝。
+- [x] 无效/过期 token 与封禁玩家的请求被拒绝（VS-1 集成测试）。
 - [ ] 副作用请求缺少 Idempotency-Key 时被拒绝。
 - [ ] 同键同请求体重试返回同一结果；同键不同请求体返回 409。
 - [ ] 未 AUTH 即发送 MOVE_SYNC 时断开。
