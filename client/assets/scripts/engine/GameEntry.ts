@@ -499,9 +499,15 @@ export class BeyondTheUnknownGameEntry extends Component {
     }
 
     if (now < this.prototypeGazeNextMaintainAt) return;
-    this.prototypeGazeNextMaintainAt = now + 500;
+    this.prototypeGazeNextMaintainAt = now + 1000;
     this.prototypeGazeMaintainInFlight = true;
     void session.maintainGaze(targetId)
+      .then(() => {
+        if (this.levelSession === session && this.prototypeGazeTargetId === targetId) {
+          // RULE_GAZE has a 5-second server lease; renew well before it expires.
+          this.prototypeGazeMaintainAt = Date.now() + 5000;
+        }
+      })
       .catch((error) => {
         this.setStatus(`注视维持失败：${error instanceof Error ? error.message : "网络错误"}`);
         this.prototypeGazeTargetId = undefined;
@@ -588,8 +594,8 @@ export class BeyondTheUnknownGameEntry extends Component {
       if (ruleIds.includes("RULE_GAZE")) {
         if (matched && definition.maintainGaze) {
           this.prototypeGazeTargetId = targetId;
-          this.prototypeGazeMaintainAt = Date.now() + 2000;
-          this.prototypeGazeNextMaintainAt = Date.now() + 500;
+          this.prototypeGazeMaintainAt = Date.now() + 5000;
+          this.prototypeGazeNextMaintainAt = Date.now() + 1000;
         } else {
           await this.levelSession.stopGaze();
           this.prototypeGazeTargetId = undefined;
