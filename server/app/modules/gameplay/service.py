@@ -308,10 +308,16 @@ async def apply_law_action(
                         sibling_state["version"] += 1
                         await session.execute(
                             text("""
-                                UPDATE mechanism_states SET state = CAST(:state AS jsonb), updated_at = now()
-                                WHERE run_id = :run_id AND mechanism_config_id = :mechanism_id
+                                UPDATE mechanism_states
+                                SET state = CAST(:state AS jsonb), updated_at = now()
+                                WHERE run_id = :run_id
+                                  AND mechanism_config_id = :mechanism_id
                             """),
-                            {"state": json.dumps(sibling_state), "run_id": run_id, "mechanism_id": sibling["mechanism_id"]},
+                            {
+                                "state": json.dumps(sibling_state),
+                                "run_id": run_id,
+                                "mechanism_id": sibling["mechanism_id"],
+                            },
                         )
         elif combo_id == "COMBO-003":
             state["state"] = "ENDPOINT_LOCKED"
