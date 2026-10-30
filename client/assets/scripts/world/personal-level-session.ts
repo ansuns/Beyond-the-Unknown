@@ -7,7 +7,8 @@ import type {
   PersonalLevelState,
   RuleCastData,
   RuleCatalogData,
-  RulePoint
+  RulePoint,
+  SettlementData
 } from "../network/types";
 import type { RestClient } from "../network/rest-client";
 
@@ -48,6 +49,14 @@ export class PersonalLevelSession {
     const run = await this.api.abandonLevel(this.requireRun());
     this.activeRunId = undefined;
     return run;
+  }
+
+  async settle(idempotencyKey: string): Promise<SettlementData> {
+    const result = await this.api.settleLevel(this.requireRun(), idempotencyKey);
+    if (result.result_status === "COMPLETED" || result.result_status === "FAILED") {
+      this.activeRunId = undefined;
+    }
+    return result;
   }
 
   listRules(): Promise<RuleCatalogData> {
