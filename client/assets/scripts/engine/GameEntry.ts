@@ -23,6 +23,7 @@ import { WeChatPlatform } from "../platform/wechat-platform";
 import { SessionStore } from "../player/session-store";
 import { MapSession } from "../world/map-session";
 import { PersonalLevelSession } from "../world/personal-level-session";
+import { formatProgressSummary } from "../ui/progress-summary";
 
 const { ccclass, property } = _decorator;
 
@@ -46,6 +47,7 @@ export class BeyondTheUnknownGameEntry extends Component {
   private worldRoot?: Node;
   private statusLabel?: Label;
   private rulesLabel?: Label;
+  private progressLabel?: Label;
   private mapSession?: MapSession;
   private levelSession?: PersonalLevelSession;
   private api?: RestClient;
@@ -190,6 +192,15 @@ export class BeyondTheUnknownGameEntry extends Component {
       () => this.returnToWorld()
     );
     this.createButton(
+      "ProgressButton",
+      "我的进度",
+      -size.width / 2 + 72,
+      size.height / 2 - 145,
+      110,
+      44,
+      () => this.refreshProgress()
+    );
+    this.createButton(
       "EmoteButton",
       "招呼",
       size.width / 2 - 72,
@@ -197,6 +208,13 @@ export class BeyondTheUnknownGameEntry extends Component {
       110,
       44,
       () => this.mapSession?.action("ACT_001")
+    );
+    this.progressLabel = this.createLabel(
+      "ProgressSummary",
+      "进度：登录后可查看",
+      0,
+      size.height / 2 - 190,
+      13
     );
 
     this.rulesLabel = this.createLabel(
@@ -307,6 +325,7 @@ export class BeyondTheUnknownGameEntry extends Component {
       this.setStatus(
         `已进入共享世界 · 在线实例 ${map.current_players}/${map.max_players} · ${map.instance_id.slice(0, 8)}`
       );
+      void this.refreshProgress();
     } catch (error) {
       this.setStatus(`连接失败：${error instanceof Error ? error.message : "未知错误"}`);
     }
