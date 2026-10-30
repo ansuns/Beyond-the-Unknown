@@ -121,7 +121,12 @@ def upgrade() -> None:
         "player_rule_states",
         sa.Column("run_id", sa.Uuid(), primary_key=True),
         sa.Column("player_id", sa.Uuid(), primary_key=True),
-        sa.Column("rule_id", sa.String(64), sa.ForeignKey("rule_catalog.rule_id"), primary_key=True),
+        sa.Column(
+            "rule_id",
+            sa.String(64),
+            sa.ForeignKey("rule_catalog.rule_id"),
+            primary_key=True,
+        ),
         sa.Column("cooldown_until", sa.DateTime(timezone=True), nullable=True),
         sa.Column("active_target_id", sa.String(100), nullable=True),
         sa.Column("active_effect", JSONB(), nullable=False, server_default="{}"),
