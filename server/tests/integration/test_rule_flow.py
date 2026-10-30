@@ -81,31 +81,6 @@ def _set_rule_tuning(ready: bool) -> None:
             UPDATE combo_catalog
             SET time_window_ms = 10000, config_status = 'READY'
         """)
-        _db_update("""
-            UPDATE level_mechanism_catalog
-            SET position_x = 0, position_y = 0
-            WHERE level_id = 'LV-ROOM-02' AND mechanism_config_id = 'M02-BRIDGE-01'
-        """)
-        _db_update("""
-            UPDATE level_mechanism_catalog
-            SET position_x = 1, position_y = 1
-            WHERE level_id = 'LV-ROOM-03' AND mechanism_config_id = 'M03-ENERGY-01'
-        """)
-        _db_update("""
-            UPDATE level_mechanism_catalog
-            SET position_x = 0, position_y = 0
-            WHERE level_id = 'LV-ROOM-05' AND mechanism_config_id = 'M05-BRIDGE-01'
-        """)
-        _db_update("""
-            UPDATE level_mechanism_catalog
-            SET position_x = 1, position_y = 1
-            WHERE level_id = 'LV-ROOM-05' AND mechanism_config_id = 'M05-ENERGY-01'
-        """)
-        _db_update("""
-            UPDATE level_mechanism_catalog
-            SET position_x = 2, position_y = 2
-            WHERE level_id = 'LV-ROOM-05' AND mechanism_config_id = 'M05-REVERSE-01'
-        """)
     else:
         _db_update("""
             UPDATE rule_catalog
@@ -115,10 +90,6 @@ def _set_rule_tuning(ready: bool) -> None:
         _db_update("""
             UPDATE combo_catalog
             SET time_window_ms = NULL, config_status = 'TUNING_REQUIRED'
-        """)
-        _db_update("""
-            UPDATE level_mechanism_catalog
-            SET position_x = NULL, position_y = NULL
         """)
 
 
@@ -166,7 +137,7 @@ def test_authoritative_laws_combos_cooldowns_and_personal_isolation() -> None:
                 "run_id": first_run,
                 "rule_id": "RULE_ECHO",
                 "target_id": "M02-BRIDGE-01",
-                "target_point": {"x": 0, "y": 0},
+                "target_point": {"x": 6, "y": 4},
             }
             echo = client.post(
                 "/api/v1/level/rule/cast",
@@ -239,7 +210,12 @@ def test_authoritative_laws_combos_cooldowns_and_personal_isolation() -> None:
                 f"/api/v1/level/state/{second_run}", headers=second["headers"]
             )
             assert second_state.status_code == 200
-            assert second_state.json()["data"]["mechanisms"] == []
+            second_mechanisms = second_state.json()["data"]["mechanisms"]
+            assert len(second_mechanisms) == 1
+            second_bridge = second_mechanisms[0]["state"]
+            assert second_bridge["status"] == "INACTIVE"
+            assert second_bridge["visible"] is False
+            assert "combo_applied" not in second_bridge
 
             wrong_order_gaze = client.post(
                 "/api/v1/level/rule/cast",
@@ -264,7 +240,7 @@ def test_authoritative_laws_combos_cooldowns_and_personal_isolation() -> None:
                     "run_id": second_run,
                     "rule_id": "RULE_ECHO",
                     "target_id": "M02-BRIDGE-01",
-                    "target_point": {"x": 0, "y": 0},
+                    "target_point": {"x": 6, "y": 4},
                 },
             )
             assert wrong_order_echo.status_code == 200
@@ -303,7 +279,7 @@ def test_authoritative_laws_combos_cooldowns_and_personal_isolation() -> None:
                     "run_id": third_run,
                     "rule_id": "RULE_ECHO",
                     "target_id": "M03-ENERGY-01",
-                    "target_point": {"x": 1, "y": 1},
+                    "target_point": {"x": 4, "y": 4},
                 },
             )
             assert echo_after_reverse.status_code == 200
@@ -377,7 +353,7 @@ def test_room_five_supports_all_three_preset_combos() -> None:
 
             echo_bridge = cast(
                 "RULE_ECHO", "M05-BRIDGE-01", "room5-echo-bridge-0001",
-                {"x": 0, "y": 0},
+                {"x": 3, "y": 4},
             )
             assert echo_bridge.status_code == 200, echo_bridge.text
             gaze_bridge = cast(
@@ -398,7 +374,7 @@ def test_room_five_supports_all_three_preset_combos() -> None:
             time.sleep(0.01)
             echo_energy = cast(
                 "RULE_ECHO", "M05-ENERGY-01", "room5-echo-energy-0001",
-                {"x": 1, "y": 1},
+                {"x": 6, "y": 4},
             )
             assert echo_energy.status_code == 200, echo_energy.text
             reverse_energy = cast(
