@@ -1,5 +1,5 @@
-from alembic import op
 import sqlalchemy as sa
+from alembic import op
 from sqlalchemy.dialects.postgresql import ENUM, JSONB
 
 
@@ -237,7 +237,10 @@ def upgrade() -> None:
              ), true),
             ('LV-ROOM-05', 'MECH_MOVING_PLATFORM', 'MOVING_OBJECT', 'MECHANISM',
              'INACTIVE', 'TRIGGERED', '["RULE_EFFECT","COMBO_EFFECT"]'::jsonb,
-             jsonb_build_object('config_status', 'PENDING_POSITION_AND_ART', 'initial_direction', 1), true),
+             jsonb_build_object(
+                 'config_status', 'PENDING_POSITION_AND_ART',
+                 'initial_direction', 1
+             ), true),
             ('LV-HIDDEN-01', 'MECH-HIDDEN-ENDING-01', 'ENDING_GATE', 'MECHANISM',
              'INACTIVE', 'TRIGGERED', '["INTERACT"]'::jsonb,
              jsonb_build_object('config_status', 'PENDING_HIDDEN_ENDING_CONTENT'), true)
