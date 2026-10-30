@@ -325,6 +325,17 @@ async def record_discovery(
             session, player_id, "COLLECT", "COLLECT_NEW",
             collection_id, f"collection:{collection_id}", run_id
         )
+    await _grant_matching_rewards(
+        session, player_id, f"DISCOVERY:{discovery_id}", "DISCOVERY", discovery_id
+    )
+    if archive is not None:
+        await _grant_matching_rewards(
+            session, player_id, f"WORLD_FIRST:{discovery_id}", "WORLD_FIRST", discovery_id
+        )
+    for collection_id in collection_rows:
+        await _grant_matching_rewards(
+            session, player_id, f"COLLECTION:{collection_id}", "COLLECTION", collection_id
+        )
     return {
         "discovery_id": discovery_id,
         "display_name": catalog["display_name"],
@@ -451,6 +462,10 @@ async def settle_level(
     await _write_score_event(
         session, player_id, "CLEAR", "CLEAR_STAGE",
         str(settlement["result_id"]), f"settlement:{run_id}", run_id
+    )
+    await _grant_matching_rewards(
+        session, player_id, f"LEVEL_COMPLETE:{run['level_id']}",
+        "SETTLEMENT", str(settlement["result_id"])
     )
 
     # Hidden ending discovery is derived only after the configured ending
@@ -738,3 +753,116 @@ async def get_current_seasons(
         }
         for item in periods
     ]
+
+
+async def grant_reward(
+    session: AsyncSession,
+    player_id: UUID,
+    reward_id: str,
+    source: str,
+    source_id: str,
+    idempotency_key: str,
+) -> dict[str, Any]:
+    reward = (
+        await session.execute(
+            text("""
+                SELECT reward_id, reward_type::text AS reward_type, reward_name,
+                       grant_mode::text AS grant_mode, payload, is_paid
+                FROM rewards
+                WHERE reward_id = :reward_id AND is_enabled = true
+            """),
+            {"reward_id": reward_id},
+        )
+    ).mappings().one_or_none()
+    if reward is None:
+        return {"granted": False, "reason": "REWARD_DISABLED_OR_MISSING"}
+    payload = dict(reward["payload"] or {})
+    forbidden_paid_fields = {
+        "score", "score_delta", "stat_bonus", "multiplier",
+        "power", "attack", "defense", "cooldown_reduction",
+    }
+    if reward["is_paid"] and forbidden_paid_fields.intersection(payload):
+        raise ValueError("Paid rewards cannot contain gameplay or score advantages")
+    grant_mode = reward["grant_mode"]
+    status = "OWNED" if grant_mode == "AUTO" else "PENDING_CLAIM"
+    row = (
+        await session.execute(
+            text("""
+                INSERT INTO player_rewards
+                    (player_id, reward_id, grant_mode, status, source,
+                     source_id, idempotency_key)
+                VALUES
+                    (:player_id, :reward_id, CAST(:grant_mode AS grant_mode),
+                     CAST(:status AS player_reward_status), :source,
+                     :source_id, :idempotency_key)
+                ON CONFLICT DO NOTHING
+                RETURNING player_reward_id, status::text AS status
+            """),
+            {
+                "player_id": player_id,
+                "reward_id": reward_id,
+                "grant_mode": grant_mode,
+                "status": status,
+                "source": source,
+                "source_id": source_id,
+                "idempotency_key": idempotency_key,
+            },
+        )
+    ).mappings().one_or_none()
+    if row is not None:
+        return {
+            "granted": True,
+            "reward_id": reward_id,
+            "player_reward_id": str(row["player_reward_id"]),
+            "status": row["status"],
+        }
+    existing = (
+        await session.execute(
+            text("""
+                SELECT player_reward_id, status::text AS status
+                FROM player_rewards
+                WHERE player_id = :player_id AND reward_id = :reward_id
+                  AND source_id = :source_id
+            """),
+            {"player_id": player_id, "reward_id": reward_id, "source_id": source_id},
+        )
+    ).mappings().one_or_none()
+    return {
+        "granted": False,
+        "reason": "ALREADY_GRANTED",
+        "reward_id": reward_id,
+        "player_reward_id": str(existing["player_reward_id"]) if existing else None,
+        "status": existing["status"] if existing else None,
+    }
+
+
+async def _grant_matching_rewards(
+    session: AsyncSession,
+    player_id: UUID,
+    condition_ref: str,
+    source: str,
+    source_id: str,
+) -> list[dict[str, Any]]:
+    rewards = (
+        await session.execute(
+            text("""
+                SELECT reward_id FROM rewards
+                WHERE condition_ref = :condition_ref AND is_enabled = true
+                ORDER BY reward_id
+            """),
+            {"condition_ref": condition_ref},
+        )
+    ).scalars().all()
+    results = []
+    for reward_id in rewards:
+        results.append(
+            await grant_reward(
+                session,
+                player_id,
+                reward_id,
+                source,
+                source_id,
+                f"grant:{reward_id}:{source}:{source_id}",
+            )
+        )
+    return results
