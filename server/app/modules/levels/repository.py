@@ -273,9 +273,11 @@ async def start_level(
     run = (
         await session.execute(
             text("""
-                SELECT run_id, level_id, status::text AS run_status, started_at, ended_at
-                FROM level_runs
-                WHERE run_id = :run_id AND player_id = :player_id
+                SELECT r.run_id, r.level_id, r.status::text AS run_status,
+                       r.started_at, r.ended_at, l.config
+                FROM level_runs AS r
+                JOIN levels AS l ON l.level_id = r.level_id
+                WHERE r.run_id = :run_id AND r.player_id = :player_id
                 FOR UPDATE
             """),
             {"run_id": run_id, "player_id": player_id},
@@ -290,7 +292,18 @@ async def start_level(
                     UPDATE level_runs
                     SET status = 'RUNNING', started_at = now()
                     WHERE run_id = :run_id AND player_id = :player_id
-                    RETURNING run_id, level_id, status::text AS run_status, started_at, ended_at
+                """),
+                {"run_id": run_id, "player_id": player_id},
+            )
+        )
+        run = (
+            await session.execute(
+                text("""
+                    SELECT r.run_id, r.level_id, r.status::text AS run_status,
+                           r.started_at, r.ended_at, l.config
+                    FROM level_runs AS r
+                    JOIN levels AS l ON l.level_id = r.level_id
+                    WHERE r.run_id = :run_id AND r.player_id = :player_id
                 """),
                 {"run_id": run_id, "player_id": player_id},
             )
