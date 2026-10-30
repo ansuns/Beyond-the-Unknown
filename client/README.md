@@ -46,3 +46,17 @@ This is a TypeScript client foundation, not yet a complete playable Cocos scene 
 Rule writes use the current backend routes (`/level/rule/cast`, `/level/rule/maintain`, `/level/rule/stop`). The client does not calculate rule effects, cooldowns, combo IDs, or mechanism state. Structured backend errors such as `RULE_COOLDOWN` remain available on `ApiError.details`.
 
 The server currently marks numeric law tuning and mechanism positions as `TUNING_REQUIRED`. The client must display this state and must not assume rule casting is enabled until the backend catalog reports `READY`. Scene/UI bindings and an interactive playable room are still separate integration work.
+
+
+## VS-4 law interaction orchestration
+
+LawController wraps PersonalLevelSession for scene/input adapters:
+
+- Loads the server-owned rule catalog and personal mechanism state after a level run starts.
+- Disables casts until a rule is unlocked and its backend config_status is READY; current TUNING_REQUIRED settings remain visibly unavailable.
+- Checks basic target shape before sending point-scoped or object-scoped casts. The server remains authoritative for target existence, geometry, radius, cooldown and combo results.
+- Generates a fresh idempotency key for each cast through an injected factory.
+- Maintains an active GAZE lease at one-third of the server-provided lease timeout (with a 250 ms minimum) when the scene calls maintainGazeIfDue(). Call stopGaze() when gaze input ends or the scene is exited.
+- Refreshes and exposes the server-owned personal mechanism state after successful interactions.
+
+This controller is engine-independent and can be called from Cocos Creator components. It does not provide scene assets, hit-testing, animations, audio, or a completed playable room.
