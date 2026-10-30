@@ -293,7 +293,7 @@ paths:
     post:
       tags: [Reward]
       operationId: claimReward
-      parameters: [{ $ref: '#/components/parameters/RequestId' }, { $ref: '#/components/parameters/IdempotencyKey' }]
+      parameters: [{ $ref: '#/components/parameters/RequestId' }]
       requestBody:
         required: true
         content:
@@ -331,34 +331,19 @@ paths:
       tags: [Leaderboard]
       operationId: getCurrentSeasons
       responses:
-        '200': { description: Current weekly and monthly periods }
+        '200': { description: Current weekly and monthly period windows in UTC }
   /world-archive:
     get:
       tags: [Archive]
       operationId: listWorldArchive
+      parameters:
+        - { name: limit, in: query, schema: { type: integer, minimum: 1, maximum: 100, default: 50 } }
       responses:
         '200':
           description: Global first-discovery archive
           content:
             application/json:
               schema: { $ref: '#/components/schemas/EnvelopeObject' }
-  /level/settle:
-    post:
-      tags: [Level]
-      operationId: settleLevel
-      parameters: [{ $ref: '#/components/parameters/RequestId' }, { $ref: '#/components/parameters/IdempotencyKey' }]
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              type: object
-              required: [run_id]
-              properties: { run_id: { type: string, format: uuid } }
-      responses:
-        '200': { description: Authoritative settlement, completion time and progress version }
-        '404': { $ref: '#/components/responses/NotFound' }
-        '409': { description: Run not active or required objectives incomplete }
   /progress/me:
     get:
       tags: [Player]
@@ -375,12 +360,6 @@ paths:
         - { name: limit, in: query, schema: { type: integer, minimum: 1, maximum: 100, default: 50 } }
       responses:
         '200': { description: Current board page and authenticated player's rank }
-  /season:
-    get:
-      tags: [Leaderboard]
-      operationId: getCurrentSeasons
-      responses:
-        '200': { description: Current weekly and monthly season windows in UTC }
   /discovery/me:
     get:
       tags: [Discovery]
@@ -393,14 +372,6 @@ paths:
       operationId: getMyCollections
       responses:
         '200': { description: Authenticated player's collected codex entries }
-  /world-archive:
-    get:
-      tags: [Archive]
-      operationId: getWorldArchive
-      parameters:
-        - { name: limit, in: query, schema: { type: integer, minimum: 1, maximum: 100, default: 50 } }
-      responses:
-        '200': { description: Public global first-discovery archive without private account identifiers }
   /reward/me:
     get:
       tags: [Reward]
