@@ -51,17 +51,18 @@ async def enqueue_due_seasons(
             await session.execute(
                 text("""
                     INSERT INTO task_outbox
-                        (task_type, schema_version, payload, idempotency_key)
+                        (task_type, schema_version, payload, idempotency_key, max_attempts)
                     VALUES
                         ('season.finalize', 1,
                          jsonb_build_object('season_id', :season_id),
-                         :idempotency_key)
+                         :idempotency_key, :max_attempts)
                     ON CONFLICT (idempotency_key) DO NOTHING
                     RETURNING task_id
                 """),
                 {
                     "season_id": season_id,
                     "idempotency_key": f"season-finalize:{season_id}",
+                    "max_attempts": get_settings().rabbitmq_max_retries + 1,
                 },
             )
         ).scalar_one_or_none()
@@ -118,17 +119,18 @@ async def finalize_season(
         text("""
             INSERT INTO task_outbox
                 (task_type, schema_version, payload, idempotency_key,
-                 available_at_utc)
+                 available_at_utc, max_attempts)
             VALUES
                 ('season.auto_approve', 1,
                  jsonb_build_object('season_id', :season_id),
-                 :idempotency_key, :available_at)
+                 :idempotency_key, :available_at, :max_attempts)
             ON CONFLICT (idempotency_key) DO NOTHING
         """),
         {
             "season_id": season_id,
             "idempotency_key": f"season-auto-approve:{season_id}",
             "available_at": review_until,
+            "max_attempts": get_settings().rabbitmq_max_retries + 1,
         },
     )
     await session.execute(
@@ -354,11 +356,11 @@ async def auto_approve_season(
             text("""
                 INSERT INTO task_outbox
                     (task_type, schema_version, payload, idempotency_key,
-                     available_at_utc)
+                     available_at_utc, max_attempts)
                 VALUES
                     ('season.auto_approve', 1,
                      jsonb_build_object('season_id', :season_id),
-                     :idempotency_key, :available_at)
+                     :idempotency_key, :available_at, :max_attempts)
                 ON CONFLICT (idempotency_key) DO NOTHING
             """),
             {
@@ -368,6 +370,7 @@ async def auto_approve_season(
                     f"{season['review_until_utc'].isoformat()}"
                 ),
                 "available_at": next_attempt,
+                "max_attempts": get_settings().rabbitmq_max_retries + 1,
             },
         )
         return {
