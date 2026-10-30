@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
   "project": "Beyond the Unknown",
-  "gdd_version": "0.2",
+  "gdd_version": "0.3",
   "status": "BLOCKED_ASSETS_NOT_DELIVERED",
   "generated_from": [
     "docs/gdd/chapters/无界之外_GDD_第3章_玩家角色系统.md",
