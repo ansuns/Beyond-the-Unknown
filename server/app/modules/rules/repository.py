@@ -6,9 +6,9 @@ from typing import Any
 from uuid import UUID
 
 from sqlalchemy import text
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.modules.progress.repository import record_discovery
-from sqlalchemy.ext.asyncio import AsyncSession
 
 
 class RuleRunNotFound(Exception):
