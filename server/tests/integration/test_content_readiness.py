@@ -11,7 +11,10 @@ pytestmark = [
     pytest.mark.integration,
     pytest.mark.skipif(
         not os.getenv("TEST_DATABASE_URL"),
-        reason="Set TEST_DATABASE_URL and apply Alembic migrations for PostgreSQL integration tests",
+        reason=(
+            "Set TEST_DATABASE_URL and apply Alembic migrations "
+            "for PostgreSQL integration tests"
+        ),
     ),
 ]
 
