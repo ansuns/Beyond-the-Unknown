@@ -19,16 +19,16 @@ def upgrade() -> None:
             VALUES
                 ('LV-ROOM-01', '[]'::jsonb),
                 ('LV-ROOM-02',
-                 '[{"combo_id":"COMBO-001","target_mechanism_id":"M02-BRIDGE-01","rule_sequence":["RULE_ECHO","RULE_GAZE"],"display_name":"施放组合一"}]'::jsonb),
+                 '[{"combo_id":"COMBO-001","target_mechanism_id":"M02-BRIDGE-01","rule_sequence":["RULE_ECHO","RULE_GAZE"],"display_name":"施放组合一","maintain_gaze":false}]'::jsonb),
                 ('LV-ROOM-03',
-                 '[{"combo_id":"COMBO-002","target_mechanism_id":"M03-ENERGY-01","rule_sequence":["RULE_ECHO","RULE_REVERSE"],"display_name":"施放组合二"}]'::jsonb),
+                 '[{"combo_id":"COMBO-002","target_mechanism_id":"M03-ENERGY-01","rule_sequence":["RULE_ECHO","RULE_REVERSE"],"display_name":"施放组合二","maintain_gaze":false}]'::jsonb),
                 ('LV-ROOM-04',
-                 '[{"combo_id":"COMBO-003","target_mechanism_id":"M04-PLATFORM-01","rule_sequence":["RULE_GAZE","RULE_REVERSE"],"display_name":"施放组合三"}]'::jsonb),
+                 '[{"combo_id":"COMBO-003","target_mechanism_id":"M04-PLATFORM-01","rule_sequence":["RULE_GAZE","RULE_REVERSE"],"display_name":"施放组合三","maintain_gaze":true}]'::jsonb),
                 ('LV-ROOM-05',
                  '[
-                    {"combo_id":"COMBO-001","target_mechanism_id":"M05-BRIDGE-01","rule_sequence":["RULE_ECHO","RULE_GAZE"],"display_name":"组合一·桥梁"},
-                    {"combo_id":"COMBO-002","target_mechanism_id":"M05-ENERGY-01","rule_sequence":["RULE_ECHO","RULE_REVERSE"],"display_name":"组合二·能量"},
-                    {"combo_id":"COMBO-003","target_mechanism_id":"M05-REVERSE-01","rule_sequence":["RULE_GAZE","RULE_REVERSE"],"display_name":"组合三·逆流"}
+                    {"combo_id":"COMBO-001","target_mechanism_id":"M05-BRIDGE-01","rule_sequence":["RULE_ECHO","RULE_GAZE"],"display_name":"组合一·桥梁","maintain_gaze":false},
+                    {"combo_id":"COMBO-002","target_mechanism_id":"M05-ENERGY-01","rule_sequence":["RULE_ECHO","RULE_REVERSE"],"display_name":"组合二·能量","maintain_gaze":false},
+                    {"combo_id":"COMBO-003","target_mechanism_id":"M05-REVERSE-01","rule_sequence":["RULE_GAZE","RULE_REVERSE"],"display_name":"组合三·逆流","maintain_gaze":true}
                  ]'::jsonb),
                 ('LV-HIDDEN-01', '[]'::jsonb)
         ) AS presets(level_id, prototype_combos)
