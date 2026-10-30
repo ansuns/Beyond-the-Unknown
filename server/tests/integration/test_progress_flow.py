@@ -351,7 +351,7 @@ def test_outbox_finalizes_season_and_grants_rank_reward_once() -> None:
                     (task_id, task_type, schema_version, payload, idempotency_key)
                 VALUES
                     (:task_id, 'season.finalize', 1,
-                     jsonb_build_object('season_id', :season_id),
+                     jsonb_build_object('season_id', CAST(:season_id AS text)),
                      :idempotency_key)
                 ON CONFLICT (idempotency_key) DO NOTHING
             """, {
