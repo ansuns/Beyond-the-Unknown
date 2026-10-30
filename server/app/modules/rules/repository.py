@@ -426,6 +426,8 @@ async def cast_rule(
             state["visible"] = True
             state["visible_by_echo"] = True
             state["last_rule"] = rule_id
+            if mechanism["mechanism_type"] == "HIDEABLE":
+                state["status"] = mechanism["target_state"]
         elif rule_id == "RULE_GAZE":
             state["visible"] = True
             state["visible_by_gaze"] = True
