@@ -7,6 +7,7 @@ class FakeWebSocket:
     def __init__(self):
         self.messages = []
         self.closed_code = None
+        self.scope = {"state": {}}
 
     async def send_json(self, message):
         self.messages.append(message)
