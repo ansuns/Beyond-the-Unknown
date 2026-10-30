@@ -11,7 +11,12 @@ depends_on = None
 def upgrade() -> None:
     op.create_table(
         "law_action_events",
-        sa.Column("event_id", sa.Uuid(), primary_key=True, server_default=sa.text("gen_random_uuid()")),
+        sa.Column(
+            "event_id",
+            sa.Uuid(),
+            primary_key=True,
+            server_default=sa.text("gen_random_uuid()"),
+        ),
         sa.Column("run_id", sa.Uuid(), nullable=False),
         sa.Column("player_id", sa.Uuid(), nullable=False),
         sa.Column("idempotency_key", sa.String(200), nullable=False),
@@ -20,8 +25,18 @@ def upgrade() -> None:
         sa.Column("mechanism_config_id", sa.String(100), nullable=False),
         sa.Column("action", sa.String(16), nullable=False),
         sa.Column("combo_id", sa.String(64), nullable=True),
-        sa.Column("result", JSONB(), nullable=False, server_default=sa.text("'{}'::jsonb")),
-        sa.Column("created_at", sa.DateTime(timezone=True), nullable=False, server_default=sa.func.now()),
+        sa.Column(
+            "result",
+            JSONB(),
+            nullable=False,
+            server_default=sa.text("'{}'::jsonb"),
+        ),
+        sa.Column(
+            "created_at",
+            sa.DateTime(timezone=True),
+            nullable=False,
+            server_default=sa.func.now(),
+        ),
         sa.ForeignKeyConstraint(
             ["run_id", "player_id"],
             ["level_runs.run_id", "level_runs.player_id"],
