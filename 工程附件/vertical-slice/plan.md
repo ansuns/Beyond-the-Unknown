@@ -43,7 +43,11 @@
 - [ ] 加载、断网、重连、结算与错误状态。
 
 ## 4. 服务端任务
-- [ ] 建立 Python 模块化单体：app/api、core、schemas、services、repositories、realtime、workers、tests。\n- [ ] 使用 FastAPI + Uvicorn；Pydantic 2.x 模型与 OpenAPI 契约保持一致。\n- [ ] 使用 SQLAlchemy 2.x async + asyncpg；Alembic 管理迁移，事务边界显式定义。\n- [ ] WebSocket 处理器采用 async I/O；CPU 密集计算不得阻塞事件循环，必要时移交进程池/后台任务。\n- [ ] 部署 RabbitMQ 与 Python Worker；定义任务消息 schema、持久化队列/消息、手动 ACK、有限重试与 dead-letter queue。
+- [ ] 建立 Python 模块化单体：app/api、core、schemas、services、repositories、realtime、workers、tests。
+- [ ] 使用 FastAPI + Uvicorn；Pydantic 2.x 模型与 OpenAPI 契约保持一致。
+- [ ] 使用 SQLAlchemy 2.x async + asyncpg；Alembic 管理迁移，事务边界显式定义。
+- [ ] WebSocket 处理器采用 async I/O；CPU 密集计算不得阻塞事件循环，必要时移交进程池/后台任务。
+- [ ] 部署 RabbitMQ 与 Python Worker；定义任务消息 schema、持久化队列/消息、手动 ACK、有限重试与 dead-letter queue。
 - [ ] 仅将可异步化的耗时工作投递到队列；消费者必须幂等，消息确认发生在业务处理成功之后；关键业务写入与消息发布采用 Transactional Outbox，避免数据库提交成功但消息丢失。
 - [ ] 玩家身份只从认证上下文取得；校验账号状态。
 - [ ] REST 写请求验证 schema、频率限制与幂等键。
