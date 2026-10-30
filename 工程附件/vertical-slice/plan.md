@@ -1,7 +1,7 @@
 # 第一阶段垂直切片开发与测试清单
 
 - 版本：VS-0.1
-- 基线：GDD V0.2；Cocos Creator 3.x + TypeScript；Node.js + TypeScript；PostgreSQL
+- 基线：GDD V0.2；Cocos Creator 3.x + TypeScript；Python 3.12+ + FastAPI；PostgreSQL；RabbitMQ
 - 目标：端到端验证“登录—共享主地图—进入个人关卡—施放法则—机关解谜—服务端结算—永久进度恢复”。
 - 策略：先完成 ROOM-01 可玩闭环，再以配置驱动接入 ROOM-02 至 ROOM-05 与隐藏结局。
 
@@ -10,7 +10,7 @@
 ### 必须包含
 - Cocos Creator 3.x 客户端：启动/登录、主地图、移动、交互、法则 UI、个人关卡、结算 UI。
 - Python FastAPI 模块化单体：Auth、Player、MapInstance、LevelRun、Rule、Mechanism、Discovery、Settlement、Progress。
-- Python 3.12+ + FastAPI；SQLAlchemy 2.x async + asyncpg；Alembic 管理 PostgreSQL 迁移 0001；Pydantic 2.x 校验契约。Redis 首阶段可暂缓，不能作为永久数据唯一来源。
+- Python 3.12+ + FastAPI；SQLAlchemy 2.x async + asyncpg；Alembic 管理 PostgreSQL 迁移 0001；Pydantic 2.x 校验契约。Redis 首阶段可暂缓，不能作为永久数据唯一来源；RabbitMQ 用于后台异步任务，Worker 独立运行。
 - WebSocket AUTH、ENTER/LEAVE、MOVE_SYNC、PING/PONG；机关状态由服务端权威推送。
 - ROOM-01 回声显形 HIDEABLE、激活出口。
 - 幂等结算、个人发现、world_archive 原子抢占、progress_version 更新。
@@ -25,7 +25,7 @@
 
 | 阶段 | 交付 | 完成定义 |
 |---|---|---|
-| VS-0 工程骨架 | Cocos 项目、Python 服务端、配置/日志/环境变量、Docker Compose | 本地启动、健康检查通过 |
+| VS-0 工程骨架 | Cocos 项目、Python 服务端、配置/日志/环境变量、Docker Compose（PostgreSQL、RabbitMQ、API、Worker） | 本地启动、健康检查通过 |
 | VS-1 身份与持久化 | 登录适配、players、角色初始化、数据库迁移 | 新玩家创建幂等；重复登录同一玩家 |
 | VS-2 共享主地图 | 地图实例、WS鉴权、进入/离开、移动同步 | 两客户端互相看到移动；断线可重新进入 |
 | VS-3 个人关卡 | level enter/run、ROOM-01 场景、个人机关状态 | 两玩家同时进入独立 run，互不影响 |
@@ -43,7 +43,8 @@
 - [ ] 加载、断网、重连、结算与错误状态。
 
 ## 4. 服务端任务
-- [ ] 建立 Python 模块化单体：app/api、core、schemas、services、repositories、realtime、workers、tests。\n- [ ] 使用 FastAPI + Uvicorn；Pydantic 2.x 模型与 OpenAPI 契约保持一致。\n- [ ] 使用 SQLAlchemy 2.x async + asyncpg；Alembic 管理迁移，事务边界显式定义。\n- [ ] WebSocket 处理器采用 async I/O；CPU 密集计算不得阻塞事件循环，必要时移交进程池/后台任务。\n- [ ] 首期不强制引入 Celery/ARQ；出现可靠异步任务需求后再选型。
+- [ ] 建立 Python 模块化单体：app/api、core、schemas、services、repositories、realtime、workers、tests。\n- [ ] 使用 FastAPI + Uvicorn；Pydantic 2.x 模型与 OpenAPI 契约保持一致。\n- [ ] 使用 SQLAlchemy 2.x async + asyncpg；Alembic 管理迁移，事务边界显式定义。\n- [ ] WebSocket 处理器采用 async I/O；CPU 密集计算不得阻塞事件循环，必要时移交进程池/后台任务。\n- [ ] 部署 RabbitMQ 与 Python Worker；定义任务消息 schema、持久化队列/消息、手动 ACK、有限重试与 dead-letter queue。
+- [ ] 仅将可异步化的耗时工作投递到队列；消费者必须幂等，消息确认发生在业务处理成功之后；关键业务写入与消息发布采用 Transactional Outbox，避免数据库提交成功但消息丢失。
 - [ ] 玩家身份只从认证上下文取得；校验账号状态。
 - [ ] REST 写请求验证 schema、频率限制与幂等键。
 - [ ] WS 方向白名单、序列号、速率限制、AOI 广播。
