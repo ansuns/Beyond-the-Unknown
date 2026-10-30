@@ -600,6 +600,18 @@ def test_mechanism_catalog_and_references_match_canonical_gdd_ids() -> None:
                         """
                     )
                 )
+                level_prototype_layouts = await connection.execute(
+                    text(
+                        """
+                        SELECT level_id,
+                               config->'prototype_bounds' AS prototype_bounds,
+                               config->'prototype_spawn' AS prototype_spawn,
+                               config->'prototype_controls' AS prototype_controls
+                        FROM levels
+                        ORDER BY level_id
+                        """
+                    )
+                )
             return {
                 "catalog": [dict(row._mapping) for row in catalog],
                 "objectives_without_mechanisms": objectives_without_mechanisms,
@@ -611,6 +623,14 @@ def test_mechanism_catalog_and_references_match_canonical_gdd_ids() -> None:
                 "level_prototype_combos": {
                     row._mapping["level_id"]: row._mapping["prototype_combos"]
                     for row in level_prototype_combos
+                },
+                "level_prototype_layouts": {
+                    row._mapping["level_id"]: {
+                        "bounds": row._mapping["prototype_bounds"],
+                        "spawn": row._mapping["prototype_spawn"],
+                        "controls": row._mapping["prototype_controls"],
+                    }
+                    for row in level_prototype_layouts
                 },
             }
         finally:
@@ -693,7 +713,23 @@ def test_mechanism_catalog_and_references_match_canonical_gdd_ids() -> None:
         for row in contract["catalog"]
     }
     for level in source_config["levels"]:
-        assert contract["level_prototype_combos"][level["level_id"]] == level["prototype_combos"]
+        level_id = level["level_id"]
+        assert contract["level_prototype_combos"][level_id] == level["prototype_combos"]
+        layout = level["prototype_layout"]
+        persisted_layout = contract["level_prototype_layouts"][level_id]
+        assert persisted_layout["bounds"] == {
+            "min_x": layout["bounds"]["min_x"],
+            "max_x": layout["bounds"]["max_x"],
+            "min_y": layout["bounds"]["min_y"],
+            "max_y": layout["bounds"]["max_y"],
+        }
+        assert persisted_layout["spawn"] == layout["spawn"]
+        assert persisted_layout["controls"]["movement_speed"] == layout["movement_speed"]
+        assert persisted_layout["controls"]["interaction_radius"] == layout["interaction_radius"]
+        assert (
+            persisted_layout["controls"]["position_sync_interval_ms"]
+            == layout["position_sync_interval_ms"]
+        )
         for mechanism in level["mechanisms"]:
             row = catalog_by_key[(level["level_id"], mechanism["mechanism_id"])]
             assert row["position_x"] == mechanism["position"]["x"]
