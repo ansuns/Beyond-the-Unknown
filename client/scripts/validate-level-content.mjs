@@ -86,6 +86,9 @@ for (const level of levels) {
     if (typeof combo.display_name !== "string" || !combo.display_name.trim()) {
       add(`${level.level_id}: prototype combo ${combo.combo_id} requires a display_name`);
     }
+    if (typeof combo.maintain_gaze !== "boolean") {
+      add(`${level.level_id}: prototype combo ${combo.combo_id} requires a maintain_gaze boolean`);
+    }
   }
 }
 
