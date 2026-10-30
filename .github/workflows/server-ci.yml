@@ -75,6 +75,36 @@ jobs:
         run: docker compose up -d --build
       - name: Apply database migration
         run: docker compose run --rm api uv run --no-sync alembic -c alembic.ini upgrade head
+      - name: Verify latest migration downgrade preserves prior layout config
+        run: |
+          docker compose run --rm api uv run --no-sync alembic -c alembic.ini downgrade -1
+          preserved=$(docker compose exec -T postgres psql -qAt -U beyond -d beyond -c "
+            SELECT COUNT(*) = 6 AND bool_and(
+              config ? 'prototype_bounds'
+              AND config ? 'prototype_spawn'
+              AND (config->'prototype_controls') ? 'movement_speed'
+              AND (config->'prototype_controls') ? 'interaction_radius'
+              AND NOT ((config->'prototype_controls') ? 'position_sync_interval_ms')
+            )
+            FROM levels
+            WHERE level_id IN (
+              'LV-ROOM-01', 'LV-ROOM-02', 'LV-ROOM-03',
+              'LV-ROOM-04', 'LV-ROOM-05', 'LV-HIDDEN-01'
+            )
+          ")
+          test "$preserved" = "t"
+          docker compose run --rm api uv run --no-sync alembic -c alembic.ini upgrade head
+          restored=$(docker compose exec -T postgres psql -qAt -U beyond -d beyond -c "
+            SELECT COUNT(*) = 6 AND bool_and(
+              (config->'prototype_controls'->>'position_sync_interval_ms')::int = 120
+            )
+            FROM levels
+            WHERE level_id IN (
+              'LV-ROOM-01', 'LV-ROOM-02', 'LV-ROOM-03',
+              'LV-ROOM-04', 'LV-ROOM-05', 'LV-HIDDEN-01'
+            )
+          ")
+          test "$restored" = "t"
       - name: Check API health
         run: |
           for attempt in $(seq 1 30); do
