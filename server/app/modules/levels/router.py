@@ -6,6 +6,15 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.authentication import get_current_player_id
 from app.core.database import get_session
+from app.modules.gameplay.service import (
+    InvalidLawAction,
+    LawCooldown,
+    LawIdempotencyConflict,
+    LevelRunNotFound,
+    MechanismNotFound,
+    apply_law_action,
+    get_run_mechanisms,
+)
 from app.modules.levels.repository import (
     ActiveLevelRunExists,
     IdempotencyConflict,
@@ -17,15 +26,6 @@ from app.modules.levels.repository import (
     enter_level,
     list_levels,
     start_level,
-)
-from app.modules.gameplay.service import (
-    InvalidLawAction,
-    LawCooldown,
-    LawIdempotencyConflict,
-    LevelRunNotFound,
-    MechanismNotFound,
-    apply_law_action,
-    get_run_mechanisms,
 )
 from app.modules.levels.schemas import (\n    LawActionRequest,\n    LevelEnterRequest,\n    LevelRunRequest,\n)
 from app.realtime.manager import map_connections
