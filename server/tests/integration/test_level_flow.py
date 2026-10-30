@@ -1,8 +1,8 @@
 import os
 from uuid import uuid4
 
-import pytest
 from fastapi.testclient import TestClient
+import pytest
 
 from app.main import app
 from app.modules.auth.provider import get_wechat_code_provider
@@ -123,6 +123,8 @@ def test_personal_level_run_entry_is_idempotent_and_isolated() -> None:
             levels = client.get("/api/v1/level/", headers=first["headers"])
             assert levels.status_code == 200
             rooms = levels.json()["data"]["levels"]
-            assert [room["room_index"] for room in rooms if not room["is_hidden"]] == [1, 2, 3, 4, 5]
+            assert [
+                room["room_index"] for room in rooms if not room["is_hidden"]
+            ] == [1, 2, 3, 4, 5]
     finally:
         app.dependency_overrides.clear()
