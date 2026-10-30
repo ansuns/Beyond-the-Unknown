@@ -45,10 +45,11 @@ describe("asset manifest contract", () => {
 
   it("rejects reusing one file for multiple assets", () => {
     const invalid = structuredClone(manifest);
-    invalid.entries[0].files = ["assets/resources/characters/CHR_001/portrait/portrait.png"];
+    invalid.entries[0].files = [
+      "assets/resources/characters/CHR_001/portrait/portrait.png",
+      "assets/resources/characters/CHR_001/portrait/portrait.png"
+    ];
     invalid.entries[0].status = "IN_PROGRESS";
-    invalid.entries[1].files = ["assets/resources/characters/CHR_001/portrait/portrait.png"];
-    invalid.entries[1].status = "IN_PROGRESS";
     expect(validateAssetManifestStructure(invalid, levels).errors.join("\n")).toContain(
       "file path is already assigned"
     );
