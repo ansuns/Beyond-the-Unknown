@@ -87,7 +87,7 @@ The map instance capacity and movement/reconnect limits are configurable through
 - GDD V0.2 leaves cooldowns, effect radii, timed durations, gaze lease and combo time windows pending. The migration deliberately stores these values as NULL and marks the catalog `TUNING_REQUIRED`; rule casting returns HTTP 503 until reviewed tuning values and actual mechanism positions are supplied. No unapproved gameplay numbers are hardcoded.
 
 
-## VS-5 discovery, settlement and permanent progress (in review)
+## VS-5 discovery, settlement and permanent progress (merged; content tuning pending)
 
 - `POST /api/v1/level/settle`: accepts only the caller's run ID and idempotency key. The server verifies every configured required objective against personal mechanism state, computes completion time and writes one settlement. Client score/status fields are ignored.
 - `GET /api/v1/player/progress`: latest versioned permanent snapshot; discoveries, collections, rewards and completed levels survive run exit.
@@ -99,3 +99,6 @@ The map instance capacity and movement/reconnect limits are configurable through
 - Weekly periods begin Monday 00:00 and monthly periods on day 1 at 00:00 in `SERVER_TIMEZONE` (default UTC); timestamps are stored in UTC.
 - Score weights remain NULL/`TUNING_REQUIRED` until approved. No score events or leaderboard entries are fabricated while weights are unset. Reward definitions/conditions are empty until approved content is supplied.
 - Objective rows for ROOM-01 exit interaction and the hidden ending remain `CONTENT_PENDING`; those levels cannot be settled until their interaction/ending content is implemented. Spatial positions and law/combination tuning also remain separate content inputs.
+
+
+VS-5 was merged into `main` after the Python/Ruff, PostgreSQL migration/integration, and Docker Compose smoke jobs passed. This confirms the backend contract and tested flows only; production score weights, reward definitions, room objectives, mechanism positions, and law tuning remain content/configuration gates.
