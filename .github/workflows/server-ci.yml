@@ -49,6 +49,8 @@ jobs:
       - name: Apply database migrations
         working-directory: server
         run: uv run alembic -c alembic.ini upgrade head
+      - name: Verify initial SQL mirror
+        run: cmp server/schema/0001_initial_schema.sql docs/engineering/database/0001_initial_schema.sql
       - name: Lint
         working-directory: server
         run: uv run ruff check .
