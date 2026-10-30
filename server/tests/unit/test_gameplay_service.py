@@ -2,6 +2,7 @@ from app.modules.gameplay.service import (
     InvalidLawAction,
     _apply_single_rule,
     _combo_for_pair,
+    _combo_is_allowed,
 )
 
 
@@ -78,3 +79,20 @@ def test_combo_completed_mechanism_rejects_later_state_mutation() -> None:
     _apply_single_rule("PLATFORM_BRIDGE", state, "RULE_GAZE", "RELEASE")
     assert state["state"] == "OPEN"
     assert state["gaze_active"] is True
+
+
+def test_combo_requires_level_and_mechanism_configuration() -> None:
+    level = {"required_combos": ["COMBO-001"]}
+    mechanism_state = {"config": {"requires_combo": "COMBO-001"}}
+    assert _combo_is_allowed(
+        "COMBO-001", level, "PLATFORM_BRIDGE", mechanism_state
+    )
+    assert not _combo_is_allowed(
+        "COMBO-001", level, "ENERGY_NODE", mechanism_state
+    )
+    assert not _combo_is_allowed(
+        "COMBO-002", level, "ENERGY_NODE", mechanism_state
+    )
+    assert not _combo_is_allowed(
+        "COMBO-001", {"required_combos": []}, "PLATFORM_BRIDGE", mechanism_state
+    )
