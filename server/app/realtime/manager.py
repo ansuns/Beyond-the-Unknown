@@ -324,6 +324,9 @@ class MapConnectionManager:
             self._owner_key(instance_id, player_id),
             current.lease_token,
         )
+        if not released:
+            async with self.lock:
+                self.avatars.pop(key, None)
         return bool(released)
 
     async def update_avatar(
