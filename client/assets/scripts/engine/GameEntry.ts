@@ -93,12 +93,11 @@ export class BeyondTheUnknownGameEntry extends Component {
     worldGraphics.lineWidth = 3;
     worldGraphics.strokeColor = new Color(72, 112, 144, 255);
     worldGraphics.fillColor = new Color(17, 34, 50, 255);
-    worldGraphics.roundRect(
+    worldGraphics.rect(
       -worldTransform.width / 2,
       -worldTransform.height / 2,
       worldTransform.width,
-      worldTransform.height,
-      18
+      worldTransform.height
     );
     worldGraphics.fill();
     worldGraphics.stroke();
@@ -187,7 +186,7 @@ export class BeyondTheUnknownGameEntry extends Component {
     node.addComponent(UITransform).setContentSize(width, height);
     const graphics = node.addComponent(Graphics);
     graphics.fillColor = new Color(35, 93, 123, 255);
-    graphics.roundRect(-width / 2, -height / 2, width, height, 10);
+    graphics.rect(-width / 2, -height / 2, width, height);
     graphics.fill();
     const label = node.addComponent(Label);
     label.string = title;
@@ -306,8 +305,16 @@ export class BeyondTheUnknownGameEntry extends Component {
     const point = transform.convertToNodeSpaceAR(event.getUILocation());
     const x = point.x / 40;
     const y = point.y / 40;
+    const current = this.localPlayerId ? this.avatars.get(this.localPlayerId) : undefined;
+    const previous = current?.position ?? new Vec3(0, 0, 0);
+    const dx = x * 40 - previous.x;
+    const dy = y * 40 - previous.y;
+    const direction =
+      Math.abs(dx) > Math.abs(dy)
+        ? (dx >= 0 ? "E" : "W")
+        : (dy >= 0 ? "N" : "S");
     this.clientTick += 1;
-    this.mapSession.move(x, y, "S", this.clientTick);
+    this.mapSession.move(x, y, direction, this.clientTick);
     if (this.localPlayerId) {
       this.upsertAvatar({ player_id: this.localPlayerId, x, y }, true);
     }
