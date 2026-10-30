@@ -74,3 +74,13 @@ describe("LatestPositionSyncQueue", () => {
     await expect(queue.flush({ x: 4, y: 4 })).rejects.toThrow("server unavailable");
   });
 });
+
+  it("allows room teardown to wait for a failed background request without throwing", async () => {
+    const onError = vi.fn();
+    const send = vi.fn().mockRejectedValueOnce(new Error("offline"));
+    const queue = new LatestPositionSyncQueue(send, onError);
+
+    queue.enqueue({ x: 5, y: 5 });
+    await expect(queue.waitForIdle()).resolves.toBeUndefined();
+    expect(onError).toHaveBeenCalledOnce();
+  });
