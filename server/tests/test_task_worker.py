@@ -93,7 +93,14 @@ async def test_exhausted_task_is_sent_to_dlq_before_ack() -> None:
     async def transient_failure(_: dict[str, Any]) -> None:
         raise RuntimeError("still unavailable")
 
-    await process_message(message, retry, dead, "game.tasks.v1", max_retries=3, handler=transient_failure)
+    await process_message(
+        message,
+        retry,
+        dead,
+        "game.tasks.v1",
+        max_retries=3,
+        handler=transient_failure,
+    )
 
     assert message.acked is True
     assert retry.published == []
