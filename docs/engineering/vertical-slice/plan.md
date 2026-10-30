@@ -1,6 +1,6 @@
 # 第一阶段垂直切片开发与测试清单
 
-- 版本：VS-1.1
+- 版本：VS-6A.1
 - 状态：VS-0 至 VS-5 服务端基础、权威法则、发现/结算/奖励/排行榜已合并并通过 CI；客户端 REST/WebSocket、个人关卡/法则/进度会话已合并或进入 CI；Cocos Creator 3.8.8 Boot 几何原型已合并。正式机关/法则数值、关卡玩法表现、Cocos 编辑器导入、微信构建与真机联调仍未完成
 - 基线：GDD V0.2；Cocos Creator 3.x + TypeScript；Python 3.12+ + FastAPI；PostgreSQL；RabbitMQ
 - 目标：端到端验证“登录—共享主地图—进入个人关卡—施放法则—机关解谜—服务端结算—永久进度恢复”。
@@ -11,7 +11,7 @@
 ### 必须包含
 - Cocos Creator 3.x 客户端：启动/登录、主地图、移动、交互、法则 UI、个人关卡、结算 UI。
 - Python FastAPI 模块化单体：Auth、Player、MapInstance、LevelRun、Rule、Mechanism、Discovery、Settlement、Progress。
-- Python 3.12+ + FastAPI；SQLAlchemy 2.x async + asyncpg；Alembic 管理 PostgreSQL 迁移 0001；Pydantic 2.x 校验契约。Redis 首阶段可暂缓，不能作为永久数据唯一来源；RabbitMQ 用于后台异步任务，Worker 独立运行。
+- Python 3.12+ + FastAPI；SQLAlchemy 2.x async + asyncpg；Alembic 管理 PostgreSQL 迁移 0001–0008；Pydantic 2.x 校验契约。Redis 首阶段可暂缓，不能作为永久数据唯一来源；RabbitMQ 用于后台异步任务，Worker 独立运行。
 - WebSocket AUTH、ENTER/LEAVE、MOVE_SYNC、PING/PONG；机关状态由服务端权威推送。
 - ROOM-01 回声显形 HIDEABLE、激活出口。
 - 幂等结算、个人发现、world_archive 原子抢占、progress_version 更新。
