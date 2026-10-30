@@ -28,11 +28,22 @@ def upgrade() -> None:
         "MECH_ENERGY_GATE": "M03-ENERGY-01",
         "MECH_MOVING_PLATFORM": "M04-PLATFORM-01",
     }
+    # Temporarily remove the composite FK while both sides are renamed.
+    op.drop_constraint(
+        "fk_level_objective_mechanism", "level_objectives", type_="foreignkey"
+    )
     for old_id, new_id in id_map.items():
-        # Update dependent rows before the referenced composite catalog key.
         _update_ids("level_objectives", old_id, new_id)
         _update_ids("mechanism_states", old_id, new_id)
         _update_ids("level_mechanism_catalog", old_id, new_id)
+    op.create_foreign_key(
+        "fk_level_objective_mechanism",
+        "level_objectives",
+        "level_mechanism_catalog",
+        ["level_id", "mechanism_config_id"],
+        ["level_id", "mechanism_config_id"],
+        ondelete="CASCADE",
+    )
 
     # Catalog entries are present for future content work. Their interaction
     # positions, art and rule tuning remain pending and must not be inferred.
@@ -78,7 +89,18 @@ def downgrade() -> None:
         "M03-ENERGY-01": "MECH_ENERGY_GATE",
         "M04-PLATFORM-01": "MECH_MOVING_PLATFORM",
     }
+    op.drop_constraint(
+        "fk_level_objective_mechanism", "level_objectives", type_="foreignkey"
+    )
     for new_id, old_id in reverse_map.items():
         _update_ids("level_objectives", new_id, old_id)
         _update_ids("mechanism_states", new_id, old_id)
         _update_ids("level_mechanism_catalog", new_id, old_id)
+    op.create_foreign_key(
+        "fk_level_objective_mechanism",
+        "level_objectives",
+        "level_mechanism_catalog",
+        ["level_id", "mechanism_config_id"],
+        ["level_id", "mechanism_config_id"],
+        ondelete="CASCADE",
+    )
