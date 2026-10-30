@@ -47,6 +47,10 @@ function handshake(socket: FakeSocket, command: "ENTER" | "RECONNECT"): void {
   socket.message(command);
 }
 
+async function flushMicrotasks(): Promise<void> {
+  for (let tick = 0; tick < 10; tick += 1) await Promise.resolve();
+}
+
 describe("MapSession reconnect", () => {
   it("reconnects with the same membership during the server grace period", async () => {
     vi.useFakeTimers();
@@ -82,8 +86,7 @@ describe("MapSession reconnect", () => {
     );
 
     const entering = session.enter(vi.fn());
-    await Promise.resolve();
-    await Promise.resolve();
+    await flushMicrotasks();
     expect(sockets).toHaveLength(1);
     handshake(sockets[0], "ENTER");
     await entering;
@@ -92,8 +95,7 @@ describe("MapSession reconnect", () => {
     await vi.advanceTimersByTimeAsync(100);
     expect(sockets).toHaveLength(2);
     handshake(sockets[1], "RECONNECT");
-    await Promise.resolve();
-    await Promise.resolve();
+    await flushMicrotasks();
 
     const reconnectCommands = sockets[1].sent.map((raw) => JSON.parse(raw).cmd);
     expect(reconnectCommands).toEqual(["AUTH", "RECONNECT"]);
@@ -134,8 +136,7 @@ describe("MapSession reconnect", () => {
     );
 
     const entering = session.enter(vi.fn());
-    await Promise.resolve();
-    await Promise.resolve();
+    await flushMicrotasks();
     handshake(sockets[0], "ENTER");
     await entering;
 
