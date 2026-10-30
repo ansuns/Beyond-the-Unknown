@@ -3,14 +3,14 @@
 ## 已确认
 - 【MVP必须】客户端引擎：Cocos Creator 3.x。
 - 【MVP必须】客户端语言：TypeScript。
-- 【MVP必须】服务端：Node.js + TypeScript，模块化单体。
+- 【MVP必须】服务端：Python 3.12+ + FastAPI，模块化单体。\n- 【MVP必须】数据层：SQLAlchemy 2.x async + asyncpg；Alembic 迁移；Pydantic 2.x。\n- 【MVP必须】ASGI 运行：Uvicorn；REST 与 WebSocket 共用语言无关契约。\n- 【可选扩展】异步任务：Celery 或 ARQ；首期先不引入独立任务队列，按实际需求决策。
 - 【MVP必须】持久化：PostgreSQL；实时在线状态/缓存可用 Redis。
 - 【MVP必须】实时通信：WebSocket；请求接口：REST /api/v1。
 - 【MVP必须】首期关闭广告展示与正式广告 SDK；成就系统不在首期范围。
 - 【MVP必须】首期包含 5 个常规房间和 LV-HIDDEN-01；隐藏路线 HIDDEN-ROUTE-01 必须启用。
 - 【MVP必须】个人关卡运行隔离；未结算机关/谜题临时状态不承诺跨退出恢复。
 
-## 工程约束
+## 工程约束\n- Python 服务端采用 async I/O；数据库连接池、WebSocket 广播与 Redis 访问必须有超时和背压策略，CPU 密集任务不得阻塞事件循环。\n- OpenAPI 3.1 与 WebSocket JSON Schema 是客户端/服务端共同契约；Pydantic 模型需通过契约一致性测试。
 - PostgreSQL 是玩家永久进度、发现、收藏、奖励、结算与积分流水的权威存储。
 - Redis 仅作可重建缓存、在线会话、限流等，不作为永久进度唯一来源。
 - 结算事务需将 settlements、积分流水、奖励/发现/收藏、进度版本变更放在同一事务或使用 Transactional Outbox。
