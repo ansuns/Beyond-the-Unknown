@@ -51,15 +51,29 @@ async def post_enter_level(
             idempotency_key,
         )
     except LevelNotFound as exc:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Level or entrance not found") from exc
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Level or entrance not found",
+        ) from exc
     except LevelLocked as exc:
-        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Level is locked") from exc
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN, detail="Level is locked"
+        ) from exc
     except PlayerNotInMap as exc:
-        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Player is not in the required map instance") from exc
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="Player is not in the required map instance",
+        ) from exc
     except ActiveLevelRunExists as exc:
-        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Player already has an active level run") from exc
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="Player already has an active level run",
+        ) from exc
     except IdempotencyConflict as exc:
-        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Idempotency key was used with a different request") from exc
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="Idempotency key was used with a different request",
+        ) from exc
 
     if data.get("map_instance_id"):
         await map_connections.evict_player(data["map_instance_id"], str(player_id))
@@ -76,9 +90,14 @@ async def post_start_level(
     try:
         data = await start_level(session, player_id, payload.run_id)
     except LevelNotFound as exc:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Level run not found") from exc
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Level run not found"
+        ) from exc
     except InvalidLevelRunState as exc:
-        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Level run cannot be started from its current state") from exc
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="Level run cannot be started from its current state",
+        ) from exc
     return success_envelope(data, request.state.request_id)
 
 
@@ -94,5 +113,8 @@ async def post_abandon_level(
     except LevelNotFound as exc:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Level run not found") from exc
     except InvalidLevelRunState as exc:
-        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Completed or failed runs cannot be abandoned") from exc
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="Completed or failed runs cannot be abandoned",
+        ) from exc
     return success_envelope(data, request.state.request_id)
