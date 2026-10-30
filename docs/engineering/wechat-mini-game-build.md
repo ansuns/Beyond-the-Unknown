@@ -95,7 +95,7 @@ docker compose --env-file server/.env ps
 - ROOM-02～ROOM-05：组合控件、目标机关、法则顺序与持续凝视要求从服务端关卡配置读取；移动出生点、边界、速度、交互半径、位置同步间隔和机关坐标也由关卡配置驱动。
 - ROOM-03 能量机关联动门、ROOM-04 平台联动终点机关；ROOM-05 三组组合使用独立 M05 机关 ID。ROOM-04/05 的持续凝视由客户端按服务端租约自动续期。
 - 隐藏结局：服务端端到端集成测试已覆盖 ROOM-01～05 完成、ROOM-05 三组组合按序触发、HIDDEN-ROUTE-01 解锁、进入 LV-HIDDEN-01、交互 H01-END 并完成独立 run；客户端结算反馈也会显示隐藏结局已解锁。
-- Alembic 0001–0016 在 CI 干净 PostgreSQL/Compose 环境执行；JSON Schema、levels.v1.json、数据库配置和客户端控件之间有自动化契约校验。 Compose smoke 还会对 0016 执行 downgrade -1，验证早期原型配置保留，再 upgrade head 验证同步间隔恢复。
+- Alembic 0001–0016 在 CI 干净 PostgreSQL/Compose 环境执行；JSON Schema、levels.v1.json、数据库配置和客户端控件之间有自动化契约校验。 Compose smoke 还会对 0016 执行 downgrade -1，验证早期原型配置保留，再 upgrade head 验证同步间隔恢复。 美术资源按 GDD 第18章 V0.3 的 P0/P1/P2 计划交付；微信小游戏主包平台上限 4 MB、全部分包合计 30 MB，项目内部预算 3.2 MB / 24 MB。
 - 法则、组合、机关和关卡目标已有原型数值/坐标配置；这些数值仍须策划体验、调优和签字验收，不能视为最终平衡值。
 
 以下仍未达到正式可玩/发布标准：
