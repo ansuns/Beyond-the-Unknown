@@ -53,6 +53,12 @@ export class BeyondTheUnknownGameEntry extends Component {
   private readonly avatars = new Map<string, Node>();
   private clientTick = 0;
   private currentMode: "MENU" | "WORLD" | "PERSONAL_LEVEL" = "MENU";
+  private pendingLevelName = "";
+  private moveTarget?: { x: number; y: number };
+  private moveSendElapsed = 0;
+  private readonly worldPixelsPerUnit = 40;
+  private readonly moveSpeedPixelsPerSecond = 160;
+  private readonly moveSyncIntervalSeconds = 0.12;
 
   onLoad(): void {
     this.buildShell();
@@ -61,6 +67,50 @@ export class BeyondTheUnknownGameEntry extends Component {
   onDestroy(): void {
     this.mapSession?.dispose();
     this.mapSession = undefined;
+  }
+
+  update(deltaTime: number): void {
+    if (
+      this.currentMode !== "WORLD" ||
+      !this.moveTarget ||
+      !this.mapSession ||
+      !this.localPlayerId
+    ) return;
+
+    const avatar = this.avatars.get(this.localPlayerId);
+    if (!avatar) return;
+    const current = avatar.position;
+    const currentX = current.x / this.worldPixelsPerUnit;
+    const currentY = current.y / this.worldPixelsPerUnit;
+    const dx = this.moveTarget.x - currentX;
+    const dy = this.moveTarget.y - currentY;
+    const distance = Math.hypot(dx, dy);
+    const speedUnits = this.moveSpeedPixelsPerSecond / this.worldPixelsPerUnit;
+    const step = speedUnits * Math.max(0, deltaTime);
+    const reached = distance <= step || distance < 0.001;
+    const nextX = reached ? this.moveTarget.x : currentX + (dx / distance) * step;
+    const nextY = reached ? this.moveTarget.y : currentY + (dy / distance) * step;
+    const direction =
+      Math.abs(dx) > Math.abs(dy)
+        ? (dx >= 0 ? "E" : "W")
+        : (dy >= 0 ? "N" : "S");
+
+    avatar.setPosition(
+      nextX * this.worldPixelsPerUnit,
+      nextY * this.worldPixelsPerUnit,
+      0
+    );
+    this.moveSendElapsed += deltaTime;
+    if (this.moveSendElapsed >= this.moveSyncIntervalSeconds || reached) {
+      this.clientTick += 1;
+      try {
+        this.mapSession.move(nextX, nextY, direction, this.clientTick);
+      } catch (error) {
+        this.setStatus(`移动同步失败：${error instanceof Error ? error.message : "连接已断开"}`);
+      }
+      this.moveSendElapsed = 0;
+    }
+    if (reached) this.moveTarget = undefined;
   }
 
   private buildShell(): void {
@@ -225,6 +275,10 @@ export class BeyondTheUnknownGameEntry extends Component {
 
   private async loginAndEnterWorld(): Promise<void> {
     try {
+      this.worldRoot?.removeAllChildren();
+      this.clearAvatars();
+      this.moveTarget = undefined;
+      this.rulesLabel && (this.rulesLabel.string = "法则：尚未读取");
       this.setStatus("正在请求微信登录码并连接共享地图…");
       await this.createApi();
       const wxApi = (globalThis as any).wx;
@@ -305,27 +359,32 @@ export class BeyondTheUnknownGameEntry extends Component {
     const transform = this.worldRoot.getComponent(UITransform);
     const uiPoint = event.getUILocation();
     const point = transform.convertToNodeSpaceAR(
-      new Vec3(),
       new Vec3(uiPoint.x, uiPoint.y, 0)
     );
-    const x = point.x / 40;
-    const y = point.y / 40;
-    const current = this.localPlayerId ? this.avatars.get(this.localPlayerId) : undefined;
-    const previous = current?.position ?? new Vec3(0, 0, 0);
-    const dx = x * 40 - previous.x;
-    const dy = y * 40 - previous.y;
-    const direction =
-      Math.abs(dx) > Math.abs(dy)
-        ? (dx >= 0 ? "E" : "W")
-        : (dy >= 0 ? "N" : "S");
-    this.clientTick += 1;
-    this.mapSession.move(x, y, direction, this.clientTick);
-    if (this.localPlayerId) {
-      this.upsertAvatar({ player_id: this.localPlayerId, x, y }, true);
-    }
+    const margin = 20;
+    const x = Math.max(
+      (-transform.width / 2 + margin) / this.worldPixelsPerUnit,
+      Math.min((transform.width / 2 - margin) / this.worldPixelsPerUnit,
+        point.x / this.worldPixelsPerUnit)
+    );
+    const y = Math.max(
+      (-transform.height / 2 + margin) / this.worldPixelsPerUnit,
+      Math.min((transform.height / 2 - margin) / this.worldPixelsPerUnit,
+        point.y / this.worldPixelsPerUnit)
+    );
+    this.moveTarget = { x, y };
   }
 
   private async enterFirstRoom(): Promise<void> {
+    if (this.currentMode === "PERSONAL_LEVEL" && this.levelSession?.activeRun()) {
+      try {
+        const run = await this.levelSession.start();
+        await this.finishPersonalLevel(this.pendingLevelName, run.run_id);
+      } catch (error) {
+        this.setStatus(`关卡启动重试失败：${error instanceof Error ? error.message : "未知错误"}`);
+      }
+      return;
+    }
     if (this.currentMode !== "WORLD" || !this.api || !this.mapSession) {
       this.setStatus("请先登录并进入共享世界");
       return;
@@ -339,30 +398,42 @@ export class BeyondTheUnknownGameEntry extends Component {
         return;
       }
       const personal = new PersonalLevelSession(this.api);
-      const result = await personal.enterAndStart(
+      const entry = await personal.enter(
         level.level_id,
         level.entrance_id,
         this.makeIdempotencyKey("level-enter")
       );
       this.levelSession = personal;
-      this.mapSession.leave();
+      this.pendingLevelName = entry.level.level_name;
       this.currentMode = "PERSONAL_LEVEL";
+      this.moveTarget = undefined;
+      this.mapSession.leave();
       this.clearAvatars();
-      const rules = await personal.listRules();
-      const configured = rules.rules.filter((rule) => rule.is_unlocked);
-      const ready = configured.filter((rule) => rule.config_status === "READY").length;
-      if (this.rulesLabel) {
-        this.rulesLabel.string = configured
-          .map((rule) => `${rule.display_name}：${rule.config_status}`)
-          .join("  ·  ");
-      }
-      this.setStatus(
-        `已进入个人关卡 ${result.entry.level.level_name} · ${result.run.run_id.slice(0, 8)} · 法则可用配置 ${ready}/${configured.length}`
-      );
-      this.drawPersonalRoom(result.entry.level.level_name);
+      const run = await personal.start();
+      await this.finishPersonalLevel(this.pendingLevelName, run.run_id);
     } catch (error) {
-      this.setStatus(`进入关卡失败：${error instanceof Error ? error.message : "未知错误"}`);
+      this.setStatus(
+        this.levelSession?.activeRun()
+          ? `个人关卡已创建，启动失败；可再次点击「进入探索房间」重试：${error instanceof Error ? error.message : "未知错误"}`
+          : `进入关卡失败：${error instanceof Error ? error.message : "未知错误"}`
+      );
     }
+  }
+
+  private async finishPersonalLevel(levelName: string, runId: string): Promise<void> {
+    if (!this.levelSession) return;
+    const rules = await this.levelSession.listRules();
+    const configured = rules.rules.filter((rule) => rule.is_unlocked);
+    const ready = configured.filter((rule) => rule.config_status === "READY").length;
+    if (this.rulesLabel) {
+      this.rulesLabel.string = configured
+        .map((rule) => `${rule.display_name}：${rule.config_status}`)
+        .join("  ·  ");
+    }
+    this.setStatus(
+      `已进入个人关卡 ${levelName} · ${runId.slice(0, 8)} · 法则可用配置 ${ready}/${configured.length}`
+    );
+    this.drawPersonalRoom(levelName);
   }
 
   private drawPersonalRoom(levelName: string): void {
@@ -400,6 +471,8 @@ export class BeyondTheUnknownGameEntry extends Component {
       this.setStatus("正在保存并放弃当前关卡…");
       await this.levelSession.abandon();
       this.levelSession = undefined;
+      this.pendingLevelName = "";
+      this.moveTarget = undefined;
       this.mapSession = undefined;
       this.currentMode = "MENU";
       this.clearAvatars();
