@@ -2,7 +2,7 @@ openapi: 3.1.0
 info:
   title: Beyond the Unknown Game API
   version: 1.0.0
-  description: REST contract for Cocos Creator 3.x client and Node.js TypeScript server.
+  description: Language-agnostic REST contract for Cocos Creator 3.x TypeScript client and Python FastAPI server.
 servers:
   - url: https://{host}/api/v1
     variables:
