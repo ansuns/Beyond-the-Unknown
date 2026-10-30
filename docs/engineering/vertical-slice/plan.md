@@ -129,3 +129,18 @@
 - P0：跨玩家数据泄露、重复结算/奖励、客户端伪造完成、世界首发现竞争错误，任一存在均禁止推进。
 - P1：断线重连、弱网、设备性能、加载问题必须有修复计划。
 - 自动化测试、真机冒烟、迁移回滚演练通过后，才标记垂直切片完成。
+
+
+## 8. VS-6A 赛季结算与 Transactional Outbox（本分支）
+- [x] 赛季周期调度：Worker 确保周榜/月赛季记录存在，并扫描到期 ACTIVE 周期。
+- [x] Transactional Outbox：数据库事务写入 task_outbox；RabbitMQ 持久化消息、publisher confirms、SKIP LOCKED 批量发布。
+- [x] Worker task receipts：数据库事务内写入唯一 task_id/idempotency_key，重复投递不重复执行业务。
+- [x] 赛季最终快照：到期时刷新 EXPLORE/CLEAR/COLLECT 三榜快照并进入 SETTLING/REVIEW。
+- [x] 审核窗口：默认 600 秒，配置限制 300–600 秒；到期自动批准，审核接口支持 APPROVE/REJECT。
+- [x] 内部审核 API Key 校验使用 constant-time compare；密钥不下发客户端。
+- [x] 赛季名次奖励：仅对 READY 的 SEASON_RANK 条件授予非付费外观/称号/宠物/徽章；幂等发放。
+- [x] 业务任务失败记录 outbox attempts；RabbitMQ 现有有限重试与 DLQ 管线保持不变。
+- [ ] RabbitMQ broker 停机/恢复、确认丢失、重复投递、retry queue TTL 与 DLQ 恢复的真实 Compose 故障注入。
+- [ ] 审核期积分纠错流水及重算审批；目前有审核批准/驳回，尚未实现纠错管理接口。
+- [ ] 正式积分权重、排名奖励档位、服务器 IANA 时区由策划/运维确认后启用。
+- [ ] Cocos Creator 编辑器导入、关卡交互/场景表现、微信构建与真机联调。
