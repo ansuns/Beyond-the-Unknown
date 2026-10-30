@@ -163,6 +163,7 @@ async def map_websocket(websocket: WebSocket) -> None:
             if not await map_connections.is_owner(
                 str(instance_id), str(player_id), lease_token
             ):
+                await map_connections.detach(websocket, str(instance_id), str(player_id))
                 joined = False
                 await websocket.close(code=4001, reason="Connection superseded")
                 break
@@ -185,6 +186,7 @@ async def map_websocket(websocket: WebSocket) -> None:
                 if not await map_connections.touch_presence(
                     str(instance_id), str(player_id)
                 ):
+                    await map_connections.detach(websocket, str(instance_id), str(player_id))
                     joined = False
                     await websocket.close(code=4001, reason="Connection lease expired")
                     break
