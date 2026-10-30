@@ -541,7 +541,14 @@ def test_hidden_route_unlocks_after_all_rooms_and_combos_then_completes_ending()
             _set_rule_tuning(True)
             _db_update("UPDATE rule_catalog SET cooldown_ms = 1")
 
+            needs_map_reentry = False
+
             def enter(level_id: str, entrance_id: str) -> str:
+                nonlocal needs_map_reentry
+                if needs_map_reentry:
+                    map_entry = client.post("/api/v1/map/enter", headers=headers)
+                    assert map_entry.status_code == 200, map_entry.text
+                    needs_map_reentry = False
                 return _enter_level(client, headers, level_id, entrance_id)
 
             def cast(
@@ -575,11 +582,15 @@ def test_hidden_route_unlocks_after_all_rooms_and_combos_then_completes_ending()
                 )
 
             def settle(run_id: str, key: str):
-                return client.post(
+                nonlocal needs_map_reentry
+                response = client.post(
                     "/api/v1/level/settle",
                     headers={**headers, "Idempotency-Key": key},
                     json={"run_id": run_id},
                 )
+                if response.status_code == 200:
+                    needs_map_reentry = True
+                return response
 
             # ROOM-01: reveal the hidden target, then activate the exit.
             room1 = enter("LV-ROOM-01", "ENT-ROOM-01")
@@ -669,17 +680,7 @@ def test_hidden_route_unlocks_after_all_rooms_and_combos_then_completes_ending()
             assert completed5.json()["data"]["unlocked_hidden_level_id"] == "LV-HIDDEN-01"
 
             # The route unlock is persisted and the hidden ending is a separate run.
-            hidden_entry = client.post(
-                "/api/v1/level/enter",
-                headers={**headers, "Idempotency-Key": "route-hidden-enter"},
-                json={"level_id": "LV-HIDDEN-01", "entrance_id": "ENT-HIDDEN-01"},
-            )
-            assert hidden_entry.status_code == 200, hidden_entry.text
-            hidden_run = hidden_entry.json()["data"]["run_id"]
-            hidden_start = client.post(
-                "/api/v1/level/start", headers=headers, json={"run_id": hidden_run}
-            )
-            assert hidden_start.status_code == 200, hidden_start.text
+            hidden_run = enter("LV-HIDDEN-01", "ENT-HIDDEN-01")
             _set_run_position(hidden_run, 9.0, 4.0)
             ending = client.post(
                 "/api/v1/level/mechanism/interact",
