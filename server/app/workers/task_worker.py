@@ -77,7 +77,7 @@ async def _process_outbox_task(envelope: dict[str, Any]) -> None:
             )
 
 
-async def _schedule_retry(task_id: UUID, error: Exception) -> None:
+async def _schedule_retry(task_id: UUID, error: Exception) -> bool:
     async with SessionFactory() as session:
         async with session.begin():
             row = (
@@ -92,7 +92,7 @@ async def _schedule_retry(task_id: UUID, error: Exception) -> None:
                 )
             ).mappings().one_or_none()
             if row is None:
-                return
+                return True
             attempts = row["attempts"] + 1
             failed = attempts >= row["max_attempts"]
             delay_seconds = min(5 * (2 ** min(attempts - 1, 6)), 300)
@@ -114,6 +114,7 @@ async def _schedule_retry(task_id: UUID, error: Exception) -> None:
                     "last_error": str(error)[:2000],
                 },
             )
+            return failed
 
 
 async def handle_message(message: AbstractIncomingMessage) -> None:
@@ -141,7 +142,11 @@ async def handle_message(message: AbstractIncomingMessage) -> None:
                 task_id,
                 envelope["task_type"],
             )
-            await _schedule_retry(task_id, exc)
+            exhausted = await _schedule_retry(task_id, exc)
+            if exhausted:
+                raise RuntimeError(
+                    f"Outbox task exhausted retries task_id={task_id}"
+                ) from exc
 
 
 async def _publish_outbox_batch(channel: AbstractRobustChannel) -> int:
