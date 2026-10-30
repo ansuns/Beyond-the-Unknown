@@ -29,8 +29,10 @@ def upgrade() -> None:
         "MECH_MOVING_PLATFORM": "M04-PLATFORM-01",
     }
     for old_id, new_id in id_map.items():
-        _update_ids("level_mechanism_catalog", old_id, new_id)
+        # Update dependent rows before the referenced composite catalog key.
+        _update_ids("level_objectives", old_id, new_id)
         _update_ids("mechanism_states", old_id, new_id)
+        _update_ids("level_mechanism_catalog", old_id, new_id)
 
     # Catalog entries are present for future content work. Their interaction
     # positions, art and rule tuning remain pending and must not be inferred.
@@ -77,5 +79,6 @@ def downgrade() -> None:
         "M04-PLATFORM-01": "MECH_MOVING_PLATFORM",
     }
     for new_id, old_id in reverse_map.items():
-        _update_ids("level_mechanism_catalog", new_id, old_id)
+        _update_ids("level_objectives", new_id, old_id)
         _update_ids("mechanism_states", new_id, old_id)
+        _update_ids("level_mechanism_catalog", new_id, old_id)
