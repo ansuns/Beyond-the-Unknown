@@ -140,3 +140,101 @@ def test_personal_level_run_entry_is_idempotent_and_isolated() -> None:
             assert cleanup.status_code == 200
     finally:
         app.dependency_overrides.clear()
+
+
+def test_room01_echo_exit_interaction_and_settlement() -> None:
+    app.dependency_overrides[get_wechat_code_provider] = lambda: FakeWeChatProvider()
+    try:
+        with TestClient(app) as client:
+            player = _login_and_enter_map(client)
+            entered = client.post(
+                "/api/v1/level/enter",
+                headers={
+                    **player["headers"],
+                    "Idempotency-Key": f"room01-enter-{uuid4()}",
+                },
+                json={"level_id": "LV-ROOM-01", "entrance_id": "ENT-ROOM-01"},
+            )
+            assert entered.status_code == 200, entered.text
+            run_id = entered.json()["data"]["run_id"]
+            started = client.post(
+                "/api/v1/level/start",
+                headers=player["headers"],
+                json={"run_id": run_id},
+            )
+            assert started.status_code == 200, started.text
+
+            outside = client.post(
+                "/api/v1/level/position",
+                headers=player["headers"],
+                json={"run_id": run_id, "x": 13, "y": 4},
+            )
+            assert outside.status_code == 422
+
+            at_exit = client.post(
+                "/api/v1/level/position",
+                headers=player["headers"],
+                json={"run_id": run_id, "x": 10.5, "y": 4},
+            )
+            assert at_exit.status_code == 200, at_exit.text
+
+            locked_exit = client.post(
+                "/api/v1/level/mechanism/interact",
+                headers={
+                    **player["headers"],
+                    "Idempotency-Key": "room01-exit-before-echo-001",
+                },
+                json={"run_id": run_id, "mechanism_id": "M01-EXIT-01"},
+            )
+            assert locked_exit.status_code == 409
+
+            echo = client.post(
+                "/api/v1/level/rule/cast",
+                headers={
+                    **player["headers"],
+                    "Idempotency-Key": "room01-echo-hidden-0001",
+                },
+                json={
+                    "run_id": run_id,
+                    "rule_id": "RULE_ECHO",
+                    "target_id": "M01-HIDEABLE-01",
+                    "target_point": {"x": 5, "y": 4},
+                },
+            )
+            assert echo.status_code == 200, echo.text
+            assert echo.json()["data"]["effects"][0]["mechanism_id"] == "M01-HIDEABLE-01"
+
+            opened = client.post(
+                "/api/v1/level/mechanism/interact",
+                headers={
+                    **player["headers"],
+                    "Idempotency-Key": "room01-exit-interact-0001",
+                },
+                json={"run_id": run_id, "mechanism_id": "M01-EXIT-01"},
+            )
+            assert opened.status_code == 200, opened.text
+            assert opened.json()["data"]["state"]["status"] == "TRIGGERED"
+
+            replay = client.post(
+                "/api/v1/level/mechanism/interact",
+                headers={
+                    **player["headers"],
+                    "Idempotency-Key": "room01-exit-interact-0001",
+                },
+                json={"run_id": run_id, "mechanism_id": "M01-EXIT-01"},
+            )
+            assert replay.status_code == 200
+            assert replay.json()["data"]["idempotent_replay"] is True
+
+            settled = client.post(
+                "/api/v1/level/settle",
+                headers={
+                    **player["headers"],
+                    "Idempotency-Key": "room01-settle-0001",
+                },
+                json={"run_id": run_id},
+            )
+            assert settled.status_code == 200, settled.text
+            assert settled.json()["data"]["result_status"] == "COMPLETED"
+    finally:
+        app.dependency_overrides.clear()
