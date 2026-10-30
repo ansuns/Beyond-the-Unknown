@@ -36,8 +36,8 @@ describe("WeChat native networking adapters", () => {
     const wx: WeChatNetworkApi = {
       request: vi.fn(),
       connectSocket: vi.fn(() => ({
-        onOpen: (callback) => { onOpen = callback; },
-        onMessage: (callback) => { onMessage = callback; },
+        onOpen: (callback: (event: unknown) => void) => { onOpen = callback; },
+        onMessage: (callback: (event: { data: string | ArrayBuffer }) => void) => { onMessage = callback; },
         onError: vi.fn(),
         onClose: vi.fn(),
         send,
