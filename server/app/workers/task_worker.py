@@ -1,14 +1,25 @@
+# ruff: noqa: I001
+
 import asyncio
 import json
 import logging
 from collections.abc import Awaitable, Callable
+from datetime import UTC, datetime, timedelta
 from typing import Any
+from uuid import UUID
 
 import aio_pika
-from aio_pika import ExchangeType
-from aio_pika.abc import AbstractExchange, AbstractIncomingMessage
+from aio_pika import DeliveryMode, ExchangeType
+from aio_pika.abc import AbstractExchange, AbstractIncomingMessage, AbstractRobustChannel
+from sqlalchemy import text
 
 from app.core.config import get_settings
+from app.core.database import SessionFactory
+from app.modules.progress.season_service import (
+    auto_approve_season,
+    enqueue_due_seasons,
+    finalize_season,
+)
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -18,19 +29,131 @@ DEAD_LETTER_QUEUE = "game.tasks.dlq"
 RETRY_EXCHANGE = "game.tasks.retry.x"
 RETRY_QUEUE_SUFFIX = ".retry"
 RETRY_ROUTING_KEY = "retry"
+OUTBOX_BATCH_SIZE = 25
+OUTBOX_POLL_SECONDS = 1.0
+SEASON_SCHEDULER_SECONDS = 5.0
 
 TaskHandler = Callable[[dict[str, Any]], Awaitable[None]]
 
 
 class PermanentTaskError(ValueError):
-    """A task envelope or task type that must not be retried."""
+    """A malformed or unsupported task that must be dead-lettered."""
 
 
 async def handle_ping(envelope: dict[str, Any]) -> None:
     logger.info("Accepted worker.ping task_id=%s", envelope["task_id"])
 
 
-TASK_HANDLERS: dict[str, TaskHandler] = {"worker.ping": handle_ping}
+async def _process_outbox_task(envelope: dict[str, Any]) -> None:
+    task_id = UUID(envelope["task_id"])
+    task_type = envelope["task_type"]
+    idempotency_key = envelope["idempotency_key"]
+    payload = envelope["payload"]
+
+    async with SessionFactory() as session:
+        async with session.begin():
+            receipt = (
+                await session.execute(
+                    text("""
+                        INSERT INTO worker_task_receipts
+                            (task_id, task_type, idempotency_key)
+                        VALUES (:task_id, :task_type, :idempotency_key)
+                        ON CONFLICT DO NOTHING
+                        RETURNING task_id
+                    """),
+                    {
+                        "task_id": task_id,
+                        "task_type": task_type,
+                        "idempotency_key": idempotency_key,
+                    },
+                )
+            ).scalar_one_or_none()
+            if receipt is None:
+                return
+
+            if task_type == "season.finalize":
+                await finalize_season(session, payload["season_id"])
+            elif task_type == "season.auto_approve":
+                await auto_approve_season(session, payload["season_id"])
+            else:
+                raise PermanentTaskError(f"Unregistered task type: {task_type}")
+
+            await session.execute(
+                text("""
+                    UPDATE task_outbox
+                    SET status = 'COMPLETED',
+                        processed_at_utc = now(),
+                        updated_at_utc = now(),
+                        last_error = NULL
+                    WHERE task_id = :task_id
+                """),
+                {"task_id": task_id},
+            )
+
+
+async def _schedule_retry(task_id: UUID, error: Exception) -> bool:
+    async with SessionFactory() as session:
+        async with session.begin():
+            row = (
+                await session.execute(
+                    text("""
+                        SELECT attempts, max_attempts
+                        FROM task_outbox
+                        WHERE task_id = :task_id
+                        FOR UPDATE
+                    """),
+                    {"task_id": task_id},
+                )
+            ).mappings().one_or_none()
+            if row is None:
+                return True
+            attempts = row["attempts"] + 1
+            failed = attempts >= row["max_attempts"]
+            delay_seconds = min(5 * (2 ** min(attempts - 1, 6)), 300)
+            await session.execute(
+                text("""
+                    UPDATE task_outbox
+                    SET attempts = :attempts,
+                        status = :status,
+                        available_at_utc = :available_at,
+                        last_error = :last_error,
+                        updated_at_utc = now()
+                    WHERE task_id = :task_id
+                """),
+                {
+                    "task_id": task_id,
+                    "attempts": attempts,
+                    "status": "FAILED" if failed else "PENDING",
+                    "available_at": datetime.now(UTC) + timedelta(seconds=delay_seconds),
+                    "last_error": str(error)[:2000],
+                },
+            )
+            return failed
+
+
+async def handle_outbox_task(envelope: dict[str, Any]) -> None:
+    try:
+        await _process_outbox_task(envelope)
+    except PermanentTaskError:
+        raise
+    except Exception as error:
+        exhausted = await _schedule_retry(UUID(envelope["task_id"]), error)
+        if exhausted:
+            raise PermanentTaskError(
+                f"Outbox task exhausted retries task_id={envelope['task_id']}"
+            ) from error
+        logger.exception(
+            "Outbox task deferred task_id=%s task_type=%s",
+            envelope["task_id"],
+            envelope["task_type"],
+        )
+
+
+TASK_HANDLERS: dict[str, TaskHandler] = {
+    "worker.ping": handle_ping,
+    "season.finalize": handle_outbox_task,
+    "season.auto_approve": handle_outbox_task,
+}
 
 
 def decode_envelope(body: bytes) -> dict[str, Any]:
@@ -46,6 +169,8 @@ def decode_envelope(body: bytes) -> dict[str, Any]:
         raise PermanentTaskError(f"Task envelope missing fields: {sorted(missing)}")
     if envelope["schema_version"] != 1:
         raise PermanentTaskError("Unsupported task schema_version")
+    if not isinstance(envelope["task_id"], str) or not envelope["task_id"]:
+        raise PermanentTaskError("Task task_id must be a non-empty string")
     if not isinstance(envelope["task_type"], str):
         raise PermanentTaskError("Task task_type must be a string")
     if not isinstance(envelope["idempotency_key"], str) or not envelope["idempotency_key"]:
@@ -54,6 +179,13 @@ def decode_envelope(body: bytes) -> dict[str, Any]:
         raise PermanentTaskError("Task payload must be an object")
     if envelope["task_type"] not in TASK_HANDLERS:
         raise PermanentTaskError(f"Unregistered task type: {envelope['task_type']}")
+    if envelope["task_type"] in {"season.finalize", "season.auto_approve"}:
+        try:
+            UUID(envelope["task_id"])
+        except ValueError as error:
+            raise PermanentTaskError("Outbox task_id must be a UUID") from error
+        if not isinstance(envelope["payload"].get("season_id"), str):
+            raise PermanentTaskError("Season task payload requires season_id")
     return envelope
 
 
@@ -68,7 +200,7 @@ async def _publish_confirmed(
         content_type=message.content_type or "application/json",
         content_encoding=message.content_encoding,
         headers=headers,
-        delivery_mode=aio_pika.DeliveryMode.PERSISTENT,
+        delivery_mode=DeliveryMode.PERSISTENT,
         correlation_id=message.correlation_id,
         message_id=message.message_id,
         type=message.type,
@@ -138,6 +270,114 @@ async def process_message(
     await message.ack()
 
 
+async def _publish_outbox_batch(channel: AbstractRobustChannel) -> int:
+    settings = get_settings()
+    published = 0
+    async with SessionFactory() as session:
+        async with session.begin():
+            rows = (
+                await session.execute(
+                    text("""
+                        SELECT task_id, task_type, schema_version, payload,
+                               idempotency_key, attempts, max_attempts
+                        FROM task_outbox
+                        WHERE status = 'PENDING' AND available_at_utc <= now()
+                        ORDER BY created_at_utc
+                        LIMIT :batch_size
+                        FOR UPDATE SKIP LOCKED
+                    """),
+                    {"batch_size": OUTBOX_BATCH_SIZE},
+                )
+            ).mappings().all()
+            for row in rows:
+                envelope = {
+                    "schema_version": row["schema_version"],
+                    "task_id": str(row["task_id"]),
+                    "task_type": row["task_type"],
+                    "idempotency_key": row["idempotency_key"],
+                    "payload": row["payload"],
+                }
+                message = aio_pika.Message(
+                    body=json.dumps(envelope, separators=(",", ":")).encode("utf-8"),
+                    content_type="application/json",
+                    delivery_mode=DeliveryMode.PERSISTENT,
+                    message_id=str(row["task_id"]),
+                )
+                try:
+                    confirmation = await channel.default_exchange.publish(
+                        message,
+                        routing_key=settings.rabbitmq_task_queue,
+                        mandatory=True,
+                    )
+                    if confirmation is False:
+                        raise RuntimeError(
+                            f"RabbitMQ did not confirm outbox task {row['task_id']}"
+                        )
+                except Exception as error:
+                    attempts = row["attempts"] + 1
+                    failed = attempts >= row["max_attempts"]
+                    delay_seconds = min(5 * (2 ** min(attempts - 1, 6)), 300)
+                    await session.execute(
+                        text("""
+                            UPDATE task_outbox
+                            SET attempts = :attempts,
+                                status = :status,
+                                available_at_utc = :available_at,
+                                last_error = :last_error,
+                                updated_at_utc = now()
+                            WHERE task_id = :task_id
+                        """),
+                        {
+                            "task_id": row["task_id"],
+                            "attempts": attempts,
+                            "status": "FAILED" if failed else "PENDING",
+                            "available_at": datetime.now(UTC)
+                            + timedelta(seconds=delay_seconds),
+                            "last_error": str(error)[:2000],
+                        },
+                    )
+                    logger.exception("Outbox publish failed task_id=%s", row["task_id"])
+                    continue
+
+                await session.execute(
+                    text("""
+                        UPDATE task_outbox
+                        SET status = 'PUBLISHED',
+                            published_at_utc = now(),
+                            updated_at_utc = now(),
+                            last_error = NULL
+                        WHERE task_id = :task_id
+                    """),
+                    {"task_id": row["task_id"]},
+                )
+                published += 1
+    return published
+
+
+async def outbox_relay_loop(channel: AbstractRobustChannel) -> None:
+    while True:
+        try:
+            count = await _publish_outbox_batch(channel)
+            if count:
+                logger.info("Published %s outbox tasks", count)
+        except Exception:
+            logger.exception("Outbox relay iteration failed")
+        await asyncio.sleep(OUTBOX_POLL_SECONDS)
+
+
+async def season_scheduler_loop() -> None:
+    while True:
+        try:
+            async with SessionFactory() as session:
+                async with session.begin():
+                    count = await enqueue_due_seasons(session)
+                    if count:
+                        logger.info("Enqueued %s due season finalizations", count)
+        except Exception:
+            logger.exception("Season scheduler iteration failed")
+        await asyncio.sleep(SEASON_SCHEDULER_SECONDS)
+
+
 async def main() -> None:
     settings = get_settings()
     connection = await aio_pika.connect_robust(settings.rabbitmq_url)
@@ -183,14 +423,16 @@ async def main() -> None:
             )
 
         logger.info(
-            "Worker consuming queue=%s retry_queue=%s dead_letter_queue=%s max_retries=%s",
+            "Worker consuming queue=%s retry_queue=%s dead_letter_queue=%s",
             settings.rabbitmq_task_queue,
             settings.rabbitmq_task_queue + RETRY_QUEUE_SUFFIX,
             DEAD_LETTER_QUEUE,
-            settings.rabbitmq_max_retries,
         )
         await queue.consume(consume)
-        await asyncio.Future()
+        await asyncio.gather(
+            outbox_relay_loop(channel),
+            season_scheduler_loop(),
+        )
 
 
 if __name__ == "__main__":

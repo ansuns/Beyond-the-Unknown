@@ -1,3 +1,4 @@
+from typing import Literal
 from uuid import UUID
 
 from pydantic import BaseModel
@@ -9,3 +10,8 @@ class LevelSettleRequest(BaseModel):
 
 class RewardClaimRequest(BaseModel):
     player_reward_id: UUID
+
+
+class SeasonReviewRequest(BaseModel):
+    decision: Literal["APPROVE", "REJECT"]
+    note: str | None = None

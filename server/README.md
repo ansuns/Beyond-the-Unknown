@@ -65,18 +65,18 @@ The current WebSocket connection manager is single-process/in-memory. It is a ve
 The map instance capacity and movement/reconnect limits are configurable through the `MAP_*` environment variables. The current 20-player value is a test target only; production capacity must be established by load testing.
 
 
-## VS-3 personal level runs (in review)
+## VS-3 personal level runs (merged)
 
 - `GET /api/v1/level/`: enabled level catalog; hidden levels are listed as locked until authoritative route gating is implemented.
 - `POST /api/v1/level/enter`: requires Bearer JWT, `Idempotency-Key`, `level_id` and `entrance_id`. Creates one player-owned `CREATED` run, stores an idempotency record, releases the main-map membership/instance seat and evicts the in-process map socket.
 - `POST /api/v1/level/start`: transitions the caller-owned run from `CREATED` to `RUNNING`; repeated start is idempotent.
 - `POST /api/v1/level/abandon`: transitions a caller-owned `CREATED`/ `RUNNING` run to `ABANDONED`; repeated abandon is idempotent.
 - At most one `CREATED` or `RUNNING` run may exist per player. The database partial unique index is the final concurrency guard.
-- The five room catalog entries and the hidden ending use stable IDs from GDD V0.2. Spatial layout, art, exact mechanism instances and hidden-route unlock conditions remain configuration/content work.
-- Settlement, score/discovery/reward writes and permanent progress are not implemented in VS-3; they belong to the later authoritative gameplay/settlement slices.
+- The five room catalog entries and hidden ending use stable IDs from GDD V0.2. Personal run lifecycle is implemented; spatial layout, art and exact mechanism instances remain configuration/content work.
+- Settlement, score/discovery/reward writes and permanent progress were added in VS-5; they remain subject to configured objectives and content readiness.
 
 
-## VS-4 authoritative laws and mechanisms (in review)
+## VS-4 authoritative laws and mechanisms (merged)
 
 - `GET /api/v1/level/rules`: returns the caller's server-owned rule permissions and tuning status. The three default laws are provisioned at player login.
 - `POST /api/v1/level/rule/cast`: authoritative rule validation and effect calculation. Requires an active player-owned run and `Idempotency-Key`.
@@ -104,12 +104,13 @@ The map instance capacity and movement/reconnect limits are configurable through
 VS-5 was merged into `main` after the Python/Ruff, PostgreSQL migration/integration, and Docker Compose smoke jobs passed. This confirms the backend contract and tested flows only; production score weights, reward definitions, room objectives, mechanism positions, and law tuning remain content/configuration gates.
 
 
-## RabbitMQ worker delivery policy
+## VS-6A season settlement and transactional outbox
 
-- The consumer channel enables publisher confirms and consumes with manual acknowledgements and prefetch 10.
-- Successful task handlers are ACKed only after completion.
-- Invalid envelopes and unregistered task types are published to the durable dead-letter exchange/queue and ACKed only after broker confirmation.
-- Transient handler failures are copied to a durable retry queue with a persistent message and incremented `x-retry-count`; the original is ACKed only after the retry publish is confirmed. The retry queue uses `RABBITMQ_RETRY_DELAY_MS` (default 5000 ms) TTL before routing the message back to the main queue.
-- After `RABBITMQ_MAX_RETRIES` (default 3) retries, the message is sent to the DLQ. If a retry/DLQ publish is not confirmed, the original delivery is NACKed with requeue=true.
-- Every registered consumer must still enforce business idempotency using the envelope's `idempotency_key`; delivery is at-least-once, not exactly-once.
-- Current registered handler is only `worker.ping`. Transactional Outbox integration with gameplay write transactions is still a separate release-readiness task.
+- Worker scheduler ensures the current weekly/monthly season rows exist and enqueues one `season.finalize` outbox record when an ACTIVE period reaches its end boundary.
+- The outbox relay publishes persistent versioned task envelopes to RabbitMQ and marks records PUBLISHED only after publisher confirmation. A publish/DB commit race can create duplicate messages; `worker_task_receipts` makes processing idempotent.
+- The worker finalizes all three board snapshots, changes the season to SETTLING/REVIEW, and schedules `season.auto_approve` for `SEASON_REVIEW_WINDOW_SECONDS` later.
+- Automatic approval runs only after the review deadline. A protected `POST /api/v1/internal/seasons/{season_id}/review` accepts APPROVE/REJECT decisions through `X-Internal-API-Key`; the key is not exposed to the client.
+- Approved rank conditions use `reward_conditions.trigger_type='SEASON_RANK'` and `condition_config={season_type,board_type,rank_min,rank_max}`. Only non-paid appearance/title/pet/badge reward types are eligible. Grant keys and player/reward/source uniqueness prevent duplicate awards.
+- Worker failures use bounded exponential retry (5 attempts) and the RabbitMQ dead-letter exchange/queue. Failed outbox records remain inspectable with `status=FAILED` and `last_error`.
+- The API and worker receive the same `SERVER_TIMEZONE` and `SEASON_REVIEW_WINDOW_SECONDS`; database period/review timestamps remain UTC.
+- This slice does not invent score weights or rank reward tiers. Until content config is marked READY, no season rank reward is granted.
