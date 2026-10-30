@@ -114,3 +114,16 @@ VS-5 was merged into `main` after the Python/Ruff, PostgreSQL migration/integrat
 - Worker failures use bounded exponential retry (5 attempts) and the RabbitMQ dead-letter exchange/queue. Failed outbox records remain inspectable with `status=FAILED` and `last_error`.
 - The API and worker receive the same `SERVER_TIMEZONE` and `SEASON_REVIEW_WINDOW_SECONDS`; database period/review timestamps remain UTC.
 - This slice does not invent score weights or rank reward tiers. Until content config is marked READY, no season rank reward is granted.
+
+
+## Gameplay content readiness gate
+
+Before enabling a build for playtest or release, run the read-only content report:
+
+```bash
+docker compose --env-file server/.env run --rm api uv run --no-sync python -m app.tools.content_readiness
+```
+
+The command reports every enabled rule with missing tuning, mechanism without authored coordinates/content status, incomplete combination window, required objective still pending, discovery/hidden-route blocker, score weight without a final value, and reward condition not ready. It exits with code 2 while any blocker remains and code 0 only when the configured gameplay catalog is ready.
+
+A `BLOCKED` result is expected in the current prototype. Do not change a row to `READY` merely to make the command pass; only set it after the corresponding game-design/content acceptance is complete.
