@@ -179,7 +179,7 @@ def test_room01_echo_exit_interaction_and_settlement() -> None:
             assert teleport.status_code == 422
 
             at_exit = None
-            for x in range(2, 11):
+            for x in range(2, 6):
                 time.sleep(0.1)
                 at_exit = client.post(
                     "/api/v1/level/position",
@@ -187,6 +187,23 @@ def test_room01_echo_exit_interaction_and_settlement() -> None:
                     json={"run_id": run_id, "x": float(x), "y": 4},
                 )
                 assert at_exit.status_code == 200, at_exit.text
+
+            # The Echo target point must remain within range of the authoritative
+            # player position; a client cannot cast across the entire room.
+            far_echo = client.post(
+                "/api/v1/level/rule/cast",
+                headers={
+                    **player["headers"],
+                    "Idempotency-Key": "room01-echo-far-0001",
+                },
+                json={
+                    "run_id": run_id,
+                    "rule_id": "RULE_ECHO",
+                    "target_id": "M01-HIDEABLE-01",
+                    "target_point": {"x": 10.5, "y": 4},
+                },
+            )
+            assert far_echo.status_code == 422
 
             locked_exit = client.post(
                 "/api/v1/level/mechanism/interact",
@@ -213,6 +230,15 @@ def test_room01_echo_exit_interaction_and_settlement() -> None:
             )
             assert echo.status_code == 200, echo.text
             assert echo.json()["data"]["effects"][0]["mechanism_id"] == "M01-HIDEABLE-01"
+
+            for x in range(6, 11):
+                time.sleep(0.1)
+                at_exit = client.post(
+                    "/api/v1/level/position",
+                    headers=player["headers"],
+                    json={"run_id": run_id, "x": float(x), "y": 4},
+                )
+                assert at_exit.status_code == 200, at_exit.text
 
             opened = client.post(
                 "/api/v1/level/mechanism/interact",
