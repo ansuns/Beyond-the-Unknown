@@ -403,3 +403,91 @@ def test_room_five_supports_all_three_preset_combos() -> None:
     finally:
         _set_rule_tuning(False)
         app.dependency_overrides.clear()
+
+
+
+def test_mechanism_catalog_and_references_match_canonical_gdd_ids() -> None:
+    async def fetch_contract() -> dict:
+        engine = create_async_engine(get_settings().database_url)
+        try:
+            async with engine.connect() as connection:
+                catalog = await connection.execute(
+                    text(
+                        """
+                        SELECT level_id, mechanism_config_id, mechanism_type
+                        FROM level_mechanism_catalog
+                        """
+                    )
+                )
+                objectives_without_mechanisms = await connection.scalar(
+                    text(
+                        """
+                        SELECT count(*)
+                        FROM level_objectives AS objective
+                        LEFT JOIN level_mechanism_catalog AS mechanism
+                          ON mechanism.level_id = objective.level_id
+                         AND mechanism.mechanism_config_id = objective.mechanism_config_id
+                        WHERE mechanism.mechanism_config_id IS NULL
+                        """
+                    )
+                )
+                route = await connection.scalar(
+                    text(
+                        """
+                        SELECT trigger_mechanism_sequence
+                        FROM hidden_routes
+                        WHERE hidden_route_id = 'HIDDEN-ROUTE-01'
+                        """
+                    )
+                )
+                combo_targets = await connection.execute(
+                    text(
+                        """
+                        SELECT target_mechanism_id
+                        FROM combo_catalog
+                        ORDER BY combo_id
+                        """
+                    )
+                )
+                hidden_discovery = await connection.scalar(
+                    text(
+                        """
+                        SELECT trigger_condition->>'mechanism_id'
+                        FROM discovery_catalog
+                        WHERE discovery_id = 'DISC-HIDDEN-OBJ-ROOM01'
+                        """
+                    )
+                )
+            return {
+                "catalog": [dict(row._mapping) for row in catalog],
+                "objectives_without_mechanisms": objectives_without_mechanisms,
+                "route": route,
+                "combo_targets": [row[0] for row in combo_targets],
+                "hidden_discovery": hidden_discovery,
+            }
+        finally:
+            await engine.dispose()
+
+    contract = asyncio.run(fetch_contract())
+    ids = {
+        (row["level_id"], row["mechanism_config_id"])
+        for row in contract["catalog"]
+    }
+    assert ("LV-ROOM-01", "M01-HIDEABLE-01") in ids
+    assert ("LV-ROOM-01", "M01-LIGHT-01") in ids
+    assert ("LV-ROOM-01", "M01-EXIT-01") in ids
+    assert ("LV-ROOM-03", "M03-DOOR-01") in ids
+    assert ("LV-HIDDEN-01", "H01-GATE") in ids
+    assert ("LV-HIDDEN-01", "H01-END") in ids
+    assert contract["objectives_without_mechanisms"] == 0
+    assert contract["route"] == [
+        "M02-BRIDGE-01",
+        "M03-ENERGY-01",
+        "M04-PLATFORM-01",
+    ]
+    assert contract["combo_targets"] == [
+        "M02-BRIDGE-01",
+        "M03-ENERGY-01",
+        "M04-PLATFORM-01",
+    ]
+    assert contract["hidden_discovery"] == "M01-HIDEABLE-01"
