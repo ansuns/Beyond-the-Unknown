@@ -47,6 +47,15 @@ async def get_or_create_player(
                 """),
                 {"player_id": row["player_id"]},
             )
+        await session.execute(
+            text("""
+                INSERT INTO player_unlocked_rules (player_id, rule_id, source)
+                SELECT :player_id, rule_id, 'DEFAULT'
+                FROM rule_catalog WHERE is_enabled = true
+                ON CONFLICT (player_id, rule_id) DO NOTHING
+            """),
+            {"player_id": row["player_id"]},
+        )
         if row["status"] != "NORMAL":
             raise PlayerBannedError
         return {
