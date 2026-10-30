@@ -288,6 +288,7 @@ def _run_outbox_task(envelope: dict) -> None:
     from app.workers.task_worker import _process_outbox_task
 
     async def execute() -> None:
+        await engine.dispose()
         await _process_outbox_task(envelope)
         await engine.dispose()
 
