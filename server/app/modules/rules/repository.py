@@ -61,7 +61,7 @@ async def list_player_rules(
             text("""
                 SELECT r.rule_id, r.display_name, r.duration_type, r.priority,
                        r.scope_type, r.cooldown_ms, r.radius, r.duration_ms,
-                       r.allowed_target_types, r.config_status,
+                       r.lease_timeout_ms, r.allowed_target_types, r.config_status,
                        (u.rule_id IS NOT NULL) AS is_unlocked
                 FROM rule_catalog AS r
                 LEFT JOIN player_unlocked_rules AS u
@@ -163,6 +163,95 @@ async def _save_mechanism_state(
     )
 
 
+async def _expire_rule_effects(
+    session: AsyncSession,
+    run_id: UUID,
+    player_id: UUID,
+    level_id: str,
+    now: datetime,
+) -> None:
+    rows = (
+        await session.execute(
+            text("""
+                SELECT s.rule_id, s.active_target_id, s.expires_at,
+                       s.last_maintained_at, r.duration_type, r.lease_timeout_ms
+                FROM player_rule_states AS s
+                JOIN rule_catalog AS r ON r.rule_id = s.rule_id
+                WHERE s.run_id = :run_id AND s.player_id = :player_id
+                  AND s.active_target_id IS NOT NULL
+                FOR UPDATE OF s
+            """),
+            {"run_id": run_id, "player_id": player_id},
+        )
+    ).mappings().all()
+    for row in rows:
+        expired = (
+            row["duration_type"] == "TIMED"
+            and row["expires_at"] is not None
+            and row["expires_at"] <= now
+        )
+        if (
+            row["duration_type"] == "WHILE_CASTING"
+            and row["lease_timeout_ms"] is not None
+            and row["last_maintained_at"] is not None
+        ):
+            expired = expired or (
+                row["last_maintained_at"]
+                + timedelta(milliseconds=row["lease_timeout_ms"])
+                <= now
+            )
+        if not expired:
+            continue
+        mechanism = (
+            await session.execute(
+                text("""
+                    SELECT mechanism_config_id, mechanism_type, initial_state,
+                           target_state, trigger_rule, config
+                    FROM level_mechanism_catalog
+                    WHERE level_id = :level_id AND mechanism_config_id = :target_id
+                """),
+                {"level_id": level_id, "target_id": row["active_target_id"]},
+            )
+        ).mappings().one_or_none()
+        if mechanism is not None:
+            state = await _load_mechanism_state(
+                session, run_id, player_id, mechanism
+            )
+            if row["rule_id"] == "RULE_REVERSE":
+                state["reverse_active"] = False
+                state["direction"] = int(
+                    state.get("original_direction", state.get("direction", 1))
+                )
+                state.pop("reverse_until", None)
+            elif row["rule_id"] == "RULE_GAZE":
+                state["gaze_active"] = False
+                state["visible_by_gaze"] = False
+                if not state.get("visible_by_echo"):
+                    state["visible"] = mechanism["config"].get(
+                        "visible_by_default", False
+                    )
+                    if state.get("status") != "LOCKED":
+                        state["status"] = mechanism["initial_state"]
+            await _save_mechanism_state(
+                session, run_id, player_id, row["active_target_id"], state
+            )
+        await session.execute(
+            text("""
+                UPDATE player_rule_states
+                SET active_target_id = NULL, active_effect = '{}'::jsonb,
+                    expires_at = NULL, last_maintained_at = NULL, updated_at = :now
+                WHERE run_id = :run_id AND player_id = :player_id
+                  AND rule_id = :rule_id
+            """),
+            {
+                "now": now,
+                "run_id": run_id,
+                "player_id": player_id,
+                "rule_id": row["rule_id"],
+            },
+        )
+
+
 async def cast_rule(
     session: AsyncSession,
     player_id: UUID,
@@ -174,6 +263,10 @@ async def cast_rule(
 ) -> dict[str, Any]:
     request_hash = _hash_request(rule_id, target_id, target_point)
     run = await _get_run(session, player_id, run_id)
+    now = datetime.now(UTC)
+    await _expire_rule_effects(
+        session, run_id, player_id, run["level_id"], now
+    )
 
     prior = (
         await session.execute(
@@ -231,10 +324,13 @@ async def cast_rule(
             rule["duration_type"] == "TIMED"
             and rule["duration_ms"] is None
         )
+        or (
+            rule["duration_type"] == "WHILE_CASTING"
+            and rule["lease_timeout_ms"] is None
+        )
     ):
         raise RuleConfigurationIncomplete
 
-    now = datetime.now(UTC)
     await session.execute(
         text("""
             INSERT INTO player_rule_states (run_id, player_id, rule_id)
@@ -246,7 +342,7 @@ async def cast_rule(
     rule_state = (
         await session.execute(
             text("""
-                SELECT cooldown_until, active_target_id, active_effect
+                SELECT cooldown_until, active_target_id, active_effect, expires_at, last_maintained_at
                 FROM player_rule_states
                 WHERE run_id = :run_id AND player_id = :player_id
                   AND rule_id = :rule_id
@@ -274,7 +370,6 @@ async def cast_rule(
                            position_x, position_y, config
                     FROM level_mechanism_catalog
                     WHERE level_id = :level_id AND is_enabled = true
-                      AND target_type = ANY(:target_types)
                       AND position_x IS NOT NULL AND position_y IS NOT NULL
                       AND power(position_x - :x, 2) + power(position_y - :y, 2)
                           <= power(:radius, 2)
@@ -282,14 +377,15 @@ async def cast_rule(
                 """),
                 {
                     "level_id": run["level_id"],
-                    "target_types": list(allowed_types),
                     "x": x,
                     "y": y,
                     "radius": rule["radius"],
                 },
             )
         ).mappings().all()
-        mechanisms = list(candidates)
+        mechanisms = [
+            item for item in candidates if item["target_type"] in allowed_types
+        ]
         if target_id is not None and not any(
             item["mechanism_config_id"] == target_id for item in mechanisms
         ):
@@ -335,7 +431,8 @@ async def cast_rule(
             state["last_rule"] = rule_id
         elif rule_id == "RULE_REVERSE":
             if not state.get("reverse_active"):
-                state["direction"] = -int(state.get("direction", 1))
+                state["original_direction"] = int(state.get("direction", 1))
+                state["direction"] = -state["original_direction"]
             state["reverse_active"] = True
             state["reverse_until"] = (
                 now + timedelta(milliseconds=rule["duration_ms"])
@@ -367,10 +464,12 @@ async def cast_rule(
     )
 
     cooldown_until = now + timedelta(milliseconds=rule["cooldown_ms"])
-    active_target = target_id if rule_id == "RULE_GAZE" else None
+    active_target = (
+        target_id if rule_id in {"RULE_GAZE", "RULE_REVERSE"} else None
+    )
     active_effect = (
-        {"target_id": target_id, "effect": "GAZE"}
-        if rule_id == "RULE_GAZE"
+        {"target_id": target_id, "effect": rule_id}
+        if active_target is not None
         else {}
     )
     expires_at = (
@@ -522,12 +621,11 @@ async def _match_combo(
         elif combo["result_effect"] == "REVEAL_AND_REVERSE_ENERGY":
             state["visible"] = True
             state["visible_by_echo"] = True
-            state["direction"] = -int(state.get("direction", 1))
             state["reverse_active"] = True
         elif combo["result_effect"] == "MAINTAIN_AND_REVERSE_PLATFORM":
             state["visible"] = True
             state["visible_by_gaze"] = True
-            state["direction"] = -int(state.get("direction", 1))
+            state["gaze_active"] = True
             state["reverse_active"] = True
         await _save_mechanism_state(
             session, run_id, player_id, target_id, state
@@ -544,6 +642,9 @@ async def stop_gaze(
     session: AsyncSession, player_id: UUID, run_id: UUID
 ) -> dict[str, Any]:
     run = await _get_run(session, player_id, run_id)
+    await _expire_rule_effects(
+        session, run_id, player_id, run["level_id"], datetime.now(UTC)
+    )
     state_row = (
         await session.execute(
             text("""
