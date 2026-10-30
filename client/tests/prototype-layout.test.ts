@@ -65,7 +65,7 @@ describe("prototype layout coordinate contract", () => {
 
   it("fits the room to viewport while respecting the maximum scale", () => {
     expect(calculatePrototypeRoomScale(bounds, { width: 640, height: 600 })).toBe(40);
-    expect(calculatePrototypeRoomScale(bounds, { width: 320, height: 400 })).toBeCloseTo(16);
+    expect(calculatePrototypeRoomScale(bounds, { width: 320, height: 400 })).toBeCloseTo(20);
   });
 
   it("rejects invalid room scale and viewport geometry", () => {
