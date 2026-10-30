@@ -1,7 +1,7 @@
 # 第一阶段垂直切片开发与测试清单
 
 - 版本：VS-1.1
-- 状态：VS-0 服务端骨架已合并；VS-1 服务端身份与玩家持久化已合并并通过 CI；VS-2 服务端共享地图/WebSocket 原型已实现并进入 CI；Cocos 客户端尚未初始化
+- 状态：VS-0/VS-1 已合并并通过 CI；VS-2 服务端共享地图/WebSocket 单进程原型已合并并通过 CI；Cocos TypeScript 网络基础正在独立 PR 验证，完整 Cocos 场景与真机联调未完成
 - 基线：GDD V0.2；Cocos Creator 3.x + TypeScript；Python 3.12+ + FastAPI；PostgreSQL；RabbitMQ
 - 目标：端到端验证“登录—共享主地图—进入个人关卡—施放法则—机关解谜—服务端结算—永久进度恢复”。
 - 策略：先完成 ROOM-01 可玩闭环，再以配置驱动接入 ROOM-02 至 ROOM-05 与隐藏结局。
@@ -28,16 +28,16 @@
 |---|---|---|
 | VS-0 工程骨架 | Python 服务端、配置/环境变量、Docker Compose（PostgreSQL、RabbitMQ、API、Worker） | 服务端骨架已完成；Cocos Creator 项目初始化仍待客户端切片 |
 | VS-1 身份与持久化 | 微信 code 服务端交换、players、12个角色初始化、JWT、玩家/角色 API、迁移与测试 | 服务端已完成并 CI 验证：重复/并发登录幂等、12角色解锁、选角、JWT；客户端 wx.login 接入待做 |
-| VS-2 共享主地图 | 地图实例分配、WS鉴权、ENTER/LEAVE、MOVE_SYNC、动作广播、心跳与重连保留 | 服务端双连接集成测试通过；客户端接入、AOI精细化和Redis多节点仍待完成 |
+| VS-2 共享主地图 | 地图实例分配、WS鉴权、ENTER/LEAVE、MOVE_SYNC、动作广播、心跳与重连保留 | 服务端双连接集成测试通过并已合并；客户端网络基础进行中；AOI精细化和Redis多节点仍待完成 |
 | VS-3 个人关卡 | level enter/run、ROOM-01 场景、个人机关状态 | 两玩家同时进入独立 run，互不影响 |
 | VS-4 核心玩法 | 回声法则、显形目标、出口机关状态机 | 服务端校验输入并广播权威状态 |
 | VS-5 发现与结算 | discovery、world_archive、settlements、score_events、进度快照 | 结算幂等；重登后永久进度可见 |
 | VS-6 联调验收 | 真机包、自动化报告、性能/断线测试 | 本文验收项通过或阻塞缺陷有负责人 |
 
 ## 3. 客户端任务（Cocos Creator 3.x）
-- [ ] 建立 core、network、player、world、level、rules、ui 模块。
-- [ ] REST client：鉴权、X-Request-Id、超时、错误映射。
-- [ ] WebSocket client：AUTH 首包、seq/ack、心跳、重连、消息 schema 校验。
+- [x] 建立 TypeScript core/network/player/world 基础模块；level/rules/ui 随后续玩法切片增加。
+- [x] REST client：Bearer 鉴权、X-Request-Id、超时、错误映射（客户端基础）。
+- [x] WebSocket client：AUTH 首包、单调 seq、消息 envelope 校验、心跳/移动/动作/离开命令；自动重连策略仍待实现。
 - [ ] 移动状态机；客户端预测仅用于表现，服务端位置权威。
 - [ ] 法则施放输入与冷却 UI；回声命中后显形反馈。
 - [ ] 关卡目标/机关表现由配置和服务端状态驱动，不硬编码完成条件。
