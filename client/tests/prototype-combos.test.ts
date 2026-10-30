@@ -9,13 +9,15 @@ describe("parsePrototypeComboDefinitions", () => {
         combo_id: "COMBO-001",
         target_mechanism_id: "M05-BRIDGE-01",
         rule_sequence: ["RULE_ECHO", "RULE_GAZE"],
-        display_name: "组合一·桥梁"
+        display_name: "组合一·桥梁",
+        maintain_gaze: true
       }]
     })).toEqual([{
       comboId: "COMBO-001",
       targetId: "M05-BRIDGE-01",
       ruleIds: ["RULE_ECHO", "RULE_GAZE"],
-      displayName: "组合一·桥梁"
+      displayName: "组合一·桥梁",
+      maintainGaze: true
     }]);
   });
 
@@ -29,8 +31,8 @@ describe("parsePrototypeComboDefinitions", () => {
     })).toThrow(/Invalid prototype combo/);
     expect(() => parsePrototypeComboDefinitions({
       prototype_combos: [
-        { combo_id: "COMBO-001", target_mechanism_id: "M02-BRIDGE-01", rule_sequence: ["RULE_ECHO", "RULE_GAZE"], display_name: "A" },
-        { combo_id: "COMBO-001", target_mechanism_id: "M02-BRIDGE-01", rule_sequence: ["RULE_ECHO", "RULE_GAZE"], display_name: "B" }
+        { combo_id: "COMBO-001", target_mechanism_id: "M02-BRIDGE-01", rule_sequence: ["RULE_ECHO", "RULE_GAZE"], display_name: "A", maintain_gaze: false },
+        { combo_id: "COMBO-001", target_mechanism_id: "M02-BRIDGE-01", rule_sequence: ["RULE_ECHO", "RULE_GAZE"], display_name: "B", maintain_gaze: false }
       ]
     })).toThrow(/Invalid prototype combo/);
   });
