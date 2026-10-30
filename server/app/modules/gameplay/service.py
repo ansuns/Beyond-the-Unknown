@@ -100,9 +100,9 @@ async def initialize_mechanisms(
 def _apply_single_rule(
     mechanism_type: str, state: dict[str, Any], rule_id: str, action: str
 ) -> None:
+    if state["combo_completed"]:
+        return
     if action == "RELEASE":
-        if state["combo_completed"]:
-            return
         if rule_id == "RULE_GAZE":
             state["gaze_active"] = False
             state["active_rules"] = [r for r in state["active_rules"] if r != rule_id]
