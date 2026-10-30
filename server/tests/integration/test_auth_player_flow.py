@@ -85,8 +85,9 @@ async def test_concurrent_first_login_creates_one_player() -> None:
     assert sum(result["is_new_player"] for result in results) == 1
 
 
-def test_banned_player_cannot_use_an_unexpired_token() -> None:
-    import asyncio
+@pytest.mark.asyncio
+async def test_banned_player_cannot_use_an_unexpired_token() -> None:
+    import httpx
 
     from sqlalchemy import text
 
@@ -98,22 +99,20 @@ def test_banned_player_cannot_use_an_unexpired_token() -> None:
         async def exchange(self, code: str) -> str:
             return f"banned-test-openid-{code}"
 
-    async def create_and_ban_player():
-        async with SessionFactory() as session:
-            result = await login_with_wechat(
-                session, IdentityProvider(), get_settings(), str(uuid4())
-            )
-            await session.execute(
-                text("UPDATE players SET status = 'BANNED' WHERE player_id = :player_id"),
-                {"player_id": result["player_id"]},
-            )
-            await session.commit()
-            return result["access_token"]
+    async with SessionFactory() as session:
+        result = await login_with_wechat(
+            session, IdentityProvider(), get_settings(), str(uuid4())
+        )
+        await session.execute(
+            text("UPDATE players SET status = 'BANNED' WHERE player_id = :player_id"),
+            {"player_id": result["player_id"]},
+        )
+        await session.commit()
 
-    token = asyncio.run(create_and_ban_player())
-    with TestClient(app) as client:
-        response = client.get(
+    transport = httpx.ASGITransport(app=app)
+    async with httpx.AsyncClient(transport=transport, base_url="http://test") as client:
+        response = await client.get(
             "/api/v1/player/me",
-            headers={"Authorization": f"Bearer {token}"},
+            headers={"Authorization": f"Bearer {result['access_token']}"},
         )
     assert response.status_code == 403
