@@ -35,8 +35,8 @@ async def dispatch_pending_once(
                         FROM outbox_events
                         WHERE published_at IS NULL AND next_attempt_at <= now()
                         ORDER BY created_at, event_id
-                        FOR UPDATE SKIP LOCKED
                         LIMIT :batch_size
+                        FOR UPDATE SKIP LOCKED
                     """),
                     {"batch_size": batch_size},
                 )
