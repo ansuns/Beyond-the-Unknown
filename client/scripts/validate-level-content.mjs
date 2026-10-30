@@ -53,6 +53,27 @@ for (const level of levels) {
       add(`${level.level_id}: objective ${objective.objective_id} references missing mechanism ${objective.mechanism_id}`);
     }
   }
+
+  const prototypeCombos = level.prototype_combos ?? [];
+  const prototypeComboIds = prototypeCombos.map((combo) => combo.combo_id);
+  if (new Set(prototypeComboIds).size !== prototypeComboIds.length) {
+    add(`${level.level_id}: duplicate prototype combo_id`);
+  }
+  for (const combo of prototypeCombos) {
+    if (!(level.required_combos ?? []).includes(combo.combo_id)) {
+      add(`${level.level_id}: prototype combo ${combo.combo_id} is not listed in required_combos`);
+    }
+    if (!mechanismIds.includes(combo.target_mechanism_id)) {
+      add(`${level.level_id}: prototype combo ${combo.combo_id} references missing target ${combo.target_mechanism_id}`);
+    }
+    if (!Array.isArray(combo.rule_sequence) || combo.rule_sequence.length !== 2 ||
+        combo.rule_sequence.some((rule) => !["RULE_ECHO", "RULE_GAZE", "RULE_REVERSE"].includes(rule))) {
+      add(`${level.level_id}: prototype combo ${combo.combo_id} must define exactly two known law rules`);
+    }
+    if (typeof combo.display_name !== "string" || !combo.display_name.trim()) {
+      add(`${level.level_id}: prototype combo ${combo.combo_id} requires a display_name`);
+    }
+  }
 }
 
 const routeIds = new Set();
