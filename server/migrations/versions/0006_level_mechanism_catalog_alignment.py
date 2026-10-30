@@ -1,6 +1,4 @@
-import sqlalchemy as sa
 from alembic import op
-from sqlalchemy.dialects.postgresql import JSONB
 
 revision = "0006_level_mechanism_catalog_alignment"
 down_revision = "0005_rules_mechanisms"
@@ -88,5 +86,18 @@ def downgrade() -> None:
         SET mechanism_config_id = 'MECH-ROOM05-TARGET-B'
         WHERE level_id = 'LV-ROOM-05'
           AND mechanism_config_id = 'M05-ENERGY-01'
+        """
+    )
+    op.execute(
+        """
+        UPDATE mechanism_states AS s
+        SET mechanism_config_id = CASE s.mechanism_config_id
+            WHEN 'M05-BRIDGE-01' THEN 'MECH-ROOM05-TARGET-A'
+            WHEN 'M05-ENERGY-01' THEN 'MECH-ROOM05-TARGET-B'
+        END
+        FROM level_runs AS r
+        WHERE s.run_id = r.run_id
+          AND r.level_id = 'LV-ROOM-05'
+          AND s.mechanism_config_id IN ('M05-BRIDGE-01', 'M05-ENERGY-01')
         """
     )
