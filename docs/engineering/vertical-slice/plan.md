@@ -36,10 +36,14 @@
 
 ## 3. 客户端任务（Cocos Creator 3.x）
 - [x] 建立 TypeScript core/network/player/world 基础模块；level/rules/ui 随后续玩法切片增加。
-- [x] REST client：Bearer 鉴权、X-Request-Id、超时、错误映射（客户端基础）。\n- [x] 玩家资料、角色目录与角色选择 REST API；服务端返回的解锁/当前角色为权威状态。\n- [x] WorldPlaySession：共享地图进入、角色/关卡数据加载、个人 run 启动、法则会话和地图移动/动作/心跳的应用层编排。\n- [x] LawController：根据服务端 READY/解锁状态控制施法，校验点/物体目标输入形状，按服务端 lease_timeout 维护 GAZE，并缓存个人机关状态。
+- [x] REST client：Bearer 鉴权、X-Request-Id、超时、错误映射（客户端基础）。
+- [x] 玩家资料、角色目录与角色选择 REST API；服务端返回的解锁/当前角色为权威状态。
+- [x] WorldPlaySession：共享地图进入、角色/关卡数据加载、个人 run 启动、法则会话和地图移动/动作/心跳的应用层编排。
+- [x] LawController：根据服务端 READY/解锁状态控制施法，校验点/物体目标输入形状，按服务端 lease_timeout 维护 GAZE，并缓存个人机关状态。
 - [x] WebSocket client：AUTH 首包、单调 seq、消息 envelope 校验、心跳/移动/动作/离开命令；自动重连策略仍待实现。
 - [ ] 移动状态机；客户端预测仅用于表现，服务端位置权威。
-- [ ] 法则施放输入与冷却 UI；回声命中后显形反馈。\n- [ ] Cocos 场景/组件、目标 hit-testing、机关动画/音效与 HUD；当前只有 engine-independent TypeScript orchestration。
+- [ ] 法则施放输入与冷却 UI；回声命中后显形反馈。
+- [ ] Cocos 场景/组件、目标 hit-testing、机关动画/音效与 HUD；当前只有 engine-independent TypeScript orchestration。
 - [ ] 关卡目标/机关表现由配置和服务端状态驱动，不硬编码完成条件。
 - [ ] 加载、断网、重连、结算与错误状态。
 
