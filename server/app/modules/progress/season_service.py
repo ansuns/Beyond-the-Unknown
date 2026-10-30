@@ -54,7 +54,7 @@ async def enqueue_due_seasons(
                         (task_type, schema_version, payload, idempotency_key)
                     VALUES
                         ('season.finalize', 1,
-                         jsonb_build_object('season_id', :season_id),
+                         jsonb_build_object('season_id', CAST(:season_id AS text)),
                          :idempotency_key)
                     ON CONFLICT (idempotency_key) DO NOTHING
                     RETURNING task_id
@@ -121,7 +121,7 @@ async def finalize_season(
                  available_at_utc)
             VALUES
                 ('season.auto_approve', 1,
-                 jsonb_build_object('season_id', :season_id),
+                 jsonb_build_object('season_id', CAST(:season_id AS text)),
                  :idempotency_key, :available_at)
             ON CONFLICT (idempotency_key) DO NOTHING
         """),
@@ -135,8 +135,8 @@ async def finalize_season(
         text("""
             INSERT INTO actions_log (action_type, payload)
             VALUES ('SEASON_FINALIZED',
-                    jsonb_build_object('season_id', :season_id,
-                                       'review_until_utc', :review_until))
+                    jsonb_build_object('season_id', CAST(:season_id AS text),
+                                       'review_until_utc', CAST(:review_until AS timestamptz)))
         """),
         {"season_id": season_id, "review_until": review_until.isoformat()},
     )
@@ -357,7 +357,7 @@ async def auto_approve_season(
                      available_at_utc)
                 VALUES
                     ('season.auto_approve', 1,
-                     jsonb_build_object('season_id', :season_id),
+                     jsonb_build_object('season_id', CAST(:season_id AS text)),
                      :idempotency_key, :available_at)
                 ON CONFLICT (idempotency_key) DO NOTHING
             """),
