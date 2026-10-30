@@ -314,6 +314,30 @@ async def start_level(
             "y": float(spawn.get("y", 4.0)),
         },
     )
+    await session.execute(
+        text("""
+            INSERT INTO mechanism_states
+                (run_id, player_id, mechanism_config_id, mechanism_type, state)
+            SELECT
+                :run_id,
+                :player_id,
+                mechanism_config_id,
+                mechanism_type,
+                jsonb_build_object(
+                    'status', initial_state,
+                    'direction', COALESCE((config ->> 'initial_direction')::integer, 1),
+                    'visible', COALESCE((config ->> 'visible_by_default')::boolean, false)
+                )
+            FROM level_mechanism_catalog
+            WHERE level_id = :level_id AND is_enabled = true
+            ON CONFLICT (run_id, mechanism_config_id) DO NOTHING
+        """),
+        {
+            "run_id": run_id,
+            "player_id": player_id,
+            "level_id": run["level_id"],
+        },
+    )
     await session.commit()
     return {
         "run_id": str(run["run_id"]),
