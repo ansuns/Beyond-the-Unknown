@@ -1,9 +1,11 @@
+import hmac
 from typing import Literal
 
 from fastapi import APIRouter, Depends, Header, HTTPException, Query, Request
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.authentication import get_current_player_id
+from app.core.config import get_settings
 from app.core.database import get_session
 from app.modules.progress.repository import (
     IncompleteObjectives,
@@ -23,6 +25,11 @@ from app.modules.progress.repository import (
     settle_level,
 )
 from app.modules.progress.schemas import LevelSettleRequest, RewardClaimRequest
+from app.modules.progress.season_service import (
+    SeasonNotFound,
+    SeasonNotReviewable,
+    review_season,
+)
 from app.schemas.envelope import success_envelope
 
 router = APIRouter()
@@ -137,6 +144,39 @@ async def post_reward_claim(
         raise HTTPException(
             status_code=409, detail="Reward is not claimable"
         ) from exc
+    return success_envelope(data, request.state.request_id)
+
+
+
+@router.post("/internal/seasons/{season_id}/review")
+async def post_season_review(
+    season_id: str,
+    payload: SeasonReviewRequest,
+    request: Request,
+    internal_api_key: str = Header(alias="X-Internal-API-Key"),
+    reviewer_id: str = Header(default="internal-operator", alias="X-Reviewer-Id"),
+    session: AsyncSession = Depends(get_session),
+) -> dict:
+    configured_key = get_settings().internal_api_key
+    if not configured_key:
+        raise HTTPException(
+            status_code=503, detail="Internal season review is not configured"
+        )
+    if not hmac.compare_digest(internal_api_key, configured_key):
+        raise HTTPException(status_code=401, detail="Invalid internal API key")
+    try:
+        data = await review_season(
+            session,
+            season_id,
+            payload.decision,
+            reviewer_id,
+            payload.note,
+        )
+    except SeasonNotFound as exc:
+        raise HTTPException(status_code=404, detail="Season not found") from exc
+    except SeasonNotReviewable as exc:
+        raise HTTPException(status_code=409, detail="Season is not in review") from exc
+    await session.commit()
     return success_envelope(data, request.state.request_id)
 
 
