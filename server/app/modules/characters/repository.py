@@ -42,19 +42,20 @@ async def list_player_characters(session: AsyncSession, player_id: UUID) -> dict
 async def select_player_character(
     session: AsyncSession, player_id: UUID, character_id: str
 ) -> str | None:
-    async with session.begin():
-        return (
-            await session.execute(
-                text("""
-                    UPDATE players AS p
-                    SET current_character_id = c.character_id, updated_at = now()
-                    FROM characters AS c
-                    JOIN player_characters AS pc
-                      ON pc.character_id = c.character_id AND pc.player_id = :player_id
-                    WHERE p.player_id = :player_id
-                      AND c.character_id = :character_id AND c.is_enabled = true
-                    RETURNING p.current_character_id
-                """),
-                {"player_id": player_id, "character_id": character_id},
-            )
-        ).scalar_one_or_none()
+    selected = (
+        await session.execute(
+            text("""
+                UPDATE players AS p
+                SET current_character_id = c.character_id, updated_at = now()
+                FROM characters AS c
+                JOIN player_characters AS pc
+                  ON pc.character_id = c.character_id AND pc.player_id = :player_id
+                WHERE p.player_id = :player_id
+                  AND c.character_id = :character_id AND c.is_enabled = true
+                RETURNING p.current_character_id
+            """),
+            {"player_id": player_id, "character_id": character_id},
+        )
+    ).scalar_one_or_none()
+    await session.commit()
+    return selected
