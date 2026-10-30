@@ -292,3 +292,90 @@ def test_room01_echo_exit_interaction_and_settlement() -> None:
             assert settled.json()["data"]["result_status"] == "COMPLETED"
     finally:
         app.dependency_overrides.clear()
+
+
+def test_room02_echo_gaze_combo_completes_bridge_objective() -> None:
+    app.dependency_overrides[get_wechat_code_provider] = lambda: FakeWeChatProvider()
+    try:
+        with TestClient(app) as client:
+            player = _login_and_enter_map(client)
+            catalog = client.get("/api/v1/level/", headers=player["headers"])
+            assert catalog.status_code == 200, catalog.text
+            level = next(
+                item
+                for item in catalog.json()["data"]["levels"]
+                if item["level_id"] == "LV-ROOM-02"
+            )
+            entered = client.post(
+                "/api/v1/level/enter",
+                headers={
+                    **player["headers"],
+                    "Idempotency-Key": f"room02-enter-{uuid4()}",
+                },
+                json={
+                    "level_id": level["level_id"],
+                    "entrance_id": level["entrance_id"],
+                },
+            )
+            assert entered.status_code == 200, entered.text
+            run_id = entered.json()["data"]["run_id"]
+            started = client.post(
+                "/api/v1/level/start",
+                headers=player["headers"],
+                json={"run_id": run_id},
+            )
+            assert started.status_code == 200, started.text
+
+            echo = client.post(
+                "/api/v1/level/rule/cast",
+                headers={
+                    **player["headers"],
+                    "Idempotency-Key": "room02-echo-bridge-0001",
+                },
+                json={
+                    "run_id": run_id,
+                    "rule_id": "RULE_ECHO",
+                    "target_id": "M02-BRIDGE-01",
+                    "target_point": {"x": 6, "y": 4},
+                },
+            )
+            assert echo.status_code == 200, echo.text
+
+            gaze = client.post(
+                "/api/v1/level/rule/cast",
+                headers={
+                    **player["headers"],
+                    "Idempotency-Key": "room02-gaze-bridge-0001",
+                },
+                json={
+                    "run_id": run_id,
+                    "rule_id": "RULE_GAZE",
+                    "target_id": "M02-BRIDGE-01",
+                },
+            )
+            assert gaze.status_code == 200, gaze.text
+            assert gaze.json()["data"]["combo"]["combo_id"] == "COMBO-001"
+
+            state = client.get(
+                f"/api/v1/level/state/{run_id}", headers=player["headers"]
+            )
+            assert state.status_code == 200, state.text
+            bridge = next(
+                item
+                for item in state.json()["data"]["mechanisms"]
+                if item["mechanism_id"] == "M02-BRIDGE-01"
+            )
+            assert bridge["state"]["status"] == "TRIGGERED"
+
+            settled = client.post(
+                "/api/v1/level/settle",
+                headers={
+                    **player["headers"],
+                    "Idempotency-Key": "room02-settle-0001",
+                },
+                json={"run_id": run_id},
+            )
+            assert settled.status_code == 200, settled.text
+            assert settled.json()["data"]["result_status"] == "COMPLETED"
+    finally:
+        app.dependency_overrides.clear()
