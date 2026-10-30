@@ -124,12 +124,13 @@ CREATE TABLE player_discoveries (
   discovery_id varchar(100) NOT NULL REFERENCES discovery_catalog(discovery_id),
   discovery_type discovery_type NOT NULL,
   level_id varchar(64),
-  run_id uuid REFERENCES level_runs(run_id),
+  run_id uuid,
   location jsonb NOT NULL DEFAULT '{}'::jsonb,
   related_rule varchar(64),
   first_discovered_at timestamptz NOT NULL DEFAULT now(),
   trigger_count integer NOT NULL DEFAULT 1 CHECK (trigger_count > 0),
-  PRIMARY KEY (player_id,discovery_id)
+  PRIMARY KEY (player_id,discovery_id),
+  CONSTRAINT fk_discovery_run_owner FOREIGN KEY (run_id,player_id) REFERENCES level_runs(run_id,player_id)
 );
 CREATE INDEX idx_player_discoveries_player_time ON player_discoveries(player_id,first_discovered_at DESC);
 
@@ -262,14 +263,15 @@ CREATE TABLE progress_snapshots (
 
 CREATE TABLE settlements (
   result_id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-  run_id uuid NOT NULL UNIQUE REFERENCES level_runs(run_id),
+  run_id uuid NOT NULL UNIQUE,
   player_id uuid NOT NULL REFERENCES players(player_id),
   level_id varchar(64) NOT NULL,
   result_status varchar(24) NOT NULL CHECK (result_status IN ('COMPLETED','FAILED')),
   completion_time_ms bigint CHECK (completion_time_ms IS NULL OR completion_time_ms >= 0),
   score_payload jsonb NOT NULL DEFAULT '{}'::jsonb,
   created_at timestamptz NOT NULL DEFAULT now(),
-  idempotency_key varchar(200) NOT NULL UNIQUE
+  idempotency_key varchar(200) NOT NULL UNIQUE,
+  CONSTRAINT fk_settlement_run_owner FOREIGN KEY (run_id,player_id) REFERENCES level_runs(run_id,player_id)
 );
 
 ALTER TABLE level_runs ADD CONSTRAINT fk_level_runs_result
