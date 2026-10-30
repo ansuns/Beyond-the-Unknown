@@ -2,7 +2,7 @@
 
 - 适用工程：无界之外（Beyond the Unknown）
 - 客户端：Cocos Creator 3.8.8 + TypeScript
-- 服务端：Python 3.12+ / FastAPI / PostgreSQL / RabbitMQ
+- 服务端：Python 3.12+ / FastAPI / PostgreSQL / RabbitMQ / Redis
 - 当前状态：工程原型已提交；本手册描述本地构建与真实微信联调步骤，不代表已在 Cocos 编辑器、微信开发者工具或真机上完成验证。
 
 ## 1. 使用哪个微信测试账号
@@ -92,7 +92,7 @@ docker compose --env-file server/.env ps
 - ROOM-01 出口交互目标和隐藏结局目标仍为 `CONTENT_PENDING`。
 - 机关坐标、房间几何、最终美术、动画、音效、完整 HUD 与关卡结算 UI 尚未完成。
 - Cocos 编辑器导入、微信开发者工具构建和 Android/iOS 真机测试尚未由自动化 CI 证明。
-- Redis 多节点 presence/pub-sub、最终 AOI、生产部署、弱网/负载/安全测试仍未完成。
+- Redis 多节点 presence/pub-sub 已有实现和双节点集成测试；Redis 生产 HA/TLS/鉴权、故障演练、最终 AOI、生产部署、弱网/负载/安全测试仍未完成。
 
 因此，首轮联调的验收目标是**登录、共享地图同步、断线重连、个人关卡生命周期和进度 API**，不是宣称 ROOM-01 已经可以完整通关。
 
@@ -105,4 +105,5 @@ docker compose --env-file server/.env ps
 - [ ] 完成法则/机关/关卡内容配置与策划验收。
 - [ ] 完成赛季时区、积分权重、奖励档位与审核流程配置。
 - [ ] 完成 RabbitMQ 故障恢复、重复投递、DLQ 恢复演练。
-- [ ] 完成多节点在线状态、AOI、性能、安全、隐私与小游戏平台审核。
+- [ ] 完成 Redis 生产 HA/TLS/鉴权与多节点故障演练。
+- [ ] 完成 AOI、性能、安全、隐私与小游戏平台审核。
