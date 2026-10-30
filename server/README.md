@@ -102,3 +102,15 @@ The map instance capacity and movement/reconnect limits are configurable through
 
 
 VS-5 was merged into `main` after the Python/Ruff, PostgreSQL migration/integration, and Docker Compose smoke jobs passed. This confirms the backend contract and tested flows only; production score weights, reward definitions, room objectives, mechanism positions, and law tuning remain content/configuration gates.
+
+
+## VS-6A season settlement and transactional outbox
+
+- Worker scheduler ensures the current weekly/monthly season rows exist and enqueues one `season.finalize` outbox record when an ACTIVE period reaches its end boundary.
+- The outbox relay publishes persistent versioned task envelopes to RabbitMQ and marks records PUBLISHED only after publisher confirmation. A publish/DB commit race can create duplicate messages; `worker_task_receipts` makes processing idempotent.
+- The worker finalizes all three board snapshots, changes the season to SETTLING/REVIEW, and schedules `season.auto_approve` for `SEASON_REVIEW_WINDOW_SECONDS` later.
+- Automatic approval runs only after the review deadline. A protected `POST /api/v1/internal/seasons/{season_id}/review` accepts APPROVE/REJECT decisions through `X-Internal-API-Key`; the key is not exposed to the client.
+- Approved rank conditions use `reward_conditions.trigger_type='SEASON_RANK'` and `condition_config={season_type,board_type,rank_min,rank_max}`. Only non-paid appearance/title/pet/badge reward types are eligible. Grant keys and player/reward/source uniqueness prevent duplicate awards.
+- Worker failures use bounded exponential retry (5 attempts) and the RabbitMQ dead-letter exchange/queue. Failed outbox records remain inspectable with `status=FAILED` and `last_error`.
+- The API and worker receive the same `SERVER_TIMEZONE` and `SEASON_REVIEW_WINDOW_SECONDS`; database period/review timestamps remain UTC.
+- This slice does not invent score weights or rank reward tiers. Until content config is marked READY, no season rank reward is granted.
