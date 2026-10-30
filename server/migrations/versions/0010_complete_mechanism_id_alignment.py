@@ -47,12 +47,12 @@ def upgrade() -> None:
         op.get_bind().execute(
             sa.text(
                 """
-                UPDATE mechanism_states AS old_state
+                UPDATE mechanism_states AS new_state
                 SET state = old_state.state || new_state.state,
                     updated_at = GREATEST(old_state.updated_at, new_state.updated_at)
-                FROM mechanism_states AS new_state
-                WHERE old_state.run_id = new_state.run_id
-                  AND old_state.player_id = new_state.player_id
+                FROM mechanism_states AS old_state
+                WHERE new_state.run_id = old_state.run_id
+                  AND new_state.player_id = old_state.player_id
                   AND old_state.mechanism_config_id = :old_id
                   AND new_state.mechanism_config_id = :new_id
                 """
