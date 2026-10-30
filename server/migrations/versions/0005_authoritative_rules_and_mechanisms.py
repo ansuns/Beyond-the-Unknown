@@ -3,7 +3,7 @@ from alembic import op
 from sqlalchemy.dialects.postgresql import JSONB
 
 
-revision = "0005_authoritative_rules_and_mechanisms"
+revision = "0005_rules_mechanisms"
 down_revision = "0004_levels_and_enter_requests"
 branch_labels = None
 depends_on = None
