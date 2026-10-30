@@ -28,6 +28,8 @@ jobs:
         run: npm install
       - name: Validate Cocos Creator project structure and Boot scene references
         run: npm run validate:project
+      - name: Validate level content and hidden-route references
+        run: npm run validate:content
       - name: TypeScript typecheck
         run: npm run typecheck
       - name: Unit tests
