@@ -449,3 +449,55 @@ def test_outbox_finalizes_season_and_grants_rank_reward_once() -> None:
             """, {"reward_id": reward_id}),
         ])
         app.dependency_overrides.clear()
+
+
+def test_internal_season_review_requires_key_and_can_reject(monkeypatch) -> None:
+    from app.core.config import get_settings
+
+    season_id = "MONTHLY-199901"
+    monkeypatch.setattr(get_settings(), "internal_api_key", "test-season-review-key")
+    _db_exec([
+        ("""
+            INSERT INTO seasons
+                (season_id, season_type, start_at_utc, end_at_utc,
+                 status, settlement_status, review_until_utc)
+            VALUES
+                (:season_id, 'MONTHLY', '1999-01-01T00:00:00Z',
+                 '1999-02-01T00:00:00Z', 'SETTLING', 'REVIEW',
+                 now() + interval '10 minutes')
+            ON CONFLICT (season_id) DO UPDATE
+            SET status = 'SETTLING', settlement_status = 'REVIEW',
+                review_until_utc = now() + interval '10 minutes',
+                settled_at_utc = NULL, reviewed_at_utc = NULL,
+                reviewed_by = NULL, review_note = NULL
+        """, {"season_id": season_id}),
+    ])
+    try:
+        with TestClient(app) as client:
+            denied = client.post(
+                f"/api/v1/internal/seasons/{season_id}/review",
+                headers={"X-Internal-API-Key": "wrong-key"},
+                json={"decision": "REJECT", "note": "test rejection"},
+            )
+            assert denied.status_code == 401
+            approved_key = client.post(
+                f"/api/v1/internal/seasons/{season_id}/review",
+                headers={
+                    "X-Internal-API-Key": "test-season-review-key",
+                    "X-Reviewer-Id": "ci-reviewer",
+                },
+                json={"decision": "REJECT", "note": "test rejection"},
+            )
+            assert approved_key.status_code == 200
+            assert approved_key.json()["data"]["status"] == "CLOSED"
+        row = _db_fetch(
+            "SELECT settlement_status, reviewed_by FROM seasons WHERE season_id = :season_id",
+            {"season_id": season_id},
+        )[0]
+        assert row["settlement_status"] == "FAILED"
+        assert row["reviewed_by"] == "ci-reviewer"
+    finally:
+        _db_exec([
+            ("DELETE FROM actions_log WHERE payload->>'season_id' = :season_id", {"season_id": season_id}),
+            ("DELETE FROM seasons WHERE season_id = :season_id", {"season_id": season_id}),
+        ])
