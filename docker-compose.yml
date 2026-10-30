@@ -64,6 +64,7 @@ services:
       RABBITMQ_MAX_RETRIES: ${RABBITMQ_MAX_RETRIES:-3}
     command: ["uv", "run", "--no-sync", "python", "-m", "app.workers.task_worker"]
     depends_on:
+      postgres: { condition: service_healthy }
       rabbitmq: { condition: service_healthy }
 volumes:
   postgres_data:
