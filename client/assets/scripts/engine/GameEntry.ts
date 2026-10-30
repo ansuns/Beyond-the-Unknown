@@ -624,6 +624,12 @@ export class BeyondTheUnknownGameEntry extends Component {
     this.prototypeActionInFlight = true;
     try {
       await this.flushLevelPosition();
+      if (this.prototypeGazeTargetId) {
+        await this.levelSession.stopGaze();
+        this.prototypeGazeTargetId = undefined;
+        this.prototypeGazeMaintainAt = 0;
+        this.prototypeGazeNextMaintainAt = 0;
+      }
       const result = await this.levelSession.settle(
         this.makeIdempotencyKey(`prototype-settle-${this.pendingLevelId}`)
       );
@@ -1071,11 +1077,18 @@ export class BeyondTheUnknownGameEntry extends Component {
     try {
       this.setStatus("正在保存并放弃当前关卡…");
       if (this.levelPositionSyncPromise) await this.levelPositionSyncPromise;
+      if (this.prototypeGazeTargetId) {
+        await this.levelSession.stopGaze();
+      }
+      this.prototypeGazeTargetId = undefined;
+      this.prototypeGazeMaintainAt = 0;
+      this.prototypeGazeNextMaintainAt = 0;
       await this.levelSession.abandon();
       this.levelSession = undefined;
       this.pendingLevelName = "";
       this.pendingLevelId = "";
       this.roomMechanismCatalog.clear();
+      this.pendingLevelPosition = undefined;
       this.prototypeRuleCooldownUntil.clear();
       this.moveTarget = undefined;
       this.mapSession = undefined;
