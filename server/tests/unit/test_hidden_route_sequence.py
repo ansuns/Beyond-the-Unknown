@@ -1,4 +1,5 @@
 import asyncio
+import json
 from unittest.mock import AsyncMock
 from uuid import uuid4
 
@@ -103,6 +104,10 @@ def test_hidden_route_unlocks_for_canonical_room05_sequence(monkeypatch):
         "newly_unlocked": True,
     }
     assert session.execute.await_count == 6
+    gate_update = session.execute.await_args_list[5]
+    gate_parameters = gate_update.args[1]
+    assert gate_parameters["run_id"] == run_id
+    assert json.loads(gate_parameters["state"])["status"] == "TRIGGERED"
     assert len(discovery_calls) == 1
     assert discovery_calls[0][0][2] == "DISC-HIDDEN-ROUTE-01"
 

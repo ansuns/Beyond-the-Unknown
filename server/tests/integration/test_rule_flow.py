@@ -346,6 +346,15 @@ def test_room_five_supports_all_three_preset_combos() -> None:
             run_id = _enter_level(
                 client, player["headers"], "LV-ROOM-05", "ENT-ROOM-05"
             )
+            initial_state = client.get(
+                f"/api/v1/level/state/{run_id}", headers=player["headers"]
+            )
+            assert initial_state.status_code == 200
+            bridge = next(
+                item for item in initial_state.json()["data"]["mechanisms"]
+                if item["mechanism_id"] == "M05-BRIDGE-01"
+            )
+            assert (bridge["position_x"], bridge["position_y"]) == (3.0, 4.0)
 
             def cast(rule_id: str, target_id: str, key: str, point=None):
                 payload = {
