@@ -113,3 +113,15 @@ VS-5 was merged into `main` after the Python/Ruff, PostgreSQL migration/integrat
 - After `RABBITMQ_MAX_RETRIES` (default 3) retries, the message is sent to the DLQ. If a retry/DLQ publish is not confirmed, the original delivery is NACKed with requeue=true.
 - Every registered consumer must still enforce business idempotency using the envelope's `idempotency_key`; delivery is at-least-once, not exactly-once.
 - Current registered handler is only `worker.ping`. Transactional Outbox integration with gameplay write transactions is still a separate release-readiness task.
+
+
+## VS-6A transactional outbox and season review (implementation branch)
+
+- The worker scheduler creates the current weekly/monthly season rows and enqueues one `season.finalize` outbox record when a period ends.
+- The outbox relay selects due PENDING records with `FOR UPDATE SKIP LOCKED`, publishes persistent versioned envelopes to RabbitMQ with publisher confirms, then marks them PUBLISHED. If the DB commit fails after broker confirmation, duplicate delivery is safe because `worker_task_receipts` is transactional and unique.
+- The registered business handlers are `season.finalize` and `season.auto_approve`. Finalization refreshes EXPLORE/CLEAR/COLLECT snapshots, transitions the season to SETTLING/REVIEW, and inserts the delayed auto-approval task in the same DB transaction.
+- The existing RabbitMQ retry/DLQ pipeline is retained. The outbox records the number of business-handler failures; after the configured retry limit the row is FAILED and the message is routed to the durable DLQ.
+- Internal review: `POST /api/v1/internal/seasons/{season_id}/review`, protected by `X-Internal-API-Key`; APPROVE grants configured SEASON_RANK cosmetic rewards, REJECT closes the period without grants. No rank reward is issued until a READY condition is configured.
+- Season rank condition config: `season_type`, `board_type`, `rank_min`, `rank_max`. Eligible reward types are appearance/title/pet/badge and `is_paid=false`.
+- `SERVER_TIMEZONE` controls weekly/monthly boundaries; timestamps are stored in UTC. `SEASON_REVIEW_WINDOW_SECONDS` is constrained to 300–600 seconds. `INTERNAL_API_KEY` must be a strong secret in deployed environments.
+- The outbox relay and scheduler are at-least-once. The DB receipt is the business idempotency boundary; RabbitMQ delivery itself is not exactly-once.
