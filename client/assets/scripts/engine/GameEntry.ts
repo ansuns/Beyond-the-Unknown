@@ -367,19 +367,23 @@ export class BeyondTheUnknownGameEntry extends Component {
     if (this.currentMode !== "WORLD" || !this.mapSession || !this.worldRoot) return;
     const transform = this.worldRoot.getComponent(UITransform);
     const uiPoint = event.getUILocation();
-    const point = transform.convertToNodeSpaceAR(
-      new Vec3(uiPoint.x, uiPoint.y, 0)
-    );
+    const visible = view.getVisibleSize();
+    const localX = uiPoint.x - visible.width / 2 - this.worldRoot.position.x;
+    const localY = uiPoint.y - visible.height / 2 - this.worldRoot.position.y;
     const margin = 20;
     const x = Math.max(
       (-transform.width / 2 + margin) / this.worldPixelsPerUnit,
-      Math.min((transform.width / 2 - margin) / this.worldPixelsPerUnit,
-        point.x / this.worldPixelsPerUnit)
+      Math.min(
+        (transform.width / 2 - margin) / this.worldPixelsPerUnit,
+        localX / this.worldPixelsPerUnit
+      )
     );
     const y = Math.max(
       (-transform.height / 2 + margin) / this.worldPixelsPerUnit,
-      Math.min((transform.height / 2 - margin) / this.worldPixelsPerUnit,
-        point.y / this.worldPixelsPerUnit)
+      Math.min(
+        (transform.height / 2 - margin) / this.worldPixelsPerUnit,
+        localY / this.worldPixelsPerUnit
+      )
     );
     this.moveTarget = { x, y };
   }
