@@ -117,7 +117,7 @@ async def _load_mechanism_state(
             "state": json.dumps({
                 "status": mechanism["initial_state"],
                 "direction": mechanism["config"].get("initial_direction", 1),
-                "visible": mechanism["config"].get("visible_by_default", True),
+                "visible": mechanism["config"].get("visible_by_default", False),
             }),
         },
     )
