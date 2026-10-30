@@ -1,10 +1,9 @@
 import asyncio
 import json
 import logging
-from datetime import UTC, datetime
-from uuid import UUID
 from collections.abc import Awaitable, Callable
 from typing import Any
+from uuid import UUID
 
 import aio_pika
 from aio_pika import ExchangeType
