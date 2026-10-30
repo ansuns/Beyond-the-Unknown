@@ -384,12 +384,12 @@ def test_room_four_combo_unlocks_and_settles() -> None:
             assert reverse.status_code == 200, reverse.text
             assert reverse.json()["data"]["combo"]["combo_id"] == "COMBO-003"
 
-            stopped = client.post(
-                "/api/v1/level/rule/stop",
+            maintained = client.post(
+                "/api/v1/level/rule/maintain",
                 headers=player["headers"],
-                json={"run_id": run_id},
+                json={"run_id": run_id, "target_id": "M04-PLATFORM-01"},
             )
-            assert stopped.status_code == 200, stopped.text
+            assert maintained.status_code == 200, maintained.text
 
             state = client.get(
                 f"/api/v1/level/state/{run_id}", headers=player["headers"]
@@ -401,6 +401,7 @@ def test_room_four_combo_unlocks_and_settles() -> None:
             )
             assert platform["status"] == "TRIGGERED"
             assert platform["combo_applied"] == "COMBO-003"
+            assert platform["gaze_active"] is True
 
             settled = client.post(
                 "/api/v1/level/settle",
