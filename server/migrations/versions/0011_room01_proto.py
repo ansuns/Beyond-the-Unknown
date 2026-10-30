@@ -2,6 +2,7 @@
 
 import sqlalchemy as sa
 from alembic import op
+from sqlalchemy.dialects.postgresql import JSONB
 
 revision = "0011_room01_proto"
 down_revision = "0010_mech_id_complete"
@@ -45,7 +46,7 @@ def upgrade() -> None:
         sa.Column("mechanism_id", sa.String(100), nullable=False),
         sa.Column("idempotency_key", sa.String(200), nullable=False),
         sa.Column("request_hash", sa.String(64), nullable=False),
-        sa.Column("result", sa.dialects.postgresql.JSONB(), nullable=False),
+        sa.Column("result", JSONB(), nullable=False),
         sa.Column(
             "created_at",
             sa.DateTime(timezone=True),
@@ -134,7 +135,11 @@ def downgrade() -> None:
     op.execute(
         """
         UPDATE level_objectives
-        SET config_status = 'CONTENT_PENDING'
+        SET config_status = CASE objective_id
+            WHEN 'HIDDEN_TARGET_REVEALED' THEN 'READY'
+            WHEN 'EXIT_ACTIVATED' THEN 'CONTENT_PENDING'
+            ELSE config_status
+        END
         WHERE level_id = 'LV-ROOM-01'
         """
     )
