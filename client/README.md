@@ -33,12 +33,16 @@ This is a TypeScript client foundation, not yet a complete playable Cocos scene 
 
 ## Personal level and law API client
 
-`RestClient` now exposes typed methods for the VS-3/VS-4 contract:
+`RestClient` follows the merged VS-3/VS-4 backend contract:
 
 - `listLevels()`
 - `enterLevel(levelId, entranceId, idempotencyKey)`
 - `startLevel(runId)` / `abandonLevel(runId)`
-- `applyLawAction(runId, ruleId, mechanismId, action, idempotencyKey)`
-- `getRunMechanisms(runId)`
+- `listRules()` — reads the server-owned rule catalog and tuning status
+- `castRule(runId, ruleId, options, idempotencyKey)` — sends `target_id` and/or `target_point` as required by the rule
+- `maintainGaze(runId, targetId)` / `stopGaze(runId)`
+- `getLevelState(runId)` — reads `GET /api/v1/level/state/{run_id}`
 
-Write calls that can be retried accept an explicit idempotency key. The API client does not calculate law effects, combo IDs, or mechanism states; it only sends the player's intent and consumes the server-authoritative response. Scene/UI bindings and an interactive playable room are not part of this API adapter slice.
+Rule writes use the current backend routes (`/level/rule/cast`, `/level/rule/maintain`, `/level/rule/stop`). The client does not calculate rule effects, cooldowns, combo IDs, or mechanism state. Structured backend errors such as `RULE_COOLDOWN` remain available on `ApiError.details`.
+
+The server currently marks numeric law tuning and mechanism positions as `TUNING_REQUIRED`. The client must display this state and must not assume rule casting is enabled until the backend catalog reports `READY`. Scene/UI bindings and an interactive playable room are still separate integration work.
