@@ -1,6 +1,5 @@
 import hashlib
 import json
-from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 from uuid import UUID
@@ -102,6 +101,8 @@ def _apply_single_rule(
     mechanism_type: str, state: dict[str, Any], rule_id: str, action: str
 ) -> None:
     if action == "RELEASE":
+        if state["combo_completed"]:
+            return
         if rule_id == "RULE_GAZE":
             state["gaze_active"] = False
             state["active_rules"] = [r for r in state["active_rules"] if r != rule_id]
@@ -230,7 +231,7 @@ async def apply_law_action(
             await session.execute(
                 text("""
                     SELECT created_at FROM law_action_events
-                    WHERE run_id = :run_id AND mechanism_config_id = :mechanism_id
+                    WHERE run_id = :run_id
                       AND rule_id = :rule_id AND action = 'APPLY'
                     ORDER BY created_at DESC LIMIT 1
                 """),
@@ -262,14 +263,22 @@ async def apply_law_action(
             )
         ).mappings().one_or_none()
         if previous is not None and previous["rule_id"] != rule_id:
-            elapsed = int(
-                (datetime.now(timezone.utc) - previous["created_at"]).total_seconds() * 1000
-            )
-            combo_id = _combo_for_pair(previous["rule_id"], rule_id, elapsed)
+            combo_id = _combo_for_pair(previous["rule_id"], rule_id, previous["elapsed_ms"])
 
     level = _level_config(run["level_id"])
     configured_combos = set(level.get("required_combos", []))
-    if combo_id not in configured_combos:
+    mechanism_config = next(
+        item for item in level["mechanisms"] if item["mechanism_id"] == mechanism_id
+    )
+    expected_type = {
+        "COMBO-001": "PLATFORM_BRIDGE",
+        "COMBO-002": "ENERGY_NODE",
+        "COMBO-003": "MOVING_OBJECT",
+    }
+    if (
+        combo_id not in configured_combos
+        or mechanism["mechanism_type"] != expected_type.get(combo_id)
+    ):
         combo_id = None
     if combo_id:
         state["combo_completed"] = True
