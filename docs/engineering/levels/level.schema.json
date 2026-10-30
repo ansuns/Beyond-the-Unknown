@@ -239,7 +239,8 @@
             "bounds",
             "spawn",
             "movement_speed",
-            "interaction_radius"
+            "interaction_radius",
+            "position_sync_interval_ms"
           ],
           "properties": {
             "prototype_only": {
@@ -299,6 +300,11 @@
             "interaction_radius": {
               "type": "number",
               "exclusiveMinimum": 0
+            },
+            "position_sync_interval_ms": {
+              "type": "integer",
+              "minimum": 50,
+              "maximum": 1000
             }
           },
           "additionalProperties": false

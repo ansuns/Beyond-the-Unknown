@@ -90,7 +90,8 @@
           "y": 4
         },
         "movement_speed": 3,
-        "interaction_radius": 1.5
+        "interaction_radius": 1.5,
+        "position_sync_interval_ms": 120
       },
       "prototype_combos": []
     },
@@ -154,7 +155,8 @@
           "y": 4
         },
         "movement_speed": 3,
-        "interaction_radius": 1.5
+        "interaction_radius": 1.5,
+        "position_sync_interval_ms": 120
       },
       "prototype_combos": [
         {
@@ -245,7 +247,8 @@
           "y": 4
         },
         "movement_speed": 3,
-        "interaction_radius": 1.5
+        "interaction_radius": 1.5,
+        "position_sync_interval_ms": 120
       },
       "prototype_combos": [
         {
@@ -335,7 +338,8 @@
           "y": 4
         },
         "movement_speed": 3,
-        "interaction_radius": 1.5
+        "interaction_radius": 1.5,
+        "position_sync_interval_ms": 120
       },
       "prototype_combos": [
         {
@@ -467,7 +471,8 @@
           "y": 4
         },
         "movement_speed": 3,
-        "interaction_radius": 1.5
+        "interaction_radius": 1.5,
+        "position_sync_interval_ms": 120
       },
       "prototype_combos": [
         {
@@ -588,7 +593,8 @@
           "y": 4
         },
         "movement_speed": 3,
-        "interaction_radius": 1.5
+        "interaction_radius": 1.5,
+        "position_sync_interval_ms": 120
       },
       "prototype_combos": []
     }
