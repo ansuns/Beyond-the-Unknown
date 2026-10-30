@@ -85,3 +85,17 @@ The map instance capacity and movement/reconnect limits are configurable through
 - The first three preset combos are catalogued exactly as COMBO-001..003; matching checks target identity, order sensitivity and configured time window.
 - Mechanism states are stored by `(run_id, player_id, mechanism_config_id)`; rule cooldowns and active effects are isolated by `(run_id, player_id, rule_id)`.
 - GDD V0.2 leaves cooldowns, effect radii, timed durations, gaze lease and combo time windows pending. The migration deliberately stores these values as NULL and marks the catalog `TUNING_REQUIRED`; rule casting returns HTTP 503 until reviewed tuning values and actual mechanism positions are supplied. No unapproved gameplay numbers are hardcoded.
+
+
+## VS-5 discovery, settlement and permanent progress (in review)
+
+- `POST /api/v1/level/settle`: accepts only the caller's run ID and idempotency key. The server verifies every configured required objective against personal mechanism state, computes completion time and writes one settlement. Client score/status fields are ignored.
+- `GET /api/v1/player/progress`: latest versioned permanent snapshot; discoveries, collections, rewards and completed levels survive run exit.
+- `GET /api/v1/player/discoveries`, `GET /api/v1/player/collections`: personal codex.
+- `GET /api/v1/world/archive`: atomic server-owned first-discovery records. The world-first record grants no leaderboard score.
+- `GET /api/v1/reward`, `POST /api/v1/reward/claim`: AUTO/CLAIM reward inbox; claim is player-owned and idempotent.
+- `GET /api/v1/leaderboard`: EXPLORE/CLEAR/COLLECT × WEEKLY/MONTHLY, backed by immutable `score_events` and refreshable snapshots.
+- Hidden route `HIDDEN-ROUTE-01` requires all five normal levels completed and COMBO-001 → COMBO-002 → COMBO-003 on LV-ROOM-05 before LV-HIDDEN-01 is unlocked.
+- Weekly periods begin Monday 00:00 and monthly periods on day 1 at 00:00 in `SERVER_TIMEZONE` (default UTC); timestamps are stored in UTC.
+- Score weights remain NULL/`TUNING_REQUIRED` until approved. No score events or leaderboard entries are fabricated while weights are unset. Reward definitions/conditions are empty until approved content is supplied.
+- Objective rows for ROOM-01 exit interaction and the hidden ending remain `CONTENT_PENDING`; those levels cannot be settled until their interaction/ending content is implemented. Spatial positions and law/combination tuning also remain separate content inputs.
