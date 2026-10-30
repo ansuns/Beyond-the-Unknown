@@ -59,7 +59,7 @@ def _level_payload(row: Any) -> dict[str, Any]:
     }
 
 
-async def list_levels(session: AsyncSession) -> list[dict[str, Any]]:
+async def list_levels(session: AsyncSession, player_id: UUID) -> list[dict[str, Any]]:
     rows = (
         await session.execute(
             text("""
@@ -77,6 +77,35 @@ async def list_levels(session: AsyncSession) -> list[dict[str, Any]]:
     for row in rows:
         item = _level_payload(row)
         item["is_unlocked"] = not item["is_hidden"]
+        if item["is_hidden"]:
+            completed_count = (
+                await session.execute(
+                    text("""
+                        SELECT count(DISTINCT level_id)
+                        FROM settlements
+                        WHERE player_id = :player_id
+                          AND result_status = 'COMPLETED'
+                          AND level_id IN (
+                            'LV-ROOM-01','LV-ROOM-02','LV-ROOM-03',
+                            'LV-ROOM-04','LV-ROOM-05'
+                          )
+                    """),
+                    {"player_id": player_id},
+                )
+            ).scalar_one()
+            clue_found = (
+                await session.execute(
+                    text("""
+                        SELECT EXISTS (
+                            SELECT 1 FROM player_discoveries
+                            WHERE player_id = :player_id
+                              AND discovery_id = 'DIS_HIDDEN_ROUTE_CLUE'
+                        )
+                    """),
+                    {"player_id": player_id},
+                )
+            ).scalar_one()
+            item["is_unlocked"] = completed_count == 5 and clue_found
         result.append(item)
     return result
 
@@ -141,8 +170,35 @@ async def enter_level(
     if level is None:
         raise LevelNotFound
     if level["is_hidden"]:
-        # Hidden-route unlock is driven by authoritative discovery state in VS-5.
-        raise LevelLocked
+        completed_count = (
+            await session.execute(
+                text("""
+                    SELECT count(DISTINCT level_id)
+                    FROM settlements
+                    WHERE player_id = :player_id
+                      AND result_status = 'COMPLETED'
+                      AND level_id IN (
+                        'LV-ROOM-01','LV-ROOM-02','LV-ROOM-03',
+                        'LV-ROOM-04','LV-ROOM-05'
+                      )
+                """),
+                {"player_id": player_id},
+            )
+        ).scalar_one()
+        clue_found = (
+            await session.execute(
+                text("""
+                    SELECT EXISTS (
+                        SELECT 1 FROM player_discoveries
+                        WHERE player_id = :player_id
+                          AND discovery_id = 'DIS_HIDDEN_ROUTE_CLUE'
+                    )
+                """),
+                {"player_id": player_id},
+            )
+        ).scalar_one()
+        if completed_count != 5 or not clue_found:
+            raise LevelLocked
 
     active_run = (
         await session.execute(
