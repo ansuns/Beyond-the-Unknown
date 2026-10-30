@@ -252,8 +252,8 @@ async def _publish_outbox_batch(exchange: AbstractExchange) -> int:
                         FROM task_outbox
                         WHERE status = 'PENDING' AND available_at_utc <= now()
                         ORDER BY created_at_utc
-                        FOR UPDATE SKIP LOCKED
                         LIMIT 25
+                        FOR UPDATE SKIP LOCKED
                     """)
                 )
             ).mappings().all()
