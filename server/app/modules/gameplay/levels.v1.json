@@ -1,0 +1,367 @@
+{
+  "schema_version": 1,
+  "world_id": "WORLD-01",
+  "levels": [
+    {
+      "level_id": "LV-ROOM-01",
+      "room_index": 1,
+      "name": "回声初醒",
+      "is_hidden": false,
+      "is_enabled": true,
+      "entrance_id": "ENTRANCE-ROOM-01",
+      "estimated_duration_seconds": 45,
+      "required_laws": [
+        "RULE_ECHO"
+      ],
+      "required_combos": [],
+      "mechanisms": [
+        {
+          "mechanism_id": "M01-HIDEABLE-01",
+          "mechanism_type": "HIDEABLE",
+          "initial_state": "HIDDEN",
+          "config": {
+            "reveal_rule": "RULE_ECHO"
+          }
+        },
+        {
+          "mechanism_id": "M01-LIGHT-01",
+          "mechanism_type": "LIGHT_REVEAL",
+          "initial_state": "INACTIVE",
+          "config": {
+            "requires_interaction": true
+          }
+        },
+        {
+          "mechanism_id": "M01-EXIT-01",
+          "mechanism_type": "EXIT_GATE",
+          "initial_state": "LOCKED",
+          "config": {}
+        }
+      ],
+      "necessary_objectives": [
+        {
+          "objective_id": "OBJ-01-REVEAL",
+          "mechanism_id": "M01-HIDEABLE-01",
+          "target_state": "REVEALED"
+        },
+        {
+          "objective_id": "OBJ-01-EXIT",
+          "mechanism_id": "M01-EXIT-01",
+          "target_state": "OPEN"
+        }
+      ],
+      "discoveries": [
+        "DIS_RULE_ECHO"
+      ],
+      "presentation": {
+        "hint_level": "L1",
+        "completion_effect": "FX_ROOM_CLEAR_01"
+      }
+    },
+    {
+      "level_id": "LV-ROOM-02",
+      "room_index": 2,
+      "name": "凝视之桥",
+      "is_hidden": false,
+      "is_enabled": true,
+      "entrance_id": "ENTRANCE-ROOM-02",
+      "estimated_duration_seconds": 60,
+      "required_laws": [
+        "RULE_ECHO",
+        "RULE_GAZE"
+      ],
+      "required_combos": [
+        "COMBO-001"
+      ],
+      "mechanisms": [
+        {
+          "mechanism_id": "M02-BRIDGE-01",
+          "mechanism_type": "PLATFORM_BRIDGE",
+          "initial_state": "INVISIBLE",
+          "config": {
+            "stable_state": "OPEN",
+            "requires_combo": "COMBO-001"
+          }
+        }
+      ],
+      "necessary_objectives": [
+        {
+          "objective_id": "OBJ-02-BRIDGE",
+          "mechanism_id": "M02-BRIDGE-01",
+          "target_state": "OPEN"
+        }
+      ],
+      "discoveries": [
+        "DIS_COMBO_001"
+      ],
+      "presentation": {
+        "hint_level": "L1",
+        "completion_effect": "FX_ROOM_CLEAR_02"
+      }
+    },
+    {
+      "level_id": "LV-ROOM-03",
+      "room_index": 3,
+      "name": "逆转的能量",
+      "is_hidden": false,
+      "is_enabled": true,
+      "entrance_id": "ENTRANCE-ROOM-03",
+      "estimated_duration_seconds": 60,
+      "required_laws": [
+        "RULE_ECHO",
+        "RULE_REVERSE"
+      ],
+      "required_combos": [
+        "COMBO-002"
+      ],
+      "mechanisms": [
+        {
+          "mechanism_id": "M03-ENERGY-01",
+          "mechanism_type": "ENERGY_NODE",
+          "initial_state": "DORMANT",
+          "config": {
+            "reveal_rule": "RULE_ECHO",
+            "reverse_rule": "RULE_REVERSE"
+          }
+        },
+        {
+          "mechanism_id": "M03-DOOR-01",
+          "mechanism_type": "DOOR_BARRIER",
+          "initial_state": "CLOSED",
+          "config": {
+            "open_on_combo": "COMBO-002"
+          }
+        }
+      ],
+      "necessary_objectives": [
+        {
+          "objective_id": "OBJ-03-DOOR",
+          "mechanism_id": "M03-DOOR-01",
+          "target_state": "OPEN",
+          "required_combo": "COMBO-002"
+        }
+      ],
+      "discoveries": [
+        "DIS_COMBO_002"
+      ],
+      "presentation": {
+        "hint_level": "L1",
+        "completion_effect": "FX_ROOM_CLEAR_03"
+      }
+    },
+    {
+      "level_id": "LV-ROOM-04",
+      "room_index": 4,
+      "name": "逆向之径",
+      "is_hidden": false,
+      "is_enabled": true,
+      "entrance_id": "ENTRANCE-ROOM-04",
+      "estimated_duration_seconds": 60,
+      "required_laws": [
+        "RULE_GAZE",
+        "RULE_REVERSE"
+      ],
+      "required_combos": [
+        "COMBO-003"
+      ],
+      "mechanisms": [
+        {
+          "mechanism_id": "M04-PLATFORM-01",
+          "mechanism_type": "MOVING_OBJECT",
+          "initial_state": "MOVING_FORWARD",
+          "config": {
+            "reverse_combo": "COMBO-003"
+          }
+        },
+        {
+          "mechanism_id": "M04-PLATFORM-02",
+          "mechanism_type": "PLATFORM_BRIDGE",
+          "initial_state": "UNSTABLE",
+          "config": {
+            "lock_at_endpoint": true
+          }
+        }
+      ],
+      "necessary_objectives": [
+        {
+          "objective_id": "OBJ-04-PLATFORM",
+          "mechanism_id": "M04-PLATFORM-01",
+          "target_state": "ENDPOINT_LOCKED",
+          "required_combo": "COMBO-003"
+        }
+      ],
+      "discoveries": [
+        "DIS_COMBO_003"
+      ],
+      "presentation": {
+        "hint_level": "L1",
+        "completion_effect": "FX_ROOM_CLEAR_04"
+      }
+    },
+    {
+      "level_id": "LV-ROOM-05",
+      "room_index": 5,
+      "name": "三重回响",
+      "is_hidden": false,
+      "is_enabled": true,
+      "entrance_id": "ENTRANCE-ROOM-05",
+      "estimated_duration_seconds": 90,
+      "required_laws": [
+        "RULE_ECHO",
+        "RULE_GAZE",
+        "RULE_REVERSE"
+      ],
+      "required_combos": [
+        "COMBO-001",
+        "COMBO-002",
+        "COMBO-003"
+      ],
+      "mechanisms": [
+        {
+          "mechanism_id": "M05-BRIDGE-01",
+          "mechanism_type": "PLATFORM_BRIDGE",
+          "initial_state": "INVISIBLE",
+          "config": {
+            "requires_combo": "COMBO-001"
+          }
+        },
+        {
+          "mechanism_id": "M05-ENERGY-01",
+          "mechanism_type": "ENERGY_NODE",
+          "initial_state": "DORMANT",
+          "config": {
+            "requires_combo": "COMBO-002"
+          }
+        },
+        {
+          "mechanism_id": "M05-REVERSE-01",
+          "mechanism_type": "MOVING_OBJECT",
+          "initial_state": "MOVING_FORWARD",
+          "config": {
+            "requires_combo": "COMBO-003"
+          }
+        },
+        {
+          "mechanism_id": "M05-HIDDEN-GATE",
+          "mechanism_type": "HIDDEN_GATE",
+          "initial_state": "SEALED",
+          "config": {
+            "opens_on_route": "HIDDEN-ROUTE-01"
+          }
+        }
+      ],
+      "necessary_objectives": [
+        {
+          "objective_id": "OBJ-05-BRIDGE",
+          "mechanism_id": "M05-BRIDGE-01",
+          "target_state": "OPEN",
+          "required_combo": "COMBO-001"
+        },
+        {
+          "objective_id": "OBJ-05-ENERGY",
+          "mechanism_id": "M05-ENERGY-01",
+          "target_state": "REVERSED",
+          "required_combo": "COMBO-002"
+        },
+        {
+          "objective_id": "OBJ-05-REVERSE",
+          "mechanism_id": "M05-REVERSE-01",
+          "target_state": "ENDPOINT_LOCKED",
+          "required_combo": "COMBO-003"
+        }
+      ],
+      "discoveries": [
+        "DIS_HIDDEN_ROUTE_CLUE"
+      ],
+      "presentation": {
+        "hint_level": "L1",
+        "completion_effect": "FX_ROOM_CLEAR_05"
+      }
+    },
+    {
+      "level_id": "LV-HIDDEN-01",
+      "room_index": null,
+      "name": "世界之外",
+      "is_hidden": true,
+      "is_enabled": true,
+      "entrance_id": "ENTRANCE-HIDDEN-01",
+      "estimated_duration_seconds": 90,
+      "required_laws": [
+        "RULE_ECHO",
+        "RULE_GAZE",
+        "RULE_REVERSE"
+      ],
+      "required_combos": [
+        "COMBO-001",
+        "COMBO-002",
+        "COMBO-003"
+      ],
+      "unlock": {
+        "hidden_route_id": "HIDDEN-ROUTE-01",
+        "requires_completed_levels": [
+          "LV-ROOM-01",
+          "LV-ROOM-02",
+          "LV-ROOM-03",
+          "LV-ROOM-04",
+          "LV-ROOM-05"
+        ]
+      },
+      "mechanisms": [
+        {
+          "mechanism_id": "H01-GATE",
+          "mechanism_type": "HIDDEN_GATE",
+          "initial_state": "OPEN",
+          "config": {
+            "opened_by_route": "HIDDEN-ROUTE-01"
+          }
+        },
+        {
+          "mechanism_id": "H01-END",
+          "mechanism_type": "ENDING_CORE",
+          "initial_state": "DORMANT",
+          "config": {
+            "target_state": "ENDING_REVEALED"
+          }
+        }
+      ],
+      "necessary_objectives": [
+        {
+          "objective_id": "OBJ-HIDDEN-END",
+          "mechanism_id": "H01-END",
+          "target_state": "ENDING_REVEALED"
+        }
+      ],
+      "discoveries": [
+        "DIS_ENDING"
+      ],
+      "presentation": {
+        "hint_level": "L1",
+        "completion_effect": "FX_HIDDEN_ENDING"
+      }
+    }
+  ],
+  "hidden_routes": [
+    {
+      "hidden_route_id": "HIDDEN-ROUTE-01",
+      "prerequisite_levels": [
+        "LV-ROOM-01",
+        "LV-ROOM-02",
+        "LV-ROOM-03",
+        "LV-ROOM-04",
+        "LV-ROOM-05"
+      ],
+      "trigger_combo": [
+        "COMBO-001",
+        "COMBO-002",
+        "COMBO-003"
+      ],
+      "trigger_mechanisms": [
+        "M05-BRIDGE-01",
+        "M05-ENERGY-01",
+        "M05-REVERSE-01"
+      ],
+      "result": "LV-HIDDEN-01",
+      "is_enabled": true
+    }
+  ]
+}
