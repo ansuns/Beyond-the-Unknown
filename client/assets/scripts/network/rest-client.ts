@@ -12,11 +12,19 @@ export class ApiError extends Error {
   }
 }
 
+export interface HttpResponseLike {
+  status: number;
+  ok: boolean;
+  json(): Promise<unknown>;
+}
+
+export type FetchLike = (input: string | URL, init?: RequestInit) => Promise<HttpResponseLike>;
+
 export interface RestClientOptions {
   baseUrl: string;
   token?: () => string | undefined;
   timeoutMs?: number;
-  fetchImpl?: typeof fetch;
+  fetchImpl?: FetchLike;
   requestId?: () => string;
 }
 
@@ -24,7 +32,7 @@ export class RestClient {
   private readonly baseUrl: string;
   private readonly token: () => string | undefined;
   private readonly timeoutMs: number;
-  private readonly fetchImpl: typeof fetch;
+  private readonly fetchImpl: FetchLike;
   private readonly requestId: () => string;
 
   constructor(options: RestClientOptions) {
