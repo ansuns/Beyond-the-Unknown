@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import hashlib
 import json
 from datetime import UTC, datetime, timedelta
 from typing import Any
@@ -424,6 +425,9 @@ async def settle_level(
     ended_at = datetime.now(UTC)
     started_at = run["started_at"]
     elapsed_ms = max(0, int((ended_at - started_at).total_seconds() * 1000)) if started_at else None
+    settlement_key = hashlib.sha256(
+        f"{player_id}:{idempotency_key}".encode("utf-8")
+    ).hexdigest()
     settlement = (
         await session.execute(
             text("""
@@ -440,7 +444,7 @@ async def settle_level(
                 "player_id": player_id,
                 "level_id": run["level_id"],
                 "completion_time_ms": elapsed_ms,
-                "idempotency_key": idempotency_key,
+                "idempotency_key": settlement_key,
             },
         )
     ).mappings().one()
@@ -862,7 +866,9 @@ async def _grant_matching_rewards(
                 reward_id,
                 source,
                 source_id,
-                f"grant:{reward_id}:{source}:{source_id}",
+                "grant:" + hashlib.sha256(
+                    f"{reward_id}:{source}:{source_id}".encode("utf-8")
+                ).hexdigest(),
             )
         )
     return results
