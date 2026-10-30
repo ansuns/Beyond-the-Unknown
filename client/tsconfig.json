@@ -7,8 +7,17 @@
     "noEmit": true,
     "skipLibCheck": true,
     "forceConsistentCasingInFileNames": true,
-    "lib": ["ES2022", "DOM"],
-    "types": ["vitest/globals"]
+    "lib": [
+      "ES2022",
+      "DOM"
+    ],
+    "types": [
+      "vitest/globals",
+      "node"
+    ]
   },
-  "include": ["assets/scripts/**/*.ts", "tests/**/*.ts"]
+  "include": [
+    "assets/scripts/**/*.ts",
+    "tests/**/*.ts"
+  ]
 }
