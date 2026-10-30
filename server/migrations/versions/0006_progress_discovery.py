@@ -1,6 +1,6 @@
 import sqlalchemy as sa
 from alembic import op
-from sqlalchemy.dialects.postgresql import JSONB
+from sqlalchemy.dialects.postgresql import ENUM, JSONB
 
 
 revision = "0006_progress_discovery"
@@ -116,7 +116,7 @@ def upgrade() -> None:
     op.create_table(
         "score_rule_config",
         sa.Column("reason", sa.String(32), primary_key=True),
-        sa.Column("board_type", sa.Enum(name="board_type", create_type=False), nullable=False),
+        sa.Column("board_type", ENUM("EXPLORE", "CLEAR", "COLLECT", name="board_type", create_type=False), nullable=False),
         sa.Column("delta", sa.BigInteger(), nullable=True),
         sa.Column(
             "config_status",
@@ -164,19 +164,9 @@ def upgrade() -> None:
         ["run_id", "player_id"],
     )
     op.create_index(
-        "idx_player_discoveries_player_time",
-        "player_discoveries",
-        ["player_id", "first_discovered_at"],
-    )
-    op.create_index(
         "idx_player_collections_player_category",
         "player_collections",
         ["player_id", "codex_category"],
-    )
-    op.create_index(
-        "idx_score_events_player_board_period",
-        "score_events",
-        ["player_id", "board_type", "period_id", "created_at_utc"],
     )
 
     op.execute(
@@ -383,9 +373,7 @@ def upgrade() -> None:
 
 
 def downgrade() -> None:
-    op.drop_index("idx_score_events_player_board_period", table_name="score_events")
     op.drop_index("idx_player_collections_player_category", table_name="player_collections")
-    op.drop_index("idx_player_discoveries_player_time", table_name="player_discoveries")
     op.drop_constraint("fk_score_event_run_owner", "score_events", type_="foreignkey")
     op.drop_constraint("fk_rewards_condition_ref", "rewards", type_="foreignkey")
     op.drop_table("reward_conditions")
