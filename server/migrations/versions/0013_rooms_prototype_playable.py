@@ -32,6 +32,16 @@ def upgrade() -> None:
     )
     op.execute(
         """
+        UPDATE level_mechanism_catalog
+        SET config = config || jsonb_build_object('prototype_only', true)
+        WHERE level_id = 'LV-ROOM-01'
+          AND mechanism_config_id IN (
+              'M01-HIDEABLE-01', 'M01-LIGHT-01', 'M01-EXIT-01'
+          )
+        """
+    )
+    op.execute(
+        """
         UPDATE rule_catalog
         SET cooldown_ms = 1200,
             radius = 2.0,
@@ -140,6 +150,16 @@ def upgrade() -> None:
 
 
 def downgrade() -> None:
+    op.execute(
+        """
+        UPDATE level_mechanism_catalog
+        SET config = config - 'prototype_only'
+        WHERE level_id = 'LV-ROOM-01'
+          AND mechanism_config_id IN (
+              'M01-HIDEABLE-01', 'M01-LIGHT-01', 'M01-EXIT-01'
+          )
+        """
+    )
     op.execute(
         """
         UPDATE level_objectives

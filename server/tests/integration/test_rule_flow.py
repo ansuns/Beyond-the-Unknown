@@ -1,4 +1,5 @@
 # ruff: noqa: I001
+from pathlib import Path
 
 import asyncio
 import os
@@ -571,6 +572,24 @@ def test_mechanism_catalog_and_references_match_canonical_gdd_ids() -> None:
         and row["config"].get("prototype_only") is True
     }
     assert prototype_ids <= configured_prototypes
+    level_config_path = (
+        Path(__file__).resolve().parents[3]
+        / "docs"
+        / "engineering"
+        / "levels"
+        / "levels.v1.json"
+    )
+    source_config = json.loads(level_config_path.read_text(encoding="utf-8"))
+    catalog_by_key = {
+        (row["level_id"], row["mechanism_config_id"]): row
+        for row in contract["catalog"]
+    }
+    for level in source_config["levels"]:
+        for mechanism in level["mechanisms"]:
+            row = catalog_by_key[(level["level_id"], mechanism["mechanism_id"])]
+            assert row["position_x"] == mechanism["position"]["x"]
+            assert row["position_y"] == mechanism["position"]["y"]
+            assert row["config"].get("prototype_only") is True
     assert contract["combo_targets"] == [
         "M02-BRIDGE-01",
         "M03-ENERGY-01",
