@@ -465,6 +465,26 @@ async def cast_rule(
         now,
     )
 
+    discovery_events: list[dict[str, Any]] = []
+    if rule_id == "RULE_ECHO" and run["level_id"] == "LV-ROOM-01" and effects:
+        discovery_events.append(
+            await record_discovery(session, player_id, "DIS_RULE_ECHO", run_id)
+        )
+    combo_discoveries = {
+        "COMBO-001": "DIS_COMBO_001",
+        "COMBO-002": "DIS_COMBO_002",
+        "COMBO-003": "DIS_COMBO_003",
+    }
+    if combo_result and combo_result.get("combo_id") in combo_discoveries:
+        discovery_events.append(
+            await record_discovery(
+                session,
+                player_id,
+                combo_discoveries[combo_result["combo_id"]],
+                run_id,
+            )
+        )
+
     cooldown_until = now + timedelta(milliseconds=rule["cooldown_ms"])
     active_target = (
         target_id if rule_id in {"RULE_GAZE", "RULE_REVERSE"} else None
@@ -509,6 +529,7 @@ async def cast_rule(
         "target_id": target_id,
         "effects": effects,
         "combo": combo_result,
+        "discoveries": discovery_events,
         "cooldown_until": cooldown_until.isoformat(),
         "idempotent_replay": False,
     }
