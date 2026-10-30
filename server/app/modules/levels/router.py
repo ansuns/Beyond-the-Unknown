@@ -18,7 +18,16 @@ from app.modules.levels.repository import (
     list_levels,
     start_level,
 )
-from app.modules.gameplay.service import (\n    InvalidLawAction,\n    LawCooldown,\n    LawIdempotencyConflict,\n    LevelRunNotFound,\n    MechanismNotFound,\n    apply_law_action,\n    get_run_mechanisms,\n)\nfrom app.modules.levels.schemas import LawActionRequest, LevelEnterRequest, LevelRunRequest
+from app.modules.gameplay.service import (
+    InvalidLawAction,
+    LawCooldown,
+    LawIdempotencyConflict,
+    LevelRunNotFound,
+    MechanismNotFound,
+    apply_law_action,
+    get_run_mechanisms,
+)
+from app.modules.levels.schemas import LawActionRequest, LevelEnterRequest, LevelRunRequest
 from app.realtime.manager import map_connections
 from app.schemas.envelope import success_envelope
 
