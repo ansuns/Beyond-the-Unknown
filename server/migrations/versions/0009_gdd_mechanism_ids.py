@@ -1,11 +1,23 @@
 """Align persisted mechanism catalog IDs with the canonical GDD level data."""
 
+import sqlalchemy as sa
 from alembic import op
 
 revision = "0009_gdd_mechanism_ids"
 down_revision = "0008_season_outbox"
 branch_labels = None
 depends_on = None
+
+
+def _update_ids(table: str, old_id: str, new_id: str) -> None:
+    # Table names are fixed internal constants at the call sites below.
+    op.get_bind().execute(
+        sa.text(
+            f"UPDATE {table} SET mechanism_config_id = :new_id "
+            "WHERE mechanism_config_id = :old_id"
+        ),
+        {"old_id": old_id, "new_id": new_id},
+    )
 
 
 def upgrade() -> None:
@@ -17,25 +29,11 @@ def upgrade() -> None:
         "MECH_MOVING_PLATFORM": "M04-PLATFORM-01",
     }
     for old_id, new_id in id_map.items():
-        op.execute(
-            """
-            UPDATE level_mechanism_catalog
-            SET mechanism_config_id = :new_id
-            WHERE mechanism_config_id = :old_id
-            """,
-            {"old_id": old_id, "new_id": new_id},
-        )
-        op.execute(
-            """
-            UPDATE mechanism_states
-            SET mechanism_config_id = :new_id
-            WHERE mechanism_config_id = :old_id
-            """,
-            {"old_id": old_id, "new_id": new_id},
-        )
+        _update_ids("level_mechanism_catalog", old_id, new_id)
+        _update_ids("mechanism_states", old_id, new_id)
 
-    # Catalog entries exist for discovery and future content work, but remain
-    # non-interactive until positions, art and rule tuning are approved.
+    # Catalog entries are present for future content work. Their interaction
+    # positions, art and rule tuning remain pending and must not be inferred.
     op.execute(
         """
         INSERT INTO level_mechanism_catalog
@@ -79,19 +77,5 @@ def downgrade() -> None:
         "M04-PLATFORM-01": "MECH_MOVING_PLATFORM",
     }
     for new_id, old_id in reverse_map.items():
-        op.execute(
-            """
-            UPDATE level_mechanism_catalog
-            SET mechanism_config_id = :old_id
-            WHERE mechanism_config_id = :new_id
-            """,
-            {"old_id": old_id, "new_id": new_id},
-        )
-        op.execute(
-            """
-            UPDATE mechanism_states
-            SET mechanism_config_id = :old_id
-            WHERE mechanism_config_id = :new_id
-            """,
-            {"old_id": old_id, "new_id": new_id},
-        )
+        _update_ids("level_mechanism_catalog", new_id, old_id)
+        _update_ids("mechanism_states", new_id, old_id)
