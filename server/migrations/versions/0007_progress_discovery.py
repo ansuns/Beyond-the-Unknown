@@ -1,3 +1,5 @@
+# ruff: noqa: I001
+
 import sqlalchemy as sa
 from alembic import op
 from sqlalchemy.dialects.postgresql import ENUM, JSONB
