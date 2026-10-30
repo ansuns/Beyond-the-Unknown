@@ -6,6 +6,8 @@ from typing import Any
 from uuid import UUID
 
 from sqlalchemy import text
+
+from app.modules.progress.repository import record_discovery
 from sqlalchemy.ext.asyncio import AsyncSession
 
 
@@ -451,6 +453,7 @@ async def cast_rule(
         effects.append(
             {
                 "mechanism_id": mechanism["mechanism_config_id"],
+                "target_type": mechanism["target_type"],
                 "state": state,
             }
         )
@@ -503,12 +506,74 @@ async def cast_rule(
         },
     )
 
+    discoveries = []
+    if effects:
+        law_discovery_id = {
+            "RULE_ECHO": "DISC-RULE-ECHO",
+            "RULE_GAZE": "DISC-RULE-GAZE",
+            "RULE_REVERSE": "DISC-RULE-REVERSE",
+        }[rule_id]
+        discoveries.append(
+            await record_discovery(
+                session,
+                player_id,
+                law_discovery_id,
+                run_id,
+                run["level_id"],
+                {
+                    "level_id": run["level_id"],
+                    "run_id": str(run_id),
+                    "mechanism_ids": [item["mechanism_id"] for item in effects],
+                },
+                related_rule=rule_id,
+            )
+        )
+    if rule_id == "RULE_ECHO" and any(
+        item["target_type"] == "HIDDEN_OBJECT" for item in effects
+    ):
+        discoveries.append(
+            await record_discovery(
+                session,
+                player_id,
+                "DISC-HIDDEN-OBJ-ROOM01",
+                run_id,
+                run["level_id"],
+                {
+                    "level_id": run["level_id"],
+                    "run_id": str(run_id),
+                    "mechanism_ids": [
+                        item["mechanism_id"]
+                        for item in effects
+                        if item["target_type"] == "HIDDEN_OBJECT"
+                    ],
+                },
+                related_rule=rule_id,
+            )
+        )
+    if combo_result and not combo_result.get("already_applied"):
+        combo_discovery_id = f"DISC-{combo_result['combo_id']}"
+        discoveries.append(
+            await record_discovery(
+                session,
+                player_id,
+                combo_discovery_id,
+                run_id,
+                run["level_id"],
+                {
+                    "level_id": run["level_id"],
+                    "run_id": str(run_id),
+                    "mechanism_id": combo_result["mechanism_id"],
+                },
+            )
+        )
+
     result = {
         "run_id": str(run_id),
         "rule_id": rule_id,
         "target_id": target_id,
         "effects": effects,
         "combo": combo_result,
+        "discoveries": discoveries,
         "cooldown_until": cooldown_until.isoformat(),
         "idempotent_replay": False,
     }
