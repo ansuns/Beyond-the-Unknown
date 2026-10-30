@@ -1,5 +1,6 @@
 from alembic import op
 import sqlalchemy as sa
+from sqlalchemy.dialects import postgresql
 from sqlalchemy.dialects.postgresql import JSONB
 
 revision = "0007_discovery_settlement"
@@ -44,7 +45,7 @@ def upgrade() -> None:
     op.create_table(
         "score_award_config",
         sa.Column("reason", sa.String(32), primary_key=True),
-        sa.Column("board_type", sa.Enum(name="board_type", create_type=False), nullable=False),
+        sa.Column(\n            "board_type",\n            postgresql.ENUM("EXPLORE", "CLEAR", "COLLECT", name="board_type", create_type=False),\n            nullable=False,\n        ),
         sa.Column("delta", sa.BigInteger()),
         sa.Column("config_status", sa.String(24), nullable=False, server_default="TUNING_REQUIRED"),
         sa.CheckConstraint("reason IN ('EXP_DISCOVER','CLEAR_STAGE','COLLECT_NEW')", name="ck_score_award_reason"),
