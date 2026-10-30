@@ -138,6 +138,12 @@ def upgrade() -> None:
                             THEN jsonb_set(effect, '{mechanism_id}', '"M03-ENERGY-01"'::jsonb)
                         WHEN 'MECH_MOVING_PLATFORM'
                             THEN jsonb_set(effect, '{mechanism_id}', '"M04-PLATFORM-01"'::jsonb)
+                        WHEN 'MECH-ROOM01-LIGHT-01'
+                            THEN jsonb_set(effect, '{mechanism_id}', '"M01-LIGHT-01"'::jsonb)
+                        WHEN 'MECH_ROOM03_DOOR_BARRIER'
+                            THEN jsonb_set(effect, '{mechanism_id}', '"M03-DOOR-01"'::jsonb)
+                        WHEN 'MECH-HIDDEN-ENDING-01'
+                            THEN jsonb_set(effect, '{mechanism_id}', '"H01-END"'::jsonb)
                         ELSE effect
                     END
                 )
@@ -160,9 +166,68 @@ def upgrade() -> None:
 
 
 def downgrade() -> None:
-    # Canonical IDs are now part of persisted player progress and event payloads.
-    # A lossy downgrade would reintroduce ambiguous aliases; retain the data
-    # contract and make this migration intentionally irreversible.
-    raise RuntimeError(
-        "0010_complete_mechanism_id_alignment is intentionally irreversible"
+    """Restore the legacy identifiers and the original dependent references."""
+    op.drop_constraint(
+        "fk_level_objective_mechanism", "level_objectives", type_="foreignkey"
+    )
+    reverse_map = {
+        "M01-LIGHT-01": "MECH-ROOM01-LIGHT-01",
+        "M03-DOOR-01": "MECH_ROOM03_DOOR_BARRIER",
+        "H01-END": "MECH-HIDDEN-ENDING-01",
+    }
+    for new_id, old_id in reverse_map.items():
+        _replace_id("level_objectives", "mechanism_config_id", new_id, old_id)
+        _replace_id("level_mechanism_catalog", "mechanism_config_id", new_id, old_id)
+        _replace_id("mechanism_states", "mechanism_config_id", new_id, old_id)
+        _replace_id("rule_cast_events", "target_id", new_id, old_id)
+        _replace_id("player_rule_states", "active_target_id", new_id, old_id)
+
+    op.execute(
+        """
+        UPDATE level_mechanism_catalog
+        SET mechanism_type = 'ENDING_GATE',
+            trigger_rule = '["INTERACT"]'::jsonb,
+            config = jsonb_build_object('config_status', 'PENDING_HIDDEN_ENDING_CONTENT')
+        WHERE level_id = 'LV-HIDDEN-01'
+          AND mechanism_config_id = 'MECH-HIDDEN-ENDING-01'
+        """
+    )
+    op.execute(
+        """
+        UPDATE level_mechanism_catalog
+        SET config = jsonb_set(
+            config, '{linked_mechanism_id}',
+            to_jsonb('MECH_ROOM03_DOOR_BARRIER'::text), true
+        )
+        WHERE level_id = 'LV-ROOM-03'
+          AND mechanism_config_id = 'M03-ENERGY-01'
+        """
+    )
+    op.execute(
+        """
+        UPDATE hidden_routes
+        SET trigger_mechanism_sequence =
+            '["MECH_BRIDGE","MECH_ENERGY_GATE","MECH_MOVING_PLATFORM"]'::jsonb
+        WHERE hidden_route_id = 'HIDDEN-ROUTE-01'
+        """
+    )
+    op.execute(
+        """
+        UPDATE discovery_catalog
+        SET trigger_condition = jsonb_set(
+            trigger_condition,
+            '{mechanism_id}',
+            to_jsonb('MECH-ROOM01-HIDDEN-01'::text),
+            true
+        )
+        WHERE discovery_id = 'DISC-HIDDEN-OBJ-ROOM01'
+        """
+    )
+    op.create_foreign_key(
+        "fk_level_objective_mechanism",
+        "level_objectives",
+        "level_mechanism_catalog",
+        ["level_id", "mechanism_config_id"],
+        ["level_id", "mechanism_config_id"],
+        ondelete="CASCADE",
     )
