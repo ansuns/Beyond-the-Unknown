@@ -377,6 +377,20 @@ def test_outbox_finalizes_season_and_grants_rank_reward_once() -> None:
             "WHERE idempotency_key = :key",
             {"key": f"season-auto-approve:{season_id}"},
         )[0]
+        early_envelope = {
+            "schema_version": 1,
+            "task_id": str(auto_task["task_id"]),
+            "task_type": "season.auto_approve",
+            "idempotency_key": auto_task["idempotency_key"],
+            "payload": auto_task["payload"],
+        }
+        asyncio.run(_process_outbox_task(early_envelope))
+        retry_task = _db_fetch(
+            "SELECT task_id, idempotency_key, payload FROM task_outbox "
+            "WHERE task_type = 'season.auto_approve' AND status = 'PENDING' "
+            "AND payload->>'season_id' = :season_id",
+            {"season_id": season_id},
+        )[0]
         _db_exec([
             ("""
                 UPDATE seasons SET review_until_utc = now() - interval '1 second'
@@ -384,16 +398,16 @@ def test_outbox_finalizes_season_and_grants_rank_reward_once() -> None:
             """, {"season_id": season_id}),
             ("""
                 UPDATE task_outbox
-                SET available_at_utc = now() - interval '1 second', status = 'PENDING'
+                SET available_at_utc = now() - interval '1 second'
                 WHERE task_id = :task_id
-            """, {"task_id": auto_task["task_id"]}),
+            """, {"task_id": retry_task["task_id"]}),
         ])
         approve_envelope = {
             "schema_version": 1,
-            "task_id": str(auto_task["task_id"]),
+            "task_id": str(retry_task["task_id"]),
             "task_type": "season.auto_approve",
-            "idempotency_key": auto_task["idempotency_key"],
-            "payload": auto_task["payload"],
+            "idempotency_key": retry_task["idempotency_key"],
+            "payload": retry_task["payload"],
         }
         asyncio.run(_process_outbox_task(approve_envelope))
         asyncio.run(_process_outbox_task(approve_envelope))
@@ -423,10 +437,11 @@ def test_outbox_finalizes_season_and_grants_rank_reward_once() -> None:
             """, {"reward_id": reward_id}),
             ("""
                 DELETE FROM worker_task_receipts
-                WHERE idempotency_key IN (:finalize_key, :approve_key)
+                WHERE idempotency_key = :finalize_key
+                   OR idempotency_key LIKE :approve_pattern
             """, {
                 "finalize_key": f"season-finalize:{season_id}",
-                "approve_key": f"season-auto-approve:{season_id}",
+                "approve_pattern": f"season-auto-approve:{season_id}%",
             }),
             ("""
                 DELETE FROM task_outbox
