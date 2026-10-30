@@ -318,7 +318,8 @@
         "combo_id",
         "target_mechanism_id",
         "rule_sequence",
-        "display_name"
+        "display_name",
+        "maintain_gaze"
       ],
       "properties": {
         "combo_id": {
@@ -344,6 +345,9 @@
         "display_name": {
           "type": "string",
           "minLength": 1
+        },
+        "maintain_gaze": {
+          "type": "boolean"
         }
       },
       "additionalProperties": false
