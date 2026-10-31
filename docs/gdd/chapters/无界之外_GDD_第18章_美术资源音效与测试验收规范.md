@@ -311,6 +311,8 @@
   UI资源        `UI_{界面/控件}_{状态}_{序号}`
   音频资源      `AUD_{类别}_{名称}_{序号}`
 
+**机关资源 ID 与服务端机制 ID 的边界：** `MEC_` 是资源文件名前缀，不是服务端机制 ID。资源清单的 `asset_id`、机关资源目录名必须使用第17章定义的 canonical `mechanism_config_id`，例如 `M01-HIDEABLE-01`；实际文件名可写为 `MEC_M01-HIDEABLE-01_REVEALED_01.png`。禁止把文件名前缀 `MEC_` 写入 `level_mechanism_catalog.mechanism_config_id`。
+
 ### 【要求】
 
 -   命名不符合规范不得进入正式资源包。
