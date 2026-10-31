@@ -926,21 +926,20 @@ export class BeyondTheUnknownGameEntry extends Component {
   }
 
   private async enterFirstRoom(): Promise<void> {
+    if (this.prototypeActionInFlight) return;
+    this.prototypeActionInFlight = true;
     this.stopJoystickMovement();
-    if (this.currentMode === "PERSONAL_LEVEL" && this.levelSession?.activeRun()) {
-      try {
+    try {
+      if (this.currentMode === "PERSONAL_LEVEL" && this.levelSession?.activeRun()) {
         const run = await this.levelSession.start();
         await this.finishPersonalLevel(this.pendingLevelName, run.run_id);
-      } catch (error) {
-        this.setStatus(`关卡启动重试失败：${error instanceof Error ? error.message : "未知错误"}`);
+        return;
       }
-      return;
-    }
-    if (this.currentMode !== "WORLD" || !this.api || !this.mapSession) {
-      this.setStatus("请先登录并进入共享世界");
-      return;
-    }
-    try {
+      if (this.currentMode !== "WORLD" || !this.api || !this.mapSession) {
+        this.setStatus("请先登录并进入共享世界");
+        return;
+      }
+
       this.setStatus("正在读取房间目录与个人进度…");
       const [catalog, progress] = await Promise.all([
         this.api.listLevels(),
@@ -967,7 +966,7 @@ export class BeyondTheUnknownGameEntry extends Component {
       this.prototypeGazeNextMaintainAt = 0;
       this.currentMode = "PERSONAL_LEVEL";
       this.updateJoystickVisibility();
-      this.moveTarget = undefined;
+      this.stopJoystickMovement();
       this.mapSession.leave();
       this.clearAvatars();
       const run = await personal.start();
@@ -978,6 +977,8 @@ export class BeyondTheUnknownGameEntry extends Component {
           ? `个人关卡已创建，启动失败；可再次点击「进入探索房间」重试：${error instanceof Error ? error.message : "未知错误"}`
           : `进入关卡失败：${error instanceof Error ? error.message : "未知错误"}`
       );
+    } finally {
+      this.prototypeActionInFlight = false;
     }
   }
 
