@@ -12,11 +12,14 @@ const [manifest, levels] = await Promise.all([
 ]).then(([assetText, levelText]) => [JSON.parse(assetText), JSON.parse(levelText)]);
 
 describe("asset manifest contract", () => {
-  it("accepts the complete 112-entry manifest structure while assets are tracked as missing", () => {
+  it("accepts the complete 112-entry manifest structure while no asset is READY", () => {
     const result = validateAssetManifestStructure(manifest, levels);
     expect(result.errors).toEqual([]);
     expect(result.expectedCount).toBe(112);
-    expect(result.counts.MISSING).toBe(112);
+    expect(result.counts.READY).toBe(0);
+    expect(
+      result.counts.MISSING + result.counts.IN_PROGRESS + result.counts.BLOCKED
+    ).toBe(112);
     expect(manifest.entries.filter((entry: any) => entry.priority === "P0")).toHaveLength(37);
     expect(manifest.entries.filter((entry: any) => entry.priority === "P1")).toHaveLength(24);
     expect(manifest.entries.filter((entry: any) => entry.priority === "P2")).toHaveLength(51);
@@ -113,7 +116,7 @@ describe("asset manifest contract", () => {
     const entry = invalid.entries.find((item: { asset_id: string }) => item.asset_id === "M01-EXIT-01");
     entry.priority = "P1";
     entry.delivery_phase = "FIVE_ROOMS_AND_HIDDEN_ENDING";
-    expect(validateAssetManifestStructure(invalid, levels).errors.join("\\n")).toContain(
+    expect(validateAssetManifestStructure(invalid, levels).errors.join("\n")).toContain(
       "M01-EXIT-01: priority must be P0 per the approved production plan"
     );
   });
@@ -123,7 +126,8 @@ describe("asset manifest contract", () => {
     const entry = invalid.entries.find((item: { asset_id: string }) => item.asset_id === "CHR_001_PORTRAIT");
     entry.status = "READY";
     entry.files = ["assets/resources/characters/CHR_001/portrait/portrait.png"];
-    const errors = validateAssetManifestStructure(invalid, levels).errors.join("\\n");
+    delete (entry as { provenance?: unknown }).provenance;
+    const errors = validateAssetManifestStructure(invalid, levels).errors.join("\n");
     expect(errors).toContain("CHR_001_PORTRAIT: READY requires provenance.source_type from the approved source types");
     expect(errors).toContain("CHR_001_PORTRAIT: READY requires non-empty provenance.source_reference");
     expect(errors).toContain("CHR_001_PORTRAIT: READY requires non-empty provenance.license");
@@ -158,7 +162,7 @@ describe("asset manifest contract", () => {
       license_evidence: "docs/engineering/assets/evidence/../../secrets.md",
       acceptance_evidence: "docs/engineering/assets/evidence/CHR_001_PORTRAIT-acceptance.md"
     };
-    expect(validateAssetManifestStructure(invalid, levels).errors.join("\\n")).toContain(
+    expect(validateAssetManifestStructure(invalid, levels).errors.join("\n")).toContain(
       "CHR_001_PORTRAIT: provenance.license_evidence must be a safe Markdown path under docs/engineering/assets/evidence/"
     );
   });

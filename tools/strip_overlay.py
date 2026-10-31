@@ -37,7 +37,9 @@ from pathlib import Path
 from PIL import Image
 
 DEFAULT_BOX = (0.75, 0.90, 1.0, 1.0)
-OPAQUE_ALERT_RATIO = 0.02
+# Glyphs of the mark alone can cover ~7% of the corner box, so the guard only trips
+# when the region is mostly filled - that means artwork, not an overlay.
+OPAQUE_ALERT_RATIO = 0.35
 
 
 def _parse_box(value: str) -> tuple[float, float, float, float]:
