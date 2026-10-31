@@ -1,0 +1,27 @@
+name: art-tools-ci
+
+on:
+  pull_request:
+    paths:
+      - "tools/**"
+      - ".github/workflows/art-tools-ci.yml"
+  push:
+    branches: [main]
+    paths:
+      - "tools/**"
+      - ".github/workflows/art-tools-ci.yml"
+
+jobs:
+  tools:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install pillow numpy opencv-python-headless pytest
+      - name: Run art pipeline tests
+        run: python -m pytest tools/tests -q

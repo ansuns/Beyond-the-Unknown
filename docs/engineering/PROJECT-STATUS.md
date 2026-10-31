@@ -30,9 +30,11 @@
 | 权威清单条目 | 112 | `asset-manifest.v1.json` |
 | P0 条目 | 37 | 同上 |
 | READY | **0** | `npm run validate:assets` 输出 |
+| IN_PROGRESS | **3** | CHR_001 的主体 / 头像 / 预览，已有独立文件与 provenance |
+| MISSING | 109 | 其余条目 |
 | P1 / P2 | 24 / 51 | 同上 |
-| P0 视觉资源实际交付 | **0** | 本轮生成的图未入库，原因见 `assets/asset-generation-backend-findings.md` |
-| P0 完成率 | **0 / 37** | — |
+| P0 独立文件已交付 | **3 / 37** | 有文件，但未 Cocos 导入、未真机验收，故不计 READY |
+| P0 完成率（READY 口径） | **0 / 37** | 发布门禁仍不通过 |
 
 ## 3. MVP 能力核对
 
@@ -125,7 +127,8 @@ PR #127 与 #128 的 `compose-smoke` 在 GitHub 托管 runner 上通过，包含
 | B-2 | 无 Cocos Creator 3.8.8 | 无法验证导入与构建 | 安装编辑器 |
 | B-3 | 无微信开发者工具 / 小程序 AppID | 无法验证小游戏导入与真机。工具已装于 `C:\Program Files (x86)\Tencent\微信web开发者工具`，但仍需登录与 AppID | 提供 AppID 并登录工具 |
 | B-4 | 本机未安装 Docker / PostgreSQL / Redis | 19 项集成测试与迁移无法**本地**验证；CI 的 compose-smoke 已覆盖同等流程 | 安装 Docker Desktop，或提供数据库连接串 |
-| B-5 | 生图后端带烘焙合规水印 | 生成资源不能作为正式美术 | 见 `assets/asset-generation-backend-findings.md` |
+| B-5 | ~~生图后端带烘焙水印~~ | 已解除：`tools/strip_overlay.py` 按模式清角/裁边，23 项测试覆盖 | — |
+| B-8 | AI 生成资源的授权与标识未核实 | 生成资源不得标 READY；若要求保留标识，现有 3 件需回退重制 | 见 `assets/AI-content-compliance.md` 的 C-1～C-4 |
 | B-6 | 独立生图角色形象漂移 | 角色资源无法成套 | 确定 CHR_001 基准图后改图生图 |
 | B-7 | 积分规则 `config_status=TUNING_REQUIRED`、`delta=NULL` | **三榜在任何未调优环境恒为 0 分**；`content_readiness` 报 BLOCKED、退出码 2 | GDD 13.2 明确数值为待定项，需策划定档后写入种子数据 |
 

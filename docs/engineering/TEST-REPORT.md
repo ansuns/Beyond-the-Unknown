@@ -152,3 +152,44 @@ tests/integration/test_progress_flow.py:619
 | 恢复后 | 2 项通过 |
 
 该守卫在本地就拦住了 PR #131 新增端点未同步规范的问题，未进入 CI 环节。
+
+## 6. 第三轮（2026-10-31 11:20–11:30）：修复 P0-1 与合规记录
+
+### 6.1 修复的缺陷
+
+`tools/strip_overlay.py` 第一版用**同一把尺子**（区域不透明占比）判断三种模式。
+`crop` 模式对普通 RGB 图恒返回 100% 不透明，于是**文档里那条不带 `--force` 的裁边命令必然失败**。
+此前每次执行都带 `--force`，把这个问题掩盖了。
+
+修复后每种模式检查各自的失败条件：`alpha` 查角落是否被美术占据；`crop` 查裁切深度是否盖住角标
+且不过量；`inpaint` 查输入是否可用。
+
+### 6.2 新增测试
+
+| 命令 | 结果 |
+|---|---|
+| `python -m pytest tools/tests -q` | **23 passed** |
+
+覆盖：RGB 裁边不带 `--force`（该缺陷的回归用例）、裁切过浅/过深、alpha 清角与拒绝、
+RGB 误用 alpha 模式、全透明图、异常尺寸（16×16 / 17×13 / 31×999 / 999×31）、
+以及**直接以子进程执行 README 里原样命令并校验输出文件**。
+
+变异检验：把旧逻辑（非 RGBA 直接判 100% 不透明）重新注入后 **14 项失败**，恢复后 23 项通过。
+
+### 6.3 文档命令实跑
+
+```
+python tools/strip_overlay.py <背景原图> out.png --mode crop
+  → wrote out.png (mode=crop crop_depth=7.000%, 1536x953)  exit=0
+
+python tools/chroma_key.py <肖像原图> keyed.png --key 235,31,191
+python tools/strip_overlay.py keyed.png out.png --mode alpha --box 0.84,0.93,1.0,1.0
+  → wrote out.png (mode=alpha opaque_ratio=6.52%, 1024x1024)  exit=0
+```
+
+两条都**未使用 `--force`**，符合文档写法。
+
+### 6.4 仍不能声称的部分
+
+工具测试通过只说明工具行为正确，**不说明资源可发布**。授权与 AI 生成内容标识事项记录在
+`assets/AI-content-compliance.md`，其中 C-1～C-4 未确认前，生成资源保持 `IN_PROGRESS`。
