@@ -153,3 +153,14 @@ export function calculatePrototypeRoomScale(
   const projectedSpan = spanX + spanY;
   return Math.min(40, availableWidth / projectedSpan, availableHeight / projectedSpan);
 }
+
+export function screenDirectionToLogicalDirection(direction: PrototypePoint): PrototypePoint {
+  if (!Number.isFinite(direction.x) || !Number.isFinite(direction.y)) {
+    throw new Error("Joystick direction must be finite");
+  }
+  const x = (direction.x + direction.y) / 2;
+  const y = (direction.y - direction.x) / 2;
+  const length = Math.hypot(x, y);
+  if (length < 0.000001) return { x: 0, y: 0 };
+  return { x: x / length, y: y / length };
+}
