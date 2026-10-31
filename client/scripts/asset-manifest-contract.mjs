@@ -283,6 +283,24 @@ export function validateAssetManifestStructure(manifest, levelConfig, strict = f
     if (entry.status === "READY" && (entry.files?.length ?? 0) === 0) {
       add(`${id}: READY requires at least one delivered file`);
     }
+    if (entry.status === "READY") {
+      const provenance = entry.provenance;
+      const allowedSourceTypes = new Set([
+        "ORIGINAL_INTERNAL",
+        "COMMISSIONED",
+        "LICENSED",
+        "PUBLIC_DOMAIN",
+        "GENERATED_WITH_REVIEW"
+      ]);
+      if (!provenance || !allowedSourceTypes.has(provenance.source_type)) {
+        add(`${id}: READY requires provenance.source_type from the approved source types`);
+      }
+      for (const field of ["source_reference", "license", "license_evidence", "acceptance_evidence"]) {
+        if (typeof provenance?.[field] !== "string" || provenance[field].trim().length === 0) {
+          add(`${id}: READY requires non-empty provenance.${field}`);
+        }
+      }
+    }
     for (const file of entry.files ?? []) {
       if (typeof file !== "string" || file.startsWith("/") ||
           file.split("/").includes("..") ||
