@@ -87,7 +87,9 @@
       "expected_directory": "assets/resources/characters/CHR_001/portrait",
       "files": [],
       "source_chapter": "GDD 3.9 / 18.1",
-      "acceptance": "角色头像可按资源ID加载"
+      "acceptance": "角色头像可按资源ID加载",
+      "priority": "P0",
+      "delivery_phase": "VERTICAL_SLICE"
     },
     {
       "asset_id": "CHR_001_MODEL",
@@ -97,7 +99,9 @@
       "expected_directory": "assets/resources/characters/CHR_001/model",
       "files": [],
       "source_chapter": "GDD 3.9 / 18.1",
-      "acceptance": "角色模型或2D角色主体资源可加载"
+      "acceptance": "角色模型或2D角色主体资源可加载",
+      "priority": "P0",
+      "delivery_phase": "VERTICAL_SLICE"
     },
     {
       "asset_id": "CHR_001_PREVIEW",
@@ -107,7 +111,9 @@
       "expected_directory": "assets/resources/characters/CHR_001/preview",
       "files": [],
       "source_chapter": "GDD 3.9 / 18.1",
-      "acceptance": "角色选择预览资源可加载"
+      "acceptance": "角色选择预览资源可加载",
+      "priority": "P0",
+      "delivery_phase": "VERTICAL_SLICE"
     },
     {
       "asset_id": "CHR_001_ANIMATION_SET",
@@ -117,7 +123,9 @@
       "expected_directory": "assets/resources/characters/CHR_001/animation",
       "files": [],
       "source_chapter": "GDD 3.4 / 3.9 / 18.2",
-      "acceptance": "包含8方向IDLE、8方向MOVE、INTERACT及ACT_001至ACT_004"
+      "acceptance": "包含8方向IDLE、8方向MOVE、INTERACT及ACT_001至ACT_004",
+      "priority": "P0",
+      "delivery_phase": "VERTICAL_SLICE"
     },
     {
       "asset_id": "CHR_002_PORTRAIT",
@@ -127,7 +135,9 @@
       "expected_directory": "assets/resources/characters/CHR_002/portrait",
       "files": [],
       "source_chapter": "GDD 3.9 / 18.1",
-      "acceptance": "角色头像可按资源ID加载"
+      "acceptance": "角色头像可按资源ID加载",
+      "priority": "P2",
+      "delivery_phase": "CONTENT_EXPANSION"
     },
     {
       "asset_id": "CHR_002_MODEL",
@@ -137,7 +147,9 @@
       "expected_directory": "assets/resources/characters/CHR_002/model",
       "files": [],
       "source_chapter": "GDD 3.9 / 18.1",
-      "acceptance": "角色模型或2D角色主体资源可加载"
+      "acceptance": "角色模型或2D角色主体资源可加载",
+      "priority": "P2",
+      "delivery_phase": "CONTENT_EXPANSION"
     },
     {
       "asset_id": "CHR_002_PREVIEW",
@@ -147,7 +159,9 @@
       "expected_directory": "assets/resources/characters/CHR_002/preview",
       "files": [],
       "source_chapter": "GDD 3.9 / 18.1",
-      "acceptance": "角色选择预览资源可加载"
+      "acceptance": "角色选择预览资源可加载",
+      "priority": "P2",
+      "delivery_phase": "CONTENT_EXPANSION"
     },
     {
       "asset_id": "CHR_002_ANIMATION_SET",
@@ -157,7 +171,9 @@
       "expected_directory": "assets/resources/characters/CHR_002/animation",
       "files": [],
       "source_chapter": "GDD 3.4 / 3.9 / 18.2",
-      "acceptance": "包含8方向IDLE、8方向MOVE、INTERACT及ACT_001至ACT_004"
+      "acceptance": "包含8方向IDLE、8方向MOVE、INTERACT及ACT_001至ACT_004",
+      "priority": "P2",
+      "delivery_phase": "CONTENT_EXPANSION"
     },
     {
       "asset_id": "CHR_003_PORTRAIT",
@@ -167,7 +183,9 @@
       "expected_directory": "assets/resources/characters/CHR_003/portrait",
       "files": [],
       "source_chapter": "GDD 3.9 / 18.1",
-      "acceptance": "角色头像可按资源ID加载"
+      "acceptance": "角色头像可按资源ID加载",
+      "priority": "P2",
+      "delivery_phase": "CONTENT_EXPANSION"
     },
     {
       "asset_id": "CHR_003_MODEL",
@@ -177,7 +195,9 @@
       "expected_directory": "assets/resources/characters/CHR_003/model",
       "files": [],
       "source_chapter": "GDD 3.9 / 18.1",
-      "acceptance": "角色模型或2D角色主体资源可加载"
+      "acceptance": "角色模型或2D角色主体资源可加载",
+      "priority": "P2",
+      "delivery_phase": "CONTENT_EXPANSION"
     },
     {
       "asset_id": "CHR_003_PREVIEW",
@@ -187,7 +207,9 @@
       "expected_directory": "assets/resources/characters/CHR_003/preview",
       "files": [],
       "source_chapter": "GDD 3.9 / 18.1",
-      "acceptance": "角色选择预览资源可加载"
+      "acceptance": "角色选择预览资源可加载",
+      "priority": "P2",
+      "delivery_phase": "CONTENT_EXPANSION"
     },
     {
       "asset_id": "CHR_003_ANIMATION_SET",
@@ -197,7 +219,9 @@
       "expected_directory": "assets/resources/characters/CHR_003/animation",
       "files": [],
       "source_chapter": "GDD 3.4 / 3.9 / 18.2",
-      "acceptance": "包含8方向IDLE、8方向MOVE、INTERACT及ACT_001至ACT_004"
+      "acceptance": "包含8方向IDLE、8方向MOVE、INTERACT及ACT_001至ACT_004",
+      "priority": "P2",
+      "delivery_phase": "CONTENT_EXPANSION"
     },
     {
       "asset_id": "CHR_004_PORTRAIT",
@@ -207,7 +231,9 @@
       "expected_directory": "assets/resources/characters/CHR_004/portrait",
       "files": [],
       "source_chapter": "GDD 3.9 / 18.1",
-      "acceptance": "角色头像可按资源ID加载"
+      "acceptance": "角色头像可按资源ID加载",
+      "priority": "P2",
+      "delivery_phase": "CONTENT_EXPANSION"
     },
     {
       "asset_id": "CHR_004_MODEL",
@@ -217,7 +243,9 @@
       "expected_directory": "assets/resources/characters/CHR_004/model",
       "files": [],
       "source_chapter": "GDD 3.9 / 18.1",
-      "acceptance": "角色模型或2D角色主体资源可加载"
+      "acceptance": "角色模型或2D角色主体资源可加载",
+      "priority": "P2",
+      "delivery_phase": "CONTENT_EXPANSION"
     },
     {
       "asset_id": "CHR_004_PREVIEW",
@@ -227,7 +255,9 @@
       "expected_directory": "assets/resources/characters/CHR_004/preview",
       "files": [],
       "source_chapter": "GDD 3.9 / 18.1",
-      "acceptance": "角色选择预览资源可加载"
+      "acceptance": "角色选择预览资源可加载",
+      "priority": "P2",
+      "delivery_phase": "CONTENT_EXPANSION"
     },
     {
       "asset_id": "CHR_004_ANIMATION_SET",
@@ -237,7 +267,9 @@
       "expected_directory": "assets/resources/characters/CHR_004/animation",
       "files": [],
       "source_chapter": "GDD 3.4 / 3.9 / 18.2",
-      "acceptance": "包含8方向IDLE、8方向MOVE、INTERACT及ACT_001至ACT_004"
+      "acceptance": "包含8方向IDLE、8方向MOVE、INTERACT及ACT_001至ACT_004",
+      "priority": "P2",
+      "delivery_phase": "CONTENT_EXPANSION"
     },
     {
       "asset_id": "CHR_005_PORTRAIT",
@@ -247,7 +279,9 @@
       "expected_directory": "assets/resources/characters/CHR_005/portrait",
       "files": [],
       "source_chapter": "GDD 3.9 / 18.1",
-      "acceptance": "角色头像可按资源ID加载"
+      "acceptance": "角色头像可按资源ID加载",
+      "priority": "P2",
+      "delivery_phase": "CONTENT_EXPANSION"
     },
     {
       "asset_id": "CHR_005_MODEL",
@@ -257,7 +291,9 @@
       "expected_directory": "assets/resources/characters/CHR_005/model",
       "files": [],
       "source_chapter": "GDD 3.9 / 18.1",
-      "acceptance": "角色模型或2D角色主体资源可加载"
+      "acceptance": "角色模型或2D角色主体资源可加载",
+      "priority": "P2",
+      "delivery_phase": "CONTENT_EXPANSION"
     },
     {
       "asset_id": "CHR_005_PREVIEW",
@@ -267,7 +303,9 @@
       "expected_directory": "assets/resources/characters/CHR_005/preview",
       "files": [],
       "source_chapter": "GDD 3.9 / 18.1",
-      "acceptance": "角色选择预览资源可加载"
+      "acceptance": "角色选择预览资源可加载",
+      "priority": "P2",
+      "delivery_phase": "CONTENT_EXPANSION"
     },
     {
       "asset_id": "CHR_005_ANIMATION_SET",
@@ -277,7 +315,9 @@
       "expected_directory": "assets/resources/characters/CHR_005/animation",
       "files": [],
       "source_chapter": "GDD 3.4 / 3.9 / 18.2",
-      "acceptance": "包含8方向IDLE、8方向MOVE、INTERACT及ACT_001至ACT_004"
+      "acceptance": "包含8方向IDLE、8方向MOVE、INTERACT及ACT_001至ACT_004",
+      "priority": "P2",
+      "delivery_phase": "CONTENT_EXPANSION"
     },
     {
       "asset_id": "CHR_006_PORTRAIT",
@@ -287,7 +327,9 @@
       "expected_directory": "assets/resources/characters/CHR_006/portrait",
       "files": [],
       "source_chapter": "GDD 3.9 / 18.1",
-      "acceptance": "角色头像可按资源ID加载"
+      "acceptance": "角色头像可按资源ID加载",
+      "priority": "P2",
+      "delivery_phase": "CONTENT_EXPANSION"
     },
     {
       "asset_id": "CHR_006_MODEL",
@@ -297,7 +339,9 @@
       "expected_directory": "assets/resources/characters/CHR_006/model",
       "files": [],
       "source_chapter": "GDD 3.9 / 18.1",
-      "acceptance": "角色模型或2D角色主体资源可加载"
+      "acceptance": "角色模型或2D角色主体资源可加载",
+      "priority": "P2",
+      "delivery_phase": "CONTENT_EXPANSION"
     },
     {
       "asset_id": "CHR_006_PREVIEW",
@@ -307,7 +351,9 @@
       "expected_directory": "assets/resources/characters/CHR_006/preview",
       "files": [],
       "source_chapter": "GDD 3.9 / 18.1",
-      "acceptance": "角色选择预览资源可加载"
+      "acceptance": "角色选择预览资源可加载",
+      "priority": "P2",
+      "delivery_phase": "CONTENT_EXPANSION"
     },
     {
       "asset_id": "CHR_006_ANIMATION_SET",
@@ -317,7 +363,9 @@
       "expected_directory": "assets/resources/characters/CHR_006/animation",
       "files": [],
       "source_chapter": "GDD 3.4 / 3.9 / 18.2",
-      "acceptance": "包含8方向IDLE、8方向MOVE、INTERACT及ACT_001至ACT_004"
+      "acceptance": "包含8方向IDLE、8方向MOVE、INTERACT及ACT_001至ACT_004",
+      "priority": "P2",
+      "delivery_phase": "CONTENT_EXPANSION"
     },
     {
       "asset_id": "CHR_007_PORTRAIT",
@@ -327,7 +375,9 @@
       "expected_directory": "assets/resources/characters/CHR_007/portrait",
       "files": [],
       "source_chapter": "GDD 3.9 / 18.1",
-      "acceptance": "角色头像可按资源ID加载"
+      "acceptance": "角色头像可按资源ID加载",
+      "priority": "P2",
+      "delivery_phase": "CONTENT_EXPANSION"
     },
     {
       "asset_id": "CHR_007_MODEL",
@@ -337,7 +387,9 @@
       "expected_directory": "assets/resources/characters/CHR_007/model",
       "files": [],
       "source_chapter": "GDD 3.9 / 18.1",
-      "acceptance": "角色模型或2D角色主体资源可加载"
+      "acceptance": "角色模型或2D角色主体资源可加载",
+      "priority": "P2",
+      "delivery_phase": "CONTENT_EXPANSION"
     },
     {
       "asset_id": "CHR_007_PREVIEW",
@@ -347,7 +399,9 @@
       "expected_directory": "assets/resources/characters/CHR_007/preview",
       "files": [],
       "source_chapter": "GDD 3.9 / 18.1",
-      "acceptance": "角色选择预览资源可加载"
+      "acceptance": "角色选择预览资源可加载",
+      "priority": "P2",
+      "delivery_phase": "CONTENT_EXPANSION"
     },
     {
       "asset_id": "CHR_007_ANIMATION_SET",
@@ -357,7 +411,9 @@
       "expected_directory": "assets/resources/characters/CHR_007/animation",
       "files": [],
       "source_chapter": "GDD 3.4 / 3.9 / 18.2",
-      "acceptance": "包含8方向IDLE、8方向MOVE、INTERACT及ACT_001至ACT_004"
+      "acceptance": "包含8方向IDLE、8方向MOVE、INTERACT及ACT_001至ACT_004",
+      "priority": "P2",
+      "delivery_phase": "CONTENT_EXPANSION"
     },
     {
       "asset_id": "CHR_008_PORTRAIT",
@@ -367,7 +423,9 @@
       "expected_directory": "assets/resources/characters/CHR_008/portrait",
       "files": [],
       "source_chapter": "GDD 3.9 / 18.1",
-      "acceptance": "角色头像可按资源ID加载"
+      "acceptance": "角色头像可按资源ID加载",
+      "priority": "P2",
+      "delivery_phase": "CONTENT_EXPANSION"
     },
     {
       "asset_id": "CHR_008_MODEL",
@@ -377,7 +435,9 @@
       "expected_directory": "assets/resources/characters/CHR_008/model",
       "files": [],
       "source_chapter": "GDD 3.9 / 18.1",
-      "acceptance": "角色模型或2D角色主体资源可加载"
+      "acceptance": "角色模型或2D角色主体资源可加载",
+      "priority": "P2",
+      "delivery_phase": "CONTENT_EXPANSION"
     },
     {
       "asset_id": "CHR_008_PREVIEW",
@@ -387,7 +447,9 @@
       "expected_directory": "assets/resources/characters/CHR_008/preview",
       "files": [],
       "source_chapter": "GDD 3.9 / 18.1",
-      "acceptance": "角色选择预览资源可加载"
+      "acceptance": "角色选择预览资源可加载",
+      "priority": "P2",
+      "delivery_phase": "CONTENT_EXPANSION"
     },
     {
       "asset_id": "CHR_008_ANIMATION_SET",
@@ -397,7 +459,9 @@
       "expected_directory": "assets/resources/characters/CHR_008/animation",
       "files": [],
       "source_chapter": "GDD 3.4 / 3.9 / 18.2",
-      "acceptance": "包含8方向IDLE、8方向MOVE、INTERACT及ACT_001至ACT_004"
+      "acceptance": "包含8方向IDLE、8方向MOVE、INTERACT及ACT_001至ACT_004",
+      "priority": "P2",
+      "delivery_phase": "CONTENT_EXPANSION"
     },
     {
       "asset_id": "CHR_009_PORTRAIT",
@@ -407,7 +471,9 @@
       "expected_directory": "assets/resources/characters/CHR_009/portrait",
       "files": [],
       "source_chapter": "GDD 3.9 / 18.1",
-      "acceptance": "角色头像可按资源ID加载"
+      "acceptance": "角色头像可按资源ID加载",
+      "priority": "P2",
+      "delivery_phase": "CONTENT_EXPANSION"
     },
     {
       "asset_id": "CHR_009_MODEL",
@@ -417,7 +483,9 @@
       "expected_directory": "assets/resources/characters/CHR_009/model",
       "files": [],
       "source_chapter": "GDD 3.9 / 18.1",
-      "acceptance": "角色模型或2D角色主体资源可加载"
+      "acceptance": "角色模型或2D角色主体资源可加载",
+      "priority": "P2",
+      "delivery_phase": "CONTENT_EXPANSION"
     },
     {
       "asset_id": "CHR_009_PREVIEW",
@@ -427,7 +495,9 @@
       "expected_directory": "assets/resources/characters/CHR_009/preview",
       "files": [],
       "source_chapter": "GDD 3.9 / 18.1",
-      "acceptance": "角色选择预览资源可加载"
+      "acceptance": "角色选择预览资源可加载",
+      "priority": "P2",
+      "delivery_phase": "CONTENT_EXPANSION"
     },
     {
       "asset_id": "CHR_009_ANIMATION_SET",
@@ -437,7 +507,9 @@
       "expected_directory": "assets/resources/characters/CHR_009/animation",
       "files": [],
       "source_chapter": "GDD 3.4 / 3.9 / 18.2",
-      "acceptance": "包含8方向IDLE、8方向MOVE、INTERACT及ACT_001至ACT_004"
+      "acceptance": "包含8方向IDLE、8方向MOVE、INTERACT及ACT_001至ACT_004",
+      "priority": "P2",
+      "delivery_phase": "CONTENT_EXPANSION"
     },
     {
       "asset_id": "CHR_010_PORTRAIT",
@@ -447,7 +519,9 @@
       "expected_directory": "assets/resources/characters/CHR_010/portrait",
       "files": [],
       "source_chapter": "GDD 3.9 / 18.1",
-      "acceptance": "角色头像可按资源ID加载"
+      "acceptance": "角色头像可按资源ID加载",
+      "priority": "P2",
+      "delivery_phase": "CONTENT_EXPANSION"
     },
     {
       "asset_id": "CHR_010_MODEL",
@@ -457,7 +531,9 @@
       "expected_directory": "assets/resources/characters/CHR_010/model",
       "files": [],
       "source_chapter": "GDD 3.9 / 18.1",
-      "acceptance": "角色模型或2D角色主体资源可加载"
+      "acceptance": "角色模型或2D角色主体资源可加载",
+      "priority": "P2",
+      "delivery_phase": "CONTENT_EXPANSION"
     },
     {
       "asset_id": "CHR_010_PREVIEW",
@@ -467,7 +543,9 @@
       "expected_directory": "assets/resources/characters/CHR_010/preview",
       "files": [],
       "source_chapter": "GDD 3.9 / 18.1",
-      "acceptance": "角色选择预览资源可加载"
+      "acceptance": "角色选择预览资源可加载",
+      "priority": "P2",
+      "delivery_phase": "CONTENT_EXPANSION"
     },
     {
       "asset_id": "CHR_010_ANIMATION_SET",
@@ -477,7 +555,9 @@
       "expected_directory": "assets/resources/characters/CHR_010/animation",
       "files": [],
       "source_chapter": "GDD 3.4 / 3.9 / 18.2",
-      "acceptance": "包含8方向IDLE、8方向MOVE、INTERACT及ACT_001至ACT_004"
+      "acceptance": "包含8方向IDLE、8方向MOVE、INTERACT及ACT_001至ACT_004",
+      "priority": "P2",
+      "delivery_phase": "CONTENT_EXPANSION"
     },
     {
       "asset_id": "CHR_011_PORTRAIT",
@@ -487,7 +567,9 @@
       "expected_directory": "assets/resources/characters/CHR_011/portrait",
       "files": [],
       "source_chapter": "GDD 3.9 / 18.1",
-      "acceptance": "角色头像可按资源ID加载"
+      "acceptance": "角色头像可按资源ID加载",
+      "priority": "P2",
+      "delivery_phase": "CONTENT_EXPANSION"
     },
     {
       "asset_id": "CHR_011_MODEL",
@@ -497,7 +579,9 @@
       "expected_directory": "assets/resources/characters/CHR_011/model",
       "files": [],
       "source_chapter": "GDD 3.9 / 18.1",
-      "acceptance": "角色模型或2D角色主体资源可加载"
+      "acceptance": "角色模型或2D角色主体资源可加载",
+      "priority": "P2",
+      "delivery_phase": "CONTENT_EXPANSION"
     },
     {
       "asset_id": "CHR_011_PREVIEW",
@@ -507,7 +591,9 @@
       "expected_directory": "assets/resources/characters/CHR_011/preview",
       "files": [],
       "source_chapter": "GDD 3.9 / 18.1",
-      "acceptance": "角色选择预览资源可加载"
+      "acceptance": "角色选择预览资源可加载",
+      "priority": "P2",
+      "delivery_phase": "CONTENT_EXPANSION"
     },
     {
       "asset_id": "CHR_011_ANIMATION_SET",
@@ -517,7 +603,9 @@
       "expected_directory": "assets/resources/characters/CHR_011/animation",
       "files": [],
       "source_chapter": "GDD 3.4 / 3.9 / 18.2",
-      "acceptance": "包含8方向IDLE、8方向MOVE、INTERACT及ACT_001至ACT_004"
+      "acceptance": "包含8方向IDLE、8方向MOVE、INTERACT及ACT_001至ACT_004",
+      "priority": "P2",
+      "delivery_phase": "CONTENT_EXPANSION"
     },
     {
       "asset_id": "CHR_012_PORTRAIT",
@@ -527,7 +615,9 @@
       "expected_directory": "assets/resources/characters/CHR_012/portrait",
       "files": [],
       "source_chapter": "GDD 3.9 / 18.1",
-      "acceptance": "角色头像可按资源ID加载"
+      "acceptance": "角色头像可按资源ID加载",
+      "priority": "P2",
+      "delivery_phase": "CONTENT_EXPANSION"
     },
     {
       "asset_id": "CHR_012_MODEL",
@@ -537,7 +627,9 @@
       "expected_directory": "assets/resources/characters/CHR_012/model",
       "files": [],
       "source_chapter": "GDD 3.9 / 18.1",
-      "acceptance": "角色模型或2D角色主体资源可加载"
+      "acceptance": "角色模型或2D角色主体资源可加载",
+      "priority": "P2",
+      "delivery_phase": "CONTENT_EXPANSION"
     },
     {
       "asset_id": "CHR_012_PREVIEW",
@@ -547,7 +639,9 @@
       "expected_directory": "assets/resources/characters/CHR_012/preview",
       "files": [],
       "source_chapter": "GDD 3.9 / 18.1",
-      "acceptance": "角色选择预览资源可加载"
+      "acceptance": "角色选择预览资源可加载",
+      "priority": "P2",
+      "delivery_phase": "CONTENT_EXPANSION"
     },
     {
       "asset_id": "CHR_012_ANIMATION_SET",
@@ -557,7 +651,9 @@
       "expected_directory": "assets/resources/characters/CHR_012/animation",
       "files": [],
       "source_chapter": "GDD 3.4 / 3.9 / 18.2",
-      "acceptance": "包含8方向IDLE、8方向MOVE、INTERACT及ACT_001至ACT_004"
+      "acceptance": "包含8方向IDLE、8方向MOVE、INTERACT及ACT_001至ACT_004",
+      "priority": "P2",
+      "delivery_phase": "CONTENT_EXPANSION"
     },
     {
       "asset_id": "MAP_MAIN_001_SCENE",
@@ -567,7 +663,9 @@
       "expected_directory": "assets/resources/maps/MAP_MAIN_001/scene",
       "files": [],
       "source_chapter": "GDD 4.10 / 18.3",
-      "acceptance": "主地图scene资源与地图版本一致"
+      "acceptance": "主地图scene资源与地图版本一致",
+      "priority": "P0",
+      "delivery_phase": "VERTICAL_SLICE"
     },
     {
       "asset_id": "MAP_MAIN_001_GROUND",
@@ -577,7 +675,9 @@
       "expected_directory": "assets/resources/maps/MAP_MAIN_001/ground",
       "files": [],
       "source_chapter": "GDD 4.10 / 18.3",
-      "acceptance": "主地图ground资源与地图版本一致"
+      "acceptance": "主地图ground资源与地图版本一致",
+      "priority": "P0",
+      "delivery_phase": "VERTICAL_SLICE"
     },
     {
       "asset_id": "MAP_MAIN_001_PROPS",
@@ -587,7 +687,9 @@
       "expected_directory": "assets/resources/maps/MAP_MAIN_001/props",
       "files": [],
       "source_chapter": "GDD 4.10 / 18.3",
-      "acceptance": "主地图props资源与地图版本一致"
+      "acceptance": "主地图props资源与地图版本一致",
+      "priority": "P0",
+      "delivery_phase": "VERTICAL_SLICE"
     },
     {
       "asset_id": "MAP_MAIN_001_COLLISION",
@@ -597,7 +699,9 @@
       "expected_directory": "assets/resources/maps/MAP_MAIN_001/collision",
       "files": [],
       "source_chapter": "GDD 4.10 / 18.3",
-      "acceptance": "主地图collision资源与地图版本一致"
+      "acceptance": "主地图collision资源与地图版本一致",
+      "priority": "P0",
+      "delivery_phase": "VERTICAL_SLICE"
     },
     {
       "asset_id": "MAP_MAIN_001_WALKABLE",
@@ -607,7 +711,9 @@
       "expected_directory": "assets/resources/maps/MAP_MAIN_001/walkable",
       "files": [],
       "source_chapter": "GDD 4.10 / 18.3",
-      "acceptance": "主地图walkable资源与地图版本一致"
+      "acceptance": "主地图walkable资源与地图版本一致",
+      "priority": "P0",
+      "delivery_phase": "VERTICAL_SLICE"
     },
     {
       "asset_id": "MAP_MAIN_001_SPAWN",
@@ -617,7 +723,9 @@
       "expected_directory": "assets/resources/maps/MAP_MAIN_001/spawn",
       "files": [],
       "source_chapter": "GDD 4.10 / 18.3",
-      "acceptance": "主地图spawn资源与地图版本一致"
+      "acceptance": "主地图spawn资源与地图版本一致",
+      "priority": "P0",
+      "delivery_phase": "VERTICAL_SLICE"
     },
     {
       "asset_id": "MAP_MAIN_001_ENTRANCES",
@@ -627,7 +735,9 @@
       "expected_directory": "assets/resources/maps/MAP_MAIN_001/entrances",
       "files": [],
       "source_chapter": "GDD 4.10 / 18.3",
-      "acceptance": "主地图entrances资源与地图版本一致"
+      "acceptance": "主地图entrances资源与地图版本一致",
+      "priority": "P0",
+      "delivery_phase": "VERTICAL_SLICE"
     },
     {
       "asset_id": "MAP_MAIN_001_CAMERA",
@@ -637,7 +747,9 @@
       "expected_directory": "assets/resources/maps/MAP_MAIN_001/camera",
       "files": [],
       "source_chapter": "GDD 4.10 / 18.3",
-      "acceptance": "主地图camera资源与地图版本一致"
+      "acceptance": "主地图camera资源与地图版本一致",
+      "priority": "P0",
+      "delivery_phase": "VERTICAL_SLICE"
     },
     {
       "asset_id": "MAP_MAIN_001_CONFIG",
@@ -647,7 +759,9 @@
       "expected_directory": "assets/resources/maps/MAP_MAIN_001/config",
       "files": [],
       "source_chapter": "GDD 4.10 / 18.3",
-      "acceptance": "主地图config资源与地图版本一致"
+      "acceptance": "主地图config资源与地图版本一致",
+      "priority": "P0",
+      "delivery_phase": "VERTICAL_SLICE"
     },
     {
       "asset_id": "LV-ROOM-01_GEOMETRY",
@@ -657,7 +771,9 @@
       "expected_directory": "assets/resources/levels/LV-ROOM-01",
       "files": [],
       "source_chapter": "GDD 6 / 18.3",
-      "acceptance": "关卡逻辑尺寸、出生点、机关坐标和可行走区域完整"
+      "acceptance": "关卡逻辑尺寸、出生点、机关坐标和可行走区域完整",
+      "priority": "P0",
+      "delivery_phase": "VERTICAL_SLICE"
     },
     {
       "asset_id": "LV-ROOM-02_GEOMETRY",
@@ -667,7 +783,9 @@
       "expected_directory": "assets/resources/levels/LV-ROOM-02",
       "files": [],
       "source_chapter": "GDD 6 / 18.3",
-      "acceptance": "关卡逻辑尺寸、出生点、机关坐标和可行走区域完整"
+      "acceptance": "关卡逻辑尺寸、出生点、机关坐标和可行走区域完整",
+      "priority": "P1",
+      "delivery_phase": "FIVE_ROOMS_AND_HIDDEN_ENDING"
     },
     {
       "asset_id": "LV-ROOM-03_GEOMETRY",
@@ -677,7 +795,9 @@
       "expected_directory": "assets/resources/levels/LV-ROOM-03",
       "files": [],
       "source_chapter": "GDD 6 / 18.3",
-      "acceptance": "关卡逻辑尺寸、出生点、机关坐标和可行走区域完整"
+      "acceptance": "关卡逻辑尺寸、出生点、机关坐标和可行走区域完整",
+      "priority": "P1",
+      "delivery_phase": "FIVE_ROOMS_AND_HIDDEN_ENDING"
     },
     {
       "asset_id": "LV-ROOM-04_GEOMETRY",
@@ -687,7 +807,9 @@
       "expected_directory": "assets/resources/levels/LV-ROOM-04",
       "files": [],
       "source_chapter": "GDD 6 / 18.3",
-      "acceptance": "关卡逻辑尺寸、出生点、机关坐标和可行走区域完整"
+      "acceptance": "关卡逻辑尺寸、出生点、机关坐标和可行走区域完整",
+      "priority": "P1",
+      "delivery_phase": "FIVE_ROOMS_AND_HIDDEN_ENDING"
     },
     {
       "asset_id": "LV-ROOM-05_GEOMETRY",
@@ -697,7 +819,9 @@
       "expected_directory": "assets/resources/levels/LV-ROOM-05",
       "files": [],
       "source_chapter": "GDD 6 / 18.3",
-      "acceptance": "关卡逻辑尺寸、出生点、机关坐标和可行走区域完整"
+      "acceptance": "关卡逻辑尺寸、出生点、机关坐标和可行走区域完整",
+      "priority": "P1",
+      "delivery_phase": "FIVE_ROOMS_AND_HIDDEN_ENDING"
     },
     {
       "asset_id": "LV-HIDDEN-01_GEOMETRY",
@@ -707,7 +831,9 @@
       "expected_directory": "assets/resources/levels/LV-HIDDEN-01",
       "files": [],
       "source_chapter": "GDD 6 / 18.3",
-      "acceptance": "关卡逻辑尺寸、出生点、机关坐标和可行走区域完整"
+      "acceptance": "关卡逻辑尺寸、出生点、机关坐标和可行走区域完整",
+      "priority": "P1",
+      "delivery_phase": "FIVE_ROOMS_AND_HIDDEN_ENDING"
     },
     {
       "asset_id": "H01-END",
@@ -717,7 +843,9 @@
       "expected_directory": "assets/resources/mechanisms/H01-END",
       "files": [],
       "source_chapter": "GDD 9 / 18.5",
-      "acceptance": "机关H01-END具备状态表现、触发动效和逻辑视觉分离"
+      "acceptance": "机关H01-END具备状态表现、触发动效和逻辑视觉分离",
+      "priority": "P1",
+      "delivery_phase": "FIVE_ROOMS_AND_HIDDEN_ENDING"
     },
     {
       "asset_id": "H01-GATE",
@@ -727,7 +855,9 @@
       "expected_directory": "assets/resources/mechanisms/H01-GATE",
       "files": [],
       "source_chapter": "GDD 9 / 18.5",
-      "acceptance": "机关H01-GATE具备状态表现、触发动效和逻辑视觉分离"
+      "acceptance": "机关H01-GATE具备状态表现、触发动效和逻辑视觉分离",
+      "priority": "P1",
+      "delivery_phase": "FIVE_ROOMS_AND_HIDDEN_ENDING"
     },
     {
       "asset_id": "M01-EXIT-01",
@@ -737,7 +867,9 @@
       "expected_directory": "assets/resources/mechanisms/M01-EXIT-01",
       "files": [],
       "source_chapter": "GDD 9 / 18.5",
-      "acceptance": "机关M01-EXIT-01具备状态表现、触发动效和逻辑视觉分离"
+      "acceptance": "机关M01-EXIT-01具备状态表现、触发动效和逻辑视觉分离",
+      "priority": "P0",
+      "delivery_phase": "VERTICAL_SLICE"
     },
     {
       "asset_id": "M01-HIDEABLE-01",
@@ -747,7 +879,9 @@
       "expected_directory": "assets/resources/mechanisms/M01-HIDEABLE-01",
       "files": [],
       "source_chapter": "GDD 9 / 18.5",
-      "acceptance": "机关M01-HIDEABLE-01具备状态表现、触发动效和逻辑视觉分离"
+      "acceptance": "机关M01-HIDEABLE-01具备状态表现、触发动效和逻辑视觉分离",
+      "priority": "P0",
+      "delivery_phase": "VERTICAL_SLICE"
     },
     {
       "asset_id": "M01-LIGHT-01",
@@ -757,7 +891,9 @@
       "expected_directory": "assets/resources/mechanisms/M01-LIGHT-01",
       "files": [],
       "source_chapter": "GDD 9 / 18.5",
-      "acceptance": "机关M01-LIGHT-01具备状态表现、触发动效和逻辑视觉分离"
+      "acceptance": "机关M01-LIGHT-01具备状态表现、触发动效和逻辑视觉分离",
+      "priority": "P0",
+      "delivery_phase": "VERTICAL_SLICE"
     },
     {
       "asset_id": "M02-BRIDGE-01",
@@ -767,7 +903,9 @@
       "expected_directory": "assets/resources/mechanisms/M02-BRIDGE-01",
       "files": [],
       "source_chapter": "GDD 9 / 18.5",
-      "acceptance": "机关M02-BRIDGE-01具备状态表现、触发动效和逻辑视觉分离"
+      "acceptance": "机关M02-BRIDGE-01具备状态表现、触发动效和逻辑视觉分离",
+      "priority": "P1",
+      "delivery_phase": "FIVE_ROOMS_AND_HIDDEN_ENDING"
     },
     {
       "asset_id": "M03-DOOR-01",
@@ -777,7 +915,9 @@
       "expected_directory": "assets/resources/mechanisms/M03-DOOR-01",
       "files": [],
       "source_chapter": "GDD 9 / 18.5",
-      "acceptance": "机关M03-DOOR-01具备状态表现、触发动效和逻辑视觉分离"
+      "acceptance": "机关M03-DOOR-01具备状态表现、触发动效和逻辑视觉分离",
+      "priority": "P1",
+      "delivery_phase": "FIVE_ROOMS_AND_HIDDEN_ENDING"
     },
     {
       "asset_id": "M03-ENERGY-01",
@@ -787,7 +927,9 @@
       "expected_directory": "assets/resources/mechanisms/M03-ENERGY-01",
       "files": [],
       "source_chapter": "GDD 9 / 18.5",
-      "acceptance": "机关M03-ENERGY-01具备状态表现、触发动效和逻辑视觉分离"
+      "acceptance": "机关M03-ENERGY-01具备状态表现、触发动效和逻辑视觉分离",
+      "priority": "P1",
+      "delivery_phase": "FIVE_ROOMS_AND_HIDDEN_ENDING"
     },
     {
       "asset_id": "M04-PLATFORM-01",
@@ -797,7 +939,9 @@
       "expected_directory": "assets/resources/mechanisms/M04-PLATFORM-01",
       "files": [],
       "source_chapter": "GDD 9 / 18.5",
-      "acceptance": "机关M04-PLATFORM-01具备状态表现、触发动效和逻辑视觉分离"
+      "acceptance": "机关M04-PLATFORM-01具备状态表现、触发动效和逻辑视觉分离",
+      "priority": "P1",
+      "delivery_phase": "FIVE_ROOMS_AND_HIDDEN_ENDING"
     },
     {
       "asset_id": "M04-PLATFORM-02",
@@ -807,7 +951,9 @@
       "expected_directory": "assets/resources/mechanisms/M04-PLATFORM-02",
       "files": [],
       "source_chapter": "GDD 9 / 18.5",
-      "acceptance": "机关M04-PLATFORM-02具备状态表现、触发动效和逻辑视觉分离"
+      "acceptance": "机关M04-PLATFORM-02具备状态表现、触发动效和逻辑视觉分离",
+      "priority": "P1",
+      "delivery_phase": "FIVE_ROOMS_AND_HIDDEN_ENDING"
     },
     {
       "asset_id": "M05-BRIDGE-01",
@@ -817,7 +963,9 @@
       "expected_directory": "assets/resources/mechanisms/M05-BRIDGE-01",
       "files": [],
       "source_chapter": "GDD 9 / 18.5",
-      "acceptance": "机关M05-BRIDGE-01具备状态表现、触发动效和逻辑视觉分离"
+      "acceptance": "机关M05-BRIDGE-01具备状态表现、触发动效和逻辑视觉分离",
+      "priority": "P1",
+      "delivery_phase": "FIVE_ROOMS_AND_HIDDEN_ENDING"
     },
     {
       "asset_id": "M05-ENERGY-01",
@@ -827,7 +975,9 @@
       "expected_directory": "assets/resources/mechanisms/M05-ENERGY-01",
       "files": [],
       "source_chapter": "GDD 9 / 18.5",
-      "acceptance": "机关M05-ENERGY-01具备状态表现、触发动效和逻辑视觉分离"
+      "acceptance": "机关M05-ENERGY-01具备状态表现、触发动效和逻辑视觉分离",
+      "priority": "P1",
+      "delivery_phase": "FIVE_ROOMS_AND_HIDDEN_ENDING"
     },
     {
       "asset_id": "M05-HIDDEN-GATE",
@@ -837,7 +987,9 @@
       "expected_directory": "assets/resources/mechanisms/M05-HIDDEN-GATE",
       "files": [],
       "source_chapter": "GDD 9 / 18.5",
-      "acceptance": "机关M05-HIDDEN-GATE具备状态表现、触发动效和逻辑视觉分离"
+      "acceptance": "机关M05-HIDDEN-GATE具备状态表现、触发动效和逻辑视觉分离",
+      "priority": "P1",
+      "delivery_phase": "FIVE_ROOMS_AND_HIDDEN_ENDING"
     },
     {
       "asset_id": "M05-REVERSE-01",
@@ -847,7 +999,9 @@
       "expected_directory": "assets/resources/mechanisms/M05-REVERSE-01",
       "files": [],
       "source_chapter": "GDD 9 / 18.5",
-      "acceptance": "机关M05-REVERSE-01具备状态表现、触发动效和逻辑视觉分离"
+      "acceptance": "机关M05-REVERSE-01具备状态表现、触发动效和逻辑视觉分离",
+      "priority": "P1",
+      "delivery_phase": "FIVE_ROOMS_AND_HIDDEN_ENDING"
     },
     {
       "asset_id": "FX_ECHO_PULSE_01",
@@ -857,7 +1011,9 @@
       "expected_directory": "assets/resources/effects",
       "files": [],
       "source_chapter": "GDD 7 / 18.6",
-      "acceptance": "特效可独立播放，不承担逻辑判定"
+      "acceptance": "特效可独立播放，不承担逻辑判定",
+      "priority": "P0",
+      "delivery_phase": "VERTICAL_SLICE"
     },
     {
       "asset_id": "FX_GAZE_BEAM_01",
@@ -867,7 +1023,9 @@
       "expected_directory": "assets/resources/effects",
       "files": [],
       "source_chapter": "GDD 7 / 18.6",
-      "acceptance": "特效可独立播放，不承担逻辑判定"
+      "acceptance": "特效可独立播放，不承担逻辑判定",
+      "priority": "P1",
+      "delivery_phase": "FIVE_ROOMS_AND_HIDDEN_ENDING"
     },
     {
       "asset_id": "FX_REVERSE_FLOW_01",
@@ -877,7 +1035,9 @@
       "expected_directory": "assets/resources/effects",
       "files": [],
       "source_chapter": "GDD 7 / 18.6",
-      "acceptance": "特效可独立播放，不承担逻辑判定"
+      "acceptance": "特效可独立播放，不承担逻辑判定",
+      "priority": "P1",
+      "delivery_phase": "FIVE_ROOMS_AND_HIDDEN_ENDING"
     },
     {
       "asset_id": "FX_ROOM_CLEAR_01",
@@ -887,7 +1047,9 @@
       "expected_directory": "assets/resources/effects",
       "files": [],
       "source_chapter": "GDD 7 / 18.6",
-      "acceptance": "特效可独立播放，不承担逻辑判定"
+      "acceptance": "特效可独立播放，不承担逻辑判定",
+      "priority": "P0",
+      "delivery_phase": "VERTICAL_SLICE"
     },
     {
       "asset_id": "FX_ROOM_CLEAR_02",
@@ -897,7 +1059,9 @@
       "expected_directory": "assets/resources/effects",
       "files": [],
       "source_chapter": "GDD 7 / 18.6",
-      "acceptance": "特效可独立播放，不承担逻辑判定"
+      "acceptance": "特效可独立播放，不承担逻辑判定",
+      "priority": "P1",
+      "delivery_phase": "FIVE_ROOMS_AND_HIDDEN_ENDING"
     },
     {
       "asset_id": "FX_ROOM_CLEAR_03",
@@ -907,7 +1071,9 @@
       "expected_directory": "assets/resources/effects",
       "files": [],
       "source_chapter": "GDD 7 / 18.6",
-      "acceptance": "特效可独立播放，不承担逻辑判定"
+      "acceptance": "特效可独立播放，不承担逻辑判定",
+      "priority": "P1",
+      "delivery_phase": "FIVE_ROOMS_AND_HIDDEN_ENDING"
     },
     {
       "asset_id": "FX_ROOM_CLEAR_04",
@@ -917,7 +1083,9 @@
       "expected_directory": "assets/resources/effects",
       "files": [],
       "source_chapter": "GDD 7 / 18.6",
-      "acceptance": "特效可独立播放，不承担逻辑判定"
+      "acceptance": "特效可独立播放，不承担逻辑判定",
+      "priority": "P1",
+      "delivery_phase": "FIVE_ROOMS_AND_HIDDEN_ENDING"
     },
     {
       "asset_id": "FX_ROOM_CLEAR_05",
@@ -927,7 +1095,9 @@
       "expected_directory": "assets/resources/effects",
       "files": [],
       "source_chapter": "GDD 7 / 18.6",
-      "acceptance": "特效可独立播放，不承担逻辑判定"
+      "acceptance": "特效可独立播放，不承担逻辑判定",
+      "priority": "P1",
+      "delivery_phase": "FIVE_ROOMS_AND_HIDDEN_ENDING"
     },
     {
       "asset_id": "FX_HIDDEN_ENDING",
@@ -937,7 +1107,9 @@
       "expected_directory": "assets/resources/effects",
       "files": [],
       "source_chapter": "GDD 7 / 18.6",
-      "acceptance": "特效可独立播放，不承担逻辑判定"
+      "acceptance": "特效可独立播放，不承担逻辑判定",
+      "priority": "P1",
+      "delivery_phase": "FIVE_ROOMS_AND_HIDDEN_ENDING"
     },
     {
       "asset_id": "UI_LOGIN",
@@ -947,7 +1119,9 @@
       "expected_directory": "assets/resources/ui",
       "files": [],
       "source_chapter": "GDD 16 / 18.7",
-      "acceptance": "UI_LOGIN具备安全区适配、加载态和缺失降级"
+      "acceptance": "UI_LOGIN具备安全区适配、加载态和缺失降级",
+      "priority": "P0",
+      "delivery_phase": "VERTICAL_SLICE"
     },
     {
       "asset_id": "UI_CHARACTER_SELECT",
@@ -957,7 +1131,9 @@
       "expected_directory": "assets/resources/ui",
       "files": [],
       "source_chapter": "GDD 16 / 18.7",
-      "acceptance": "UI_CHARACTER_SELECT具备安全区适配、加载态和缺失降级"
+      "acceptance": "UI_CHARACTER_SELECT具备安全区适配、加载态和缺失降级",
+      "priority": "P2",
+      "delivery_phase": "CONTENT_EXPANSION"
     },
     {
       "asset_id": "UI_MAIN_MAP_HUD",
@@ -967,7 +1143,9 @@
       "expected_directory": "assets/resources/ui",
       "files": [],
       "source_chapter": "GDD 16 / 18.7",
-      "acceptance": "UI_MAIN_MAP_HUD具备安全区适配、加载态和缺失降级"
+      "acceptance": "UI_MAIN_MAP_HUD具备安全区适配、加载态和缺失降级",
+      "priority": "P0",
+      "delivery_phase": "VERTICAL_SLICE"
     },
     {
       "asset_id": "UI_INTERACTION",
@@ -977,7 +1155,9 @@
       "expected_directory": "assets/resources/ui",
       "files": [],
       "source_chapter": "GDD 16 / 18.7",
-      "acceptance": "UI_INTERACTION具备安全区适配、加载态和缺失降级"
+      "acceptance": "UI_INTERACTION具备安全区适配、加载态和缺失降级",
+      "priority": "P0",
+      "delivery_phase": "VERTICAL_SLICE"
     },
     {
       "asset_id": "UI_LAW_BAR",
@@ -987,7 +1167,9 @@
       "expected_directory": "assets/resources/ui",
       "files": [],
       "source_chapter": "GDD 16 / 18.7",
-      "acceptance": "UI_LAW_BAR具备安全区适配、加载态和缺失降级"
+      "acceptance": "UI_LAW_BAR具备安全区适配、加载态和缺失降级",
+      "priority": "P0",
+      "delivery_phase": "VERTICAL_SLICE"
     },
     {
       "asset_id": "UI_DISCOVERY",
@@ -997,7 +1179,9 @@
       "expected_directory": "assets/resources/ui",
       "files": [],
       "source_chapter": "GDD 16 / 18.7",
-      "acceptance": "UI_DISCOVERY具备安全区适配、加载态和缺失降级"
+      "acceptance": "UI_DISCOVERY具备安全区适配、加载态和缺失降级",
+      "priority": "P0",
+      "delivery_phase": "VERTICAL_SLICE"
     },
     {
       "asset_id": "UI_SETTLEMENT",
@@ -1007,7 +1191,9 @@
       "expected_directory": "assets/resources/ui",
       "files": [],
       "source_chapter": "GDD 16 / 18.7",
-      "acceptance": "UI_SETTLEMENT具备安全区适配、加载态和缺失降级"
+      "acceptance": "UI_SETTLEMENT具备安全区适配、加载态和缺失降级",
+      "priority": "P0",
+      "delivery_phase": "VERTICAL_SLICE"
     },
     {
       "asset_id": "UI_LEADERBOARD",
@@ -1017,7 +1203,9 @@
       "expected_directory": "assets/resources/ui",
       "files": [],
       "source_chapter": "GDD 16 / 18.7",
-      "acceptance": "UI_LEADERBOARD具备安全区适配、加载态和缺失降级"
+      "acceptance": "UI_LEADERBOARD具备安全区适配、加载态和缺失降级",
+      "priority": "P1",
+      "delivery_phase": "FIVE_ROOMS_AND_HIDDEN_ENDING"
     },
     {
       "asset_id": "UI_COLLECTION",
@@ -1027,7 +1215,9 @@
       "expected_directory": "assets/resources/ui",
       "files": [],
       "source_chapter": "GDD 16 / 18.7",
-      "acceptance": "UI_COLLECTION具备安全区适配、加载态和缺失降级"
+      "acceptance": "UI_COLLECTION具备安全区适配、加载态和缺失降级",
+      "priority": "P1",
+      "delivery_phase": "FIVE_ROOMS_AND_HIDDEN_ENDING"
     },
     {
       "asset_id": "UI_REWARD",
@@ -1037,7 +1227,9 @@
       "expected_directory": "assets/resources/ui",
       "files": [],
       "source_chapter": "GDD 16 / 18.7",
-      "acceptance": "UI_REWARD具备安全区适配、加载态和缺失降级"
+      "acceptance": "UI_REWARD具备安全区适配、加载态和缺失降级",
+      "priority": "P1",
+      "delivery_phase": "FIVE_ROOMS_AND_HIDDEN_ENDING"
     },
     {
       "asset_id": "UI_PROFILE",
@@ -1047,7 +1239,9 @@
       "expected_directory": "assets/resources/ui",
       "files": [],
       "source_chapter": "GDD 16 / 18.7",
-      "acceptance": "UI_PROFILE具备安全区适配、加载态和缺失降级"
+      "acceptance": "UI_PROFILE具备安全区适配、加载态和缺失降级",
+      "priority": "P1",
+      "delivery_phase": "FIVE_ROOMS_AND_HIDDEN_ENDING"
     },
     {
       "asset_id": "UI_NETWORK_STATE",
@@ -1057,7 +1251,9 @@
       "expected_directory": "assets/resources/ui",
       "files": [],
       "source_chapter": "GDD 16 / 18.7",
-      "acceptance": "UI_NETWORK_STATE具备安全区适配、加载态和缺失降级"
+      "acceptance": "UI_NETWORK_STATE具备安全区适配、加载态和缺失降级",
+      "priority": "P0",
+      "delivery_phase": "VERTICAL_SLICE"
     },
     {
       "asset_id": "AUD_UI_CLICK",
@@ -1067,7 +1263,9 @@
       "expected_directory": "assets/resources/audio",
       "files": [],
       "source_chapter": "GDD 18.8",
-      "acceptance": "AUD_UI_CLICK触发点、音量、循环/优先级符合音频规范"
+      "acceptance": "AUD_UI_CLICK触发点、音量、循环/优先级符合音频规范",
+      "priority": "P0",
+      "delivery_phase": "VERTICAL_SLICE"
     },
     {
       "asset_id": "AUD_INTERACTION",
@@ -1077,7 +1275,9 @@
       "expected_directory": "assets/resources/audio",
       "files": [],
       "source_chapter": "GDD 18.8",
-      "acceptance": "AUD_INTERACTION触发点、音量、循环/优先级符合音频规范"
+      "acceptance": "AUD_INTERACTION触发点、音量、循环/优先级符合音频规范",
+      "priority": "P0",
+      "delivery_phase": "VERTICAL_SLICE"
     },
     {
       "asset_id": "AUD_ECHO",
@@ -1087,7 +1287,9 @@
       "expected_directory": "assets/resources/audio",
       "files": [],
       "source_chapter": "GDD 18.8",
-      "acceptance": "AUD_ECHO触发点、音量、循环/优先级符合音频规范"
+      "acceptance": "AUD_ECHO触发点、音量、循环/优先级符合音频规范",
+      "priority": "P0",
+      "delivery_phase": "VERTICAL_SLICE"
     },
     {
       "asset_id": "AUD_GAZE",
@@ -1097,7 +1299,9 @@
       "expected_directory": "assets/resources/audio",
       "files": [],
       "source_chapter": "GDD 18.8",
-      "acceptance": "AUD_GAZE触发点、音量、循环/优先级符合音频规范"
+      "acceptance": "AUD_GAZE触发点、音量、循环/优先级符合音频规范",
+      "priority": "P1",
+      "delivery_phase": "FIVE_ROOMS_AND_HIDDEN_ENDING"
     },
     {
       "asset_id": "AUD_REVERSE",
@@ -1107,7 +1311,9 @@
       "expected_directory": "assets/resources/audio",
       "files": [],
       "source_chapter": "GDD 18.8",
-      "acceptance": "AUD_REVERSE触发点、音量、循环/优先级符合音频规范"
+      "acceptance": "AUD_REVERSE触发点、音量、循环/优先级符合音频规范",
+      "priority": "P1",
+      "delivery_phase": "FIVE_ROOMS_AND_HIDDEN_ENDING"
     },
     {
       "asset_id": "AUD_DISCOVERY",
@@ -1117,7 +1323,9 @@
       "expected_directory": "assets/resources/audio",
       "files": [],
       "source_chapter": "GDD 18.8",
-      "acceptance": "AUD_DISCOVERY触发点、音量、循环/优先级符合音频规范"
+      "acceptance": "AUD_DISCOVERY触发点、音量、循环/优先级符合音频规范",
+      "priority": "P1",
+      "delivery_phase": "FIVE_ROOMS_AND_HIDDEN_ENDING"
     },
     {
       "asset_id": "AUD_SETTLEMENT_CLEAR",
@@ -1127,7 +1335,9 @@
       "expected_directory": "assets/resources/audio",
       "files": [],
       "source_chapter": "GDD 18.8",
-      "acceptance": "AUD_SETTLEMENT_CLEAR触发点、音量、循环/优先级符合音频规范"
+      "acceptance": "AUD_SETTLEMENT_CLEAR触发点、音量、循环/优先级符合音频规范",
+      "priority": "P0",
+      "delivery_phase": "VERTICAL_SLICE"
     },
     {
       "asset_id": "AUD_SETTLEMENT_FAIL",
@@ -1137,7 +1347,9 @@
       "expected_directory": "assets/resources/audio",
       "files": [],
       "source_chapter": "GDD 18.8",
-      "acceptance": "AUD_SETTLEMENT_FAIL触发点、音量、循环/优先级符合音频规范"
+      "acceptance": "AUD_SETTLEMENT_FAIL触发点、音量、循环/优先级符合音频规范",
+      "priority": "P1",
+      "delivery_phase": "FIVE_ROOMS_AND_HIDDEN_ENDING"
     },
     {
       "asset_id": "AUD_SOCIAL_ACTION",
@@ -1147,7 +1359,9 @@
       "expected_directory": "assets/resources/audio",
       "files": [],
       "source_chapter": "GDD 18.8",
-      "acceptance": "AUD_SOCIAL_ACTION触发点、音量、循环/优先级符合音频规范"
+      "acceptance": "AUD_SOCIAL_ACTION触发点、音量、循环/优先级符合音频规范",
+      "priority": "P2",
+      "delivery_phase": "CONTENT_EXPANSION"
     },
     {
       "asset_id": "AUD_NETWORK_DISCONNECT",
@@ -1157,7 +1371,9 @@
       "expected_directory": "assets/resources/audio",
       "files": [],
       "source_chapter": "GDD 18.8",
-      "acceptance": "AUD_NETWORK_DISCONNECT触发点、音量、循环/优先级符合音频规范"
+      "acceptance": "AUD_NETWORK_DISCONNECT触发点、音量、循环/优先级符合音频规范",
+      "priority": "P0",
+      "delivery_phase": "VERTICAL_SLICE"
     },
     {
       "asset_id": "AUD_NETWORK_RECONNECT",
@@ -1167,7 +1383,9 @@
       "expected_directory": "assets/resources/audio",
       "files": [],
       "source_chapter": "GDD 18.8",
-      "acceptance": "AUD_NETWORK_RECONNECT触发点、音量、循环/优先级符合音频规范"
+      "acceptance": "AUD_NETWORK_RECONNECT触发点、音量、循环/优先级符合音频规范",
+      "priority": "P0",
+      "delivery_phase": "VERTICAL_SLICE"
     },
     {
       "asset_id": "AUD_BGM_MAIN_MAP",
@@ -1177,7 +1395,9 @@
       "expected_directory": "assets/resources/audio",
       "files": [],
       "source_chapter": "GDD 18.8",
-      "acceptance": "AUD_BGM_MAIN_MAP触发点、音量、循环/优先级符合音频规范"
+      "acceptance": "AUD_BGM_MAIN_MAP触发点、音量、循环/优先级符合音频规范",
+      "priority": "P0",
+      "delivery_phase": "VERTICAL_SLICE"
     },
     {
       "asset_id": "AUD_BGM_ROOM",
@@ -1187,7 +1407,9 @@
       "expected_directory": "assets/resources/audio",
       "files": [],
       "source_chapter": "GDD 18.8",
-      "acceptance": "AUD_BGM_ROOM触发点、音量、循环/优先级符合音频规范"
+      "acceptance": "AUD_BGM_ROOM触发点、音量、循环/优先级符合音频规范",
+      "priority": "P0",
+      "delivery_phase": "VERTICAL_SLICE"
     },
     {
       "asset_id": "AUD_BGM_SETTLEMENT",
@@ -1197,7 +1419,9 @@
       "expected_directory": "assets/resources/audio",
       "files": [],
       "source_chapter": "GDD 18.8",
-      "acceptance": "AUD_BGM_SETTLEMENT触发点、音量、循环/优先级符合音频规范"
+      "acceptance": "AUD_BGM_SETTLEMENT触发点、音量、循环/优先级符合音频规范",
+      "priority": "P1",
+      "delivery_phase": "FIVE_ROOMS_AND_HIDDEN_ENDING"
     }
   ],
   "gdd_chapter_versions": {
