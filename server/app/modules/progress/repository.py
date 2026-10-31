@@ -200,6 +200,9 @@ async def _write_score_event(
             await _refresh_leaderboard_snapshot(
                 session, period["season_id"], config["board_type"]
             )
+            await _grant_score_conditions(
+                session, player_id, config["board_type"], period["season_id"]
+            )
             written_periods.append(period["season_id"])
     return {
         "written": bool(written_periods),
@@ -246,38 +249,121 @@ async def _grant_rewards_for_trigger(
             continue
         if is_repeat and not condition.get("repeatable", False):
             continue
-        reward_status = (
-            "PENDING_CLAIM" if row["grant_mode"] == "CLAIM" else "OWNED"
+        inserted = await _insert_player_reward(
+            session,
+            player_id,
+            row["reward_id"],
+            row["grant_mode"],
+            source,
+            source_id,
         )
-        key = f"{source}:{source_id}:{row['reward_id']}"
-        if len(key) > 200:
-            key = key[:200]
-        inserted = (
-            await session.execute(
-                text("""
-                    INSERT INTO player_rewards
-                        (player_id, reward_id, grant_mode, status, source,
-                         source_id, idempotency_key)
-                    VALUES
-                        (:player_id, :reward_id, :grant_mode, :status, :source,
-                         :source_id, :idempotency_key)
-                    ON CONFLICT DO NOTHING
-                    RETURNING player_reward_id
-                """),
-                {
-                    "player_id": player_id,
-                    "reward_id": row["reward_id"],
-                    "grant_mode": row["grant_mode"],
-                    "status": reward_status,
-                    "source": source,
-                    "source_id": source_id,
-                    "idempotency_key": key,
-                },
-            )
-        ).scalar_one_or_none()
-        if inserted is not None:
+        if inserted:
             granted.append(row["reward_id"])
     return granted
+
+
+async def _grant_score_conditions(
+    session: AsyncSession,
+    player_id: UUID,
+    board_type: str,
+    period_id: str,
+) -> list[str]:
+    """GDD 11.7 SCORE conditions: grant once the player's running total reaches a threshold.
+
+    Thresholds are only ever read from configuration. GDD 13.2 leaves the numbers
+    unspecified, so a condition without a usable threshold is skipped rather than
+    defaulted, and the CONFIGURED board must match the board that was just scored.
+    """
+    rows = (
+        await session.execute(
+            text("""
+                SELECT c.condition_id, c.condition_config, r.reward_id,
+                       r.grant_mode::text AS grant_mode
+                FROM reward_conditions AS c
+                JOIN rewards AS r ON r.reward_id = c.reward_id
+                WHERE c.trigger_type = 'SCORE'
+                  AND c.is_enabled = true AND c.config_status = 'READY'
+                  AND r.is_enabled = true AND r.is_paid = false
+            """)
+        )
+    ).mappings().all()
+    if not rows:
+        return []
+
+    total = (
+        await session.execute(
+            text("""
+                SELECT COALESCE(SUM(delta), 0)::bigint AS total
+                FROM score_events
+                WHERE player_id = :player_id AND board_type = :board_type
+                  AND period_id = :period_id
+            """),
+            {"player_id": player_id, "board_type": board_type, "period_id": period_id},
+        )
+    ).scalar_one()
+
+    granted = []
+    for row in rows:
+        config = row["condition_config"] or {}
+        if config.get("board_type") not in (None, board_type):
+            continue
+        threshold = config.get("score_threshold")
+        if not isinstance(threshold, int) or isinstance(threshold, bool):
+            continue
+        if total < threshold:
+            continue
+        # Keyed by the condition alone. Scoping to the period would pay twice for one
+        # crossing, because every score event is written to both the weekly and the
+        # monthly period. GDD 11.7 does not define a period scope, so the conservative
+        # reading is one grant per condition; per-period rewards need an explicit
+        # config field rather than a guess here.
+        if await _insert_player_reward(
+            session,
+            player_id,
+            row["reward_id"],
+            row["grant_mode"],
+            "SCORE",
+            row["condition_id"],
+        ):
+            granted.append(row["reward_id"])
+    return granted
+
+
+async def _insert_player_reward(
+    session: AsyncSession,
+    player_id: UUID,
+    reward_id: str,
+    grant_mode: str,
+    source: str,
+    source_id: str,
+) -> bool:
+    """Grant one reward once per (source, source_id, reward). Returns True if new."""
+    reward_status = "PENDING_CLAIM" if grant_mode == "CLAIM" else "OWNED"
+    key = f"{source}:{source_id}:{reward_id}"[:200]
+    inserted = (
+        await session.execute(
+            text("""
+                INSERT INTO player_rewards
+                    (player_id, reward_id, grant_mode, status, source,
+                     source_id, idempotency_key)
+                VALUES
+                    (:player_id, :reward_id, :grant_mode, :status, :source,
+                     :source_id, :idempotency_key)
+                ON CONFLICT DO NOTHING
+                RETURNING player_reward_id
+            """),
+            {
+                "player_id": player_id,
+                "reward_id": reward_id,
+                "grant_mode": grant_mode,
+                "status": reward_status,
+                "source": source,
+                "source_id": source_id,
+                "idempotency_key": key,
+            },
+        )
+    ).scalar_one_or_none()
+    return inserted is not None
 
 
 async def _snapshot_progress(
