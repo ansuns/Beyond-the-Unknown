@@ -38,3 +38,6 @@ client/.DS_Store
 !tools/
 !tools/**
 tools/__pycache__/
+
+# A symlinked dependency folder in a worktree matches no trailing-slash rule.
+client/node_modules
