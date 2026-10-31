@@ -21,7 +21,7 @@ describe("asset manifest contract", () => {
 
   it("rejects an asset directory that does not match its canonical asset ID", () => {
     const invalid = structuredClone(manifest);
-    invalid.entries.find((entry) => entry.asset_id === "M01-HIDEABLE-01").expected_directory =
+    invalid.entries.find((entry: { asset_id: string; expected_directory: string }) => entry.asset_id === "M01-HIDEABLE-01").expected_directory =
       "assets/resources/mechanisms/MEC_HIDEABLE";
     expect(validateAssetManifestStructure(invalid, levels).errors.join("\n")).toContain(
       "M01-HIDEABLE-01: expected_directory must be assets/resources/mechanisms/M01-HIDEABLE-01"
@@ -37,7 +37,7 @@ describe("asset manifest contract", () => {
 
   it("rejects a missing character asset entry", () => {
     const invalid = structuredClone(manifest) as MutableManifest;
-    invalid.entries = invalid.entries.filter((entry) => entry.asset_id !== "CHR_012_ANIMATION_SET");
+    invalid.entries = invalid.entries.filter((entry: { asset_id: string }) => entry.asset_id !== "CHR_012_ANIMATION_SET");
     expect(validateAssetManifestStructure(invalid, levels).errors.join("\n")).toContain(
       "required asset missing from manifest: CHR_012_ANIMATION_SET"
     );
@@ -45,7 +45,7 @@ describe("asset manifest contract", () => {
 
   it("rejects an orphan or miscategorized mechanism asset", () => {
     const invalid = structuredClone(manifest);
-    const entry = invalid.entries.find((item) => item.asset_id === "M03-ENERGY-01");
+    const entry = invalid.entries.find((item: { asset_id: string; category: string }) => item.asset_id === "M03-ENERGY-01");
     entry.category = "effect";
     expect(validateAssetManifestStructure(invalid, levels).errors.join("\n")).toContain(
       "M03-ENERGY-01: category must be mechanism, got effect"
