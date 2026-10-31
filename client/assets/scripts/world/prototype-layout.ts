@@ -154,6 +154,7 @@ export function calculatePrototypeRoomScale(
   return Math.min(40, availableWidth / projectedSpan, availableHeight / projectedSpan);
 }
 
+// Inverse of the GDD 4.2 screen projection, normalized for analog joystick input.
 export function screenDirectionToLogicalDirection(direction: PrototypePoint): PrototypePoint {
   if (!Number.isFinite(direction.x) || !Number.isFinite(direction.y)) {
     throw new Error("Joystick direction must be finite");
