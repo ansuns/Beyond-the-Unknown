@@ -1,0 +1,33 @@
+{
+  "version": "1.0",
+  "source": "GDD 11.1 任务类型枚举与新手引导闭环（登录、移动、法则、结算）",
+  "tasks": [
+    {
+      "task_id": "TASK-TUTORIAL-01",
+      "task_type": "TASK_TUTORIAL",
+      "title": "初次踏入无界之地",
+      "objectives": [
+        {
+          "objective_id": "OBJ-TUTORIAL-LOGIN",
+          "objective_type": "LOGIN",
+          "target_value": 1
+        },
+        {
+          "objective_id": "OBJ-TUTORIAL-MOVE",
+          "objective_type": "MOVE",
+          "target_value": 1
+        },
+        {
+          "objective_id": "OBJ-TUTORIAL-RULE",
+          "objective_type": "RULE_CAST",
+          "target_value": 1
+        },
+        {
+          "objective_id": "OBJ-TUTORIAL-SETTLE",
+          "objective_type": "SETTLEMENT",
+          "target_value": 1
+        }
+      ]
+    }
+  ]
+}

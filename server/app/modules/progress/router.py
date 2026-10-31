@@ -37,6 +37,7 @@ from app.modules.progress.season_service import (
     SeasonNotReviewable,
     review_season,
 )
+from app.modules.progress.tasks import list_player_tasks
 from app.schemas.envelope import success_envelope
 
 router = APIRouter()
@@ -236,3 +237,15 @@ async def get_leaderboard_endpoint(
             status_code=404, detail="Leaderboard season not found"
         ) from exc
     return success_envelope(data, request.state.request_id)
+
+
+@router.get("/player/tasks")
+async def get_player_tasks(
+    request: Request,
+    player_id=Depends(get_current_player_id),
+    session: AsyncSession = Depends(get_session),
+) -> dict:
+    """GDD 11.1: the server owns task creation; the client only reads."""
+    tasks = await list_player_tasks(session, player_id)
+    await session.commit()
+    return success_envelope({"tasks": tasks}, request.state.request_id)
