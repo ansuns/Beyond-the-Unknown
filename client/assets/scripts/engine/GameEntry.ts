@@ -1350,9 +1350,10 @@ export class BeyondTheUnknownGameEntry extends Component {
       this.pendingLevelId = "";
       this.roomMechanismCatalog.clear();
       this.prototypeRuleCooldownUntil.clear();
-      this.moveTarget = undefined;
+      this.stopJoystickMovement();
       this.mapSession = undefined;
       this.currentMode = "MENU";
+      this.updateJoystickVisibility();
       this.clearAvatars();
       await this.loginAndEnterWorld();
     } catch (error) {
