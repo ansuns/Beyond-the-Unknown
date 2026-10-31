@@ -591,3 +591,127 @@ def test_leaderboard_serves_explicit_season_and_rejects_unknown_one() -> None:
             assert unknown.status_code == 404
     finally:
         app.dependency_overrides.clear()
+
+
+def test_leaderboard_recompute_rebuilds_snapshot_without_touching_ledger(monkeypatch) -> None:
+    """GDD 13.6: recompute from the ledger, never rewrite score_events."""
+    from app.core.config import get_settings
+
+    season_id = "WEEKLY-19990104"
+    monkeypatch.setattr(get_settings(), "internal_api_key", "test-recompute-key")
+    _db_exec([
+        ("""
+            INSERT INTO seasons
+                (season_id, season_type, start_at_utc, end_at_utc,
+                 status, settlement_status)
+            VALUES
+                (:season_id, 'WEEKLY', '1999-01-04T00:00:00Z',
+                 '1999-01-11T00:00:00Z', 'ACTIVE', 'PENDING')
+            ON CONFLICT (season_id) DO NOTHING
+        """, {"season_id": season_id}),
+    ])
+    try:
+        with TestClient(app) as client:
+            login = client.post(
+                "/api/v1/auth/login",
+                json={"wx_code": str(uuid4()), "request_id": "recompute-login"},
+            )
+            assert login.status_code == 200
+            headers = {"Authorization": f"Bearer {login.json()['data']['access_token']}"}
+            player_id = client.get("/api/v1/player/me", headers=headers).json()["data"][
+                "player_id"
+            ]
+
+            _db_exec([
+                ("""
+                    INSERT INTO score_events
+                        (player_id, board_type, period_id, delta, reason,
+                         source_event_id, idempotency_key, created_at_utc)
+                    VALUES
+                        (:player_id, 'EXPLORE', :season_id, 5, 'EXP_DISCOVER',
+                         'recompute-a', 'recompute-a', now()),
+                        (:player_id, 'EXPLORE', :season_id, 3, 'EXP_DISCOVER',
+                         'recompute-b', 'recompute-b', now())
+                    ON CONFLICT (board_type, period_id, idempotency_key) DO NOTHING
+                """, {"player_id": player_id, "season_id": season_id}),
+                ("""
+                    INSERT INTO leaderboard_snapshots
+                        (season_id, board_type, player_id, score, rank, snapshot_at_utc)
+                    VALUES (:season_id, 'EXPLORE', :player_id, 99, 1, now())
+                    ON CONFLICT (season_id, board_type, player_id)
+                    DO UPDATE SET score = 99, rank = 1, snapshot_at_utc = now()
+                """, {"season_id": season_id, "player_id": player_id}),
+            ])
+
+            dry_run = client.post(
+                f"/api/v1/internal/leaderboard/{season_id}/recompute",
+                headers={"X-Internal-API-Key": "test-recompute-key"},
+                json={"board_type": "EXPLORE", "apply": False},
+            )
+            assert dry_run.status_code == 200
+            dry = dry_run.json()["data"]
+            assert dry["applied"] is False
+            assert dry["difference_count"] == 1
+            assert dry["differences"][0]["snapshot_score"] == 99
+            assert dry["differences"][0]["recomputed_score"] == 8
+            unchanged = _db_fetch(
+                "SELECT score FROM leaderboard_snapshots WHERE season_id = :season_id"
+                " AND board_type = 'EXPLORE' AND player_id = :player_id",
+                {"season_id": season_id, "player_id": player_id},
+            )
+            assert unchanged[0]["score"] == 99
+
+            applied = client.post(
+                f"/api/v1/internal/leaderboard/{season_id}/recompute",
+                headers={"X-Internal-API-Key": "test-recompute-key"},
+                json={"board_type": "EXPLORE", "apply": True},
+            )
+            assert applied.status_code == 200
+            assert applied.json()["data"]["applied"] is True
+            rebuilt = _db_fetch(
+                "SELECT score FROM leaderboard_snapshots WHERE season_id = :season_id"
+                " AND board_type = 'EXPLORE' AND player_id = :player_id",
+                {"season_id": season_id, "player_id": player_id},
+            )
+            assert rebuilt[0]["score"] == 8
+
+            settled = client.post(
+                f"/api/v1/internal/leaderboard/{season_id}/recompute",
+                headers={"X-Internal-API-Key": "test-recompute-key"},
+                json={"board_type": "EXPLORE", "apply": True},
+            )
+            assert settled.json()["data"]["difference_count"] == 0
+
+            ledger = _db_fetch(
+                "SELECT COUNT(*) AS total FROM score_events WHERE period_id = :season_id",
+                {"season_id": season_id},
+            )
+            assert ledger[0]["total"] == 2
+            audit = _db_fetch(
+                "SELECT COUNT(*) AS total FROM actions_log"
+                " WHERE action_type = 'LEADERBOARD_RECOMPUTE'"
+                " AND payload->>'season_id' = :season_id",
+                {"season_id": season_id},
+            )
+            assert audit[0]["total"] == 1
+
+            denied = client.post(
+                f"/api/v1/internal/leaderboard/{season_id}/recompute",
+                headers={"X-Internal-API-Key": "wrong-key"},
+                json={"board_type": "EXPLORE"},
+            )
+            assert denied.status_code == 401
+    finally:
+        _db_exec([
+            ("DELETE FROM score_events WHERE period_id = :season_id", {"season_id": season_id}),
+            (
+                "DELETE FROM leaderboard_snapshots WHERE season_id = :season_id",
+                {"season_id": season_id},
+            ),
+            (
+                "DELETE FROM actions_log WHERE action_type = 'LEADERBOARD_RECOMPUTE'"
+                " AND payload->>'season_id' = :season_id",
+                {"season_id": season_id},
+            ),
+            ("DELETE FROM seasons WHERE season_id = :season_id", {"season_id": season_id}),
+        ])
