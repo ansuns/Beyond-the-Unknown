@@ -1100,10 +1100,15 @@ export class BeyondTheUnknownGameEntry extends Component {
   }
 
   private async returnToWorld(): Promise<void> {
-    if (this.currentMode !== "PERSONAL_LEVEL" || !this.levelSession) {
-      this.setStatus("当前不在个人关卡中");
+    if (
+      this.currentMode !== "PERSONAL_LEVEL" ||
+      !this.levelSession ||
+      this.prototypeActionInFlight
+    ) {
+      this.setStatus("当前不在个人关卡中，或关卡操作尚未完成");
       return;
     }
+    this.prototypeActionInFlight = true;
     this.moveTarget = undefined;
     try {
       this.setStatus("正在保存并放弃当前关卡…");
@@ -1133,6 +1138,8 @@ export class BeyondTheUnknownGameEntry extends Component {
       await this.loginAndEnterWorld();
     } catch (error) {
       this.setStatus(`返回世界失败：${error instanceof Error ? error.message : "未知错误"}`);
+    } finally {
+      this.prototypeActionInFlight = false;
     }
   }
 
