@@ -54,7 +54,13 @@ export function validateLevelContentConfig(config) {
     const mechanisms = Array.isArray(level.mechanisms) ? level.mechanisms : [];
     const localMechanisms = new Set();
     for (const mechanism of mechanisms) {
-      if (typeof mechanism.mechanism_type !== "string" || !mechanism.mechanism_type.trim()) {\n        add(`${level.level_id}: mechanism ${mechanism.mechanism_id ?? ""} requires mechanism_type`);\n      }\n      if (typeof mechanism.initial_state !== "string" || !mechanism.initial_state.trim()) {\n        add(`${level.level_id}: mechanism ${mechanism.mechanism_id ?? ""} requires initial_state`);\n      }\n      const id = mechanism.mechanism_id;
+      if (typeof mechanism.mechanism_type !== "string" || !mechanism.mechanism_type.trim()) {
+        add(`${level.level_id}: mechanism ${mechanism.mechanism_id ?? ""} requires mechanism_type`);
+      }
+      if (typeof mechanism.initial_state !== "string" || !mechanism.initial_state.trim()) {
+        add(`${level.level_id}: mechanism ${mechanism.mechanism_id ?? ""} requires initial_state`);
+      }
+      const id = mechanism.mechanism_id;
       if (!id || localMechanisms.has(id) || mechanismIds.has(id)) {
         add(`${level.level_id}: missing or duplicate mechanism_id ${id ?? ""}`);
       }
@@ -143,7 +149,8 @@ export function validateLevelContentConfig(config) {
           add(`${level.level_id}: prototype combo ${combo.combo_id} references missing target ${combo.target_mechanism_id}`);
         }
         if (!Array.isArray(combo.rule_sequence) || combo.rule_sequence.length !== 2 ||
-            combo.rule_sequence.some((rule) => !allowedRules.has(rule)) ||\n            new Set(combo.rule_sequence).size !== combo.rule_sequence.length) {
+            combo.rule_sequence.some((rule) => !allowedRules.has(rule)) ||
+            new Set(combo.rule_sequence).size !== combo.rule_sequence.length) {
           add(`${level.level_id}: prototype combo ${combo.combo_id} must define exactly two known law rules`);
         }
         if (typeof combo.display_name !== "string" || !combo.display_name.trim()) {
