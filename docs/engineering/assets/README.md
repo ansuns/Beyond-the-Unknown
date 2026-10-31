@@ -21,6 +21,8 @@
 
 详细制作优先级、P0/P1/P2 资源范围、交付格式、分包建议和 READY 验收证据见 [production-plan.md](./production-plan.md)。
 
+资源 manifest 的每个条目都必须包含 priority 与 delivery_phase；客户端契约校验器固定校验批次成员和阶段，防止关键 P0 资产被误降级。当前批次：P0 37、P1 24、P2 51；优先级不改变 required=true，也不解除发布门禁。
+
 ## Cocos / 微信小游戏包体基线
 
 - Cocos Creator 3.8 微信小游戏主包平台上限 4 MB、全部分包合计上限 30 MB；项目安全预算分别为 3.2 MB 和 24 MB。

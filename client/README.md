@@ -98,4 +98,5 @@ See [微信小游戏构建与联调手册](../docs/engineering/wechat-mini-game-
 - The personal-room prototype uses the GDD 4.2 45° isometric transform. The virtual joystick maps screen-space direction back into logical room direction; click-to-move remains available.
 - Mechanisms are drawn from the server catalog's canonical `mechanism_type` and state. These procedural glyphs and tile palettes are temporary playtest visuals, not approved final assets.
 - The asset manifest remains 112/112 `MISSING`; strict release-assets validation must remain blocked until real files, source/license data, Cocos import evidence and device acceptance are supplied.
+- Asset delivery is now split into P0 37 items (first visual slice), P1 24 items (five rooms + hidden ending) and P2 51 items (content expansion). All 112 remain required; see [asset production plan](../docs/engineering/assets/production-plan.md).
 - The complete client-side movement state machine is not finished: obstacle collision, pathfinding, final character animation, multi-touch/safe-area tuning and real-device movement feel remain open.
