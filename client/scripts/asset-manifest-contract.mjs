@@ -85,7 +85,10 @@ export function validateAssetManifestStructure(manifest, levelConfig, strict = f
   )].sort();
 
   if (manifest?.schema_version !== 1) add("asset manifest schema_version must be 1");
-  if (manifest?.gdd_version !== "0.3") add("asset manifest GDD baseline must be 0.3");
+  if (manifest?.gdd_version !== "0.2") add("asset manifest GDD baseline must be 0.2");
+  if (manifest?.gdd_chapter_versions?.["18"] !== "0.3") {
+    add("asset manifest Chapter 18 baseline must be 0.3");
+  }
   if (!Array.isArray(manifest?.entries)) add("entries must be an array");
   if (!sameOrderedValues(manifest?.character_ids, expectedCharacters)) {
     add("manifest must include exactly CHR_001 through CHR_012 in order");
