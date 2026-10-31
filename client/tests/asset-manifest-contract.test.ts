@@ -107,4 +107,15 @@ describe("asset manifest contract", () => {
     );
   });
 
+
+  it("rejects moving a critical ROOM-01 asset out of the P0 vertical slice", () => {
+    const invalid = structuredClone(manifest);
+    const entry = invalid.entries.find((item: { asset_id: string }) => item.asset_id === "M01-EXIT-01");
+    entry.priority = "P1";
+    entry.delivery_phase = "FIVE_ROOMS_AND_HIDDEN_ENDING";
+    expect(validateAssetManifestStructure(invalid, levels).errors.join("\\n")).toContain(
+      "M01-EXIT-01: priority must be P0 per the approved production plan"
+    );
+  });
+
 });
