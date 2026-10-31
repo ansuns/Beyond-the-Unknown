@@ -52,9 +52,9 @@ describe("prototype mechanism visual mapping", () => {
       resolve(process.cwd(), "../docs/engineering/levels/levels.v1.json"),
       "utf8"
     ));
-    const configuredTypes = [...new Set(
-      config.levels.flatMap((level: any) =>
-        level.mechanisms.map((mechanism: any) => mechanism.mechanism_type)
+    const configuredTypes = [...new Set<string>(
+      config.levels.flatMap((level: { mechanisms: Array<{ mechanism_type: string }> }) =>
+        level.mechanisms.map((mechanism) => mechanism.mechanism_type)
       )
     )].sort();
 
