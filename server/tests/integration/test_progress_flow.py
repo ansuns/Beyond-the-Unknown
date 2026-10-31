@@ -721,6 +721,7 @@ def test_leaderboard_recompute_rebuilds_snapshot_without_touching_ledger(monkeyp
 
 def test_score_threshold_condition_grants_once_per_period() -> None:
     """GDD 11.7: SCORE conditions are evaluated against the running total."""
+    import json
     from uuid import UUID
 
     from sqlalchemy.ext.asyncio import AsyncSession
@@ -729,33 +730,35 @@ def test_score_threshold_condition_grants_once_per_period() -> None:
     from app.modules.progress.repository import _write_score_event
 
     app.dependency_overrides[get_wechat_code_provider] = lambda: FakeWeChatProvider()
-    _set_test_content(True)
-    _db_exec([
-        ("""
-            INSERT INTO rewards
-                (reward_id, reward_type, reward_name, condition_ref,
-                 grant_mode, payload, is_paid, is_enabled)
-            VALUES
-                ('TEST-SCORE-REWARD', 'RT_BADGE', '积分阈值徽章',
-                 'TEST-SCORE-CONDITION', 'AUTO', '{}'::jsonb, false, true)
-            ON CONFLICT (reward_id) DO NOTHING
-        """, None),
-        ("""
-            INSERT INTO reward_conditions
-                (condition_id, trigger_type, condition_config,
-                 reward_id, is_enabled, config_status)
-            VALUES
-                ('TEST-SCORE-CONDITION', 'SCORE',
-                 '{"board_type":"EXPLORE","score_threshold":8}'::jsonb,
-                 'TEST-SCORE-REWARD', true, 'READY')
-            ON CONFLICT (condition_id) DO UPDATE
-            SET trigger_type = 'SCORE',
-                condition_config = '{"board_type":"EXPLORE","score_threshold":8}'::jsonb,
-                is_enabled = true, config_status = 'READY'
-        """, None),
-    ])
     player_id: UUID | None = None
     try:
+        # Seeding lives inside the try block: an exception here must not leave the
+        # shared catalogues READY and the mechanism positions zeroed for later tests.
+        _set_test_content(True)
+        _db_exec([
+            ("""
+                INSERT INTO rewards
+                    (reward_id, reward_type, reward_name, condition_ref,
+                     grant_mode, payload, is_paid, is_enabled)
+                VALUES
+                    ('TEST-SCORE-REWARD', 'RT_BADGE', '积分阈值徽章',
+                     'TEST-SCORE-CONDITION', 'AUTO', '{}'::jsonb, false, true)
+                ON CONFLICT (reward_id) DO NOTHING
+            """, None),
+            ("""
+                INSERT INTO reward_conditions
+                    (condition_id, trigger_type, condition_config,
+                     reward_id, is_enabled, config_status)
+                VALUES
+                    ('TEST-SCORE-CONDITION', 'SCORE', CAST(:config AS jsonb),
+                     'TEST-SCORE-REWARD', true, 'READY')
+                ON CONFLICT (condition_id) DO UPDATE
+                SET trigger_type = 'SCORE',
+                    condition_config = CAST(:config AS jsonb),
+                    is_enabled = true, config_status = 'READY'
+            """, {"config": json.dumps({"board_type": "EXPLORE", "score_threshold": 8})}),
+        ])
+
         with TestClient(app) as client:
             login = client.post(
                 "/api/v1/auth/login",
@@ -798,12 +801,8 @@ def test_score_threshold_condition_grants_once_per_period() -> None:
         )
         assert totals[0]["total"] >= 8
     finally:
-        _set_test_content(False)
         _db_exec([
-            (
-                "DELETE FROM player_rewards WHERE reward_id = 'TEST-SCORE-REWARD'",
-                None,
-            ),
+            ("DELETE FROM player_rewards WHERE reward_id = 'TEST-SCORE-REWARD'", None),
             (
                 "DELETE FROM reward_conditions WHERE condition_id = 'TEST-SCORE-CONDITION'",
                 None,
@@ -813,4 +812,5 @@ def test_score_threshold_condition_grants_once_per_period() -> None:
             "DELETE FROM score_events WHERE player_id = :player_id",
             {"player_id": player_id},
         )] if player_id else []))
+        _set_test_content(False)
         app.dependency_overrides.clear()
