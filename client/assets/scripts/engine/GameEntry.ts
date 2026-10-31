@@ -774,6 +774,8 @@ export class BeyondTheUnknownGameEntry extends Component {
       this.setStatus(result.effects.length ? "回声扩散：隐藏的符号显现了" : "回声没有回应");
     } catch (error) {
       this.setStatus(`回声失败：${error instanceof Error ? error.message : "请稍后重试"}`);
+    } finally {
+      this.prototypeActionInFlight = false;
     }
   }
 
