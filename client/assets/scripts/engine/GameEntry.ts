@@ -40,6 +40,11 @@ import {
   sortIsometricDepth,
   type PrototypeLayoutConfig
 } from "../world/prototype-layout";
+import {
+  getPrototypeMechanismShape,
+  getPrototypeMechanismVisualState,
+  type PrototypeMechanismShape
+} from "../world/prototype-mechanism-visual";
 import { LatestPositionSyncQueue } from "../world/latest-position-sync-queue";
 import { formatProgressSummary } from "../ui/progress-summary";
 
@@ -893,6 +898,88 @@ export class BeyondTheUnknownGameEntry extends Component {
    * Draws a temporary, data-aligned isometric floor for playtesting.
    * This is deliberately procedural prototype presentation, not a READY art asset.
    */
+  private drawPrototypeMechanismSymbol(
+    graphics: Graphics,
+    shape: PrototypeMechanismShape,
+    active: boolean
+  ): void {
+    graphics.lineWidth = 2;
+    const drawDiamond = (halfWidth: number, halfHeight: number) => {
+      graphics.moveTo(0, halfHeight);
+      graphics.lineTo(halfWidth, 0);
+      graphics.lineTo(0, -halfHeight);
+      graphics.lineTo(-halfWidth, 0);
+      graphics.close();
+    };
+    const fillOrStroke = () => {
+      if (active) graphics.fill();
+      else graphics.stroke();
+    };
+
+    switch (shape) {
+      case "BRIDGE":
+        graphics.rect(-12, -5, 24, 10);
+        fillOrStroke();
+        graphics.moveTo(-7, -5);
+        graphics.lineTo(-7, 5);
+        graphics.moveTo(0, -5);
+        graphics.lineTo(0, 5);
+        graphics.moveTo(7, -5);
+        graphics.lineTo(7, 5);
+        graphics.stroke();
+        break;
+      case "DOOR":
+        graphics.rect(-7, -12, 14, 24);
+        fillOrStroke();
+        graphics.circle(3, 0, 1.5);
+        graphics.fill();
+        break;
+      case "ENERGY":
+        graphics.circle(0, 0, 10);
+        graphics.stroke();
+        graphics.circle(0, 0, active ? 6 : 3);
+        fillOrStroke();
+        break;
+      case "GATE":
+        drawDiamond(12, 13);
+        graphics.stroke();
+        drawDiamond(6, 7);
+        fillOrStroke();
+        break;
+      case "HIDEABLE":
+        graphics.circle(0, 0, 10);
+        fillOrStroke();
+        graphics.moveTo(-6, 0);
+        graphics.lineTo(6, 0);
+        graphics.moveTo(0, -6);
+        graphics.lineTo(0, 6);
+        graphics.stroke();
+        break;
+      case "PLATFORM":
+        drawDiamond(13, 8);
+        fillOrStroke();
+        graphics.moveTo(-7, -2);
+        graphics.lineTo(7, -2);
+        graphics.stroke();
+        break;
+      case "CORE":
+        graphics.circle(0, 0, 10);
+        graphics.stroke();
+        graphics.circle(0, 0, 4);
+        fillOrStroke();
+        graphics.moveTo(-13, 0);
+        graphics.lineTo(13, 0);
+        graphics.moveTo(0, -13);
+        graphics.lineTo(0, 13);
+        graphics.stroke();
+        break;
+      default:
+        graphics.circle(0, 0, 10);
+        fillOrStroke();
+        break;
+    }
+  }
+
   private drawPrototypeFloorTiles(graphics: Graphics): void {
     const bounds = this.prototypeLayout.bounds;
     const palette: Record<string, [Color, Color, Color]> = {
@@ -1005,11 +1092,11 @@ export class BeyondTheUnknownGameEntry extends Component {
         if (descriptor.position_x === null || descriptor.position_y === null) continue;
         const state = this.roomMechanismStates.get(mechanismId) ?? {};
         const status = String(state.status ?? "INACTIVE");
-        const activated = status === "TRIGGERED" || state.visible === true;
-        const locked = status === "LOCKED" || status === "SEALED";
+        const visualState = getPrototypeMechanismVisualState(status, state.visible === true);
+        const activated = visualState === "ACTIVE";
         const color = activated
           ? new Color(122, 204, 151, 255)
-          : locked
+          : visualState === "LOCKED"
             ? new Color(220, 170, 104, 255)
             : new Color(117, 185, 220, 255);
         const markerNode = new Node(`Mechanism-${mechanismId}`);
@@ -1024,10 +1111,11 @@ export class BeyondTheUnknownGameEntry extends Component {
         const marker = markerNode.addComponent(Graphics);
         marker.fillColor = color;
         marker.strokeColor = color;
-        marker.lineWidth = 2;
-        marker.circle(0, 0, 10);
-        if (activated) marker.fill();
-        else marker.stroke();
+        this.drawPrototypeMechanismSymbol(
+          marker,
+          getPrototypeMechanismShape(descriptor.mechanism_type),
+          activated
+        );
 
         const labelNode = new Node(`Label-${mechanismId}`);
         markerNode.addChild(labelNode);
