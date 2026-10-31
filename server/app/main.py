@@ -2,6 +2,7 @@ from contextlib import asynccontextmanager
 from uuid import uuid4
 
 from fastapi import FastAPI, Request
+from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy import text
 
 from app.api.router import api_router
@@ -27,6 +28,19 @@ async def lifespan(_: FastAPI):
 
 
 app = FastAPI(title=settings.app_name, version="0.2.0", lifespan=lifespan)
+
+# The WeChat client talks through wx.request and needs no CORS. The Cocos web
+# preview is a normal browser page on another port, so without this the whole
+# client fails at the first fetch. Local only: a deployed API must name its
+# real origins rather than inheriting a wildcard from a dev convenience.
+if settings.local_login_allowed():
+    app.add_middleware(
+        CORSMiddleware,
+        allow_origin_regex=r"^http://(127\.0\.0\.1|localhost):\d+$",
+        allow_credentials=False,
+        allow_methods=["*"],
+        allow_headers=["*"],
+    )
 
 
 @app.middleware("http")

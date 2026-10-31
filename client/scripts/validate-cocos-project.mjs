@@ -15,6 +15,25 @@ try {
     fail(`expected Cocos Creator 3.8.8, got .cocos-version=${version}, package.creatorVersion=${pkg.creatorVersion}`);
   }
 
+const BASE64 = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
+
+/**
+ * Compress a script uuid into the class id a scene actually stores.
+ *
+ * Cocos resolves a component by this id, not by the asset uuid. Writing the raw
+ * uuid into the scene looks right and silently loses the component at load
+ * ("component ... is corrupted"), which is exactly what happened before.
+ */
+function compressUuid(uuid) {
+  const hex = uuid.replace(/-/g, "");
+  let out = hex.slice(0, 5);
+  for (let index = 5; index < 32; index += 3) {
+    const chunk = Number.parseInt(hex.slice(index, index + 3), 16);
+    out += BASE64[(chunk >> 6) & 63] + BASE64[chunk & 63];
+  }
+  return out;
+}
+
   const scene = JSON.parse(await read("assets/scenes/Boot.scene"));
   const sceneMeta = JSON.parse(await read("assets/scenes/Boot.scene.meta"));
   const scriptMeta = JSON.parse(await read("assets/scripts/engine/GameEntry.ts.meta"));
@@ -26,8 +45,12 @@ try {
   if (!entrySource.includes('@ccclass("BeyondTheUnknownGameEntry")')) {
     fail("GameEntry.ts does not register the expected Cocos component class");
   }
-  if (!scene.some((item) => item.__type__ === scriptMeta.uuid)) {
-    fail("Boot.scene does not reference the GameEntry script UUID");
+  const classId = compressUuid(scriptMeta.uuid);
+  if (!scene.some((item) => item.__type__ === classId)) {
+    fail(
+      `Boot.scene does not reference the GameEntry class id (${classId}); ` +
+        "the engine resolves components by the compressed id, not the asset uuid"
+    );
   }
   if (!scene.some((item) => item.__type__ === "cc.Camera")) {
     fail("Boot.scene has no camera component");

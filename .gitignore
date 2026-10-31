@@ -31,6 +31,7 @@ client/local/
 client/temp/
 client/logs/
 client/node_modules/
+client/profiles/
 client/.DS_Store
 
 # Art asset post-processing tooling (not runtime code)

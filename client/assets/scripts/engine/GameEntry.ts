@@ -10,6 +10,7 @@ import {
   Component,
   Graphics,
   Label,
+  Layers,
   Node,
   NodeEventType,
   UITransform,
@@ -19,6 +20,12 @@ import {
 import { RestClient } from "../network/rest-client";
 import type { LawRuleId, MapServerEvent, PersonalLevelState } from "../network/types";
 import { createWeChatFetch, createWeChatWebSocketFactory } from "../platform/wechat-network";
+import {
+  BrowserPlatform,
+  createBrowserFetch,
+  createBrowserWebSocketFactory,
+  hasWeChatApi
+} from "../platform/browser-platform";
 import { WeChatPlatform } from "../platform/wechat-platform";
 import { SessionStore } from "../player/session-store";
 import { CharacterSelectionSession } from "../player/character-selection-session";
@@ -49,6 +56,14 @@ import {
 import { LatestPositionSyncQueue } from "../world/latest-position-sync-queue";
 import { getGazeLeaseRenewalInterval } from "../world/gaze-lease-timing";
 import { formatProgressSummary } from "../ui/progress-summary";
+import {
+  applyRoomBackground,
+  applySprite,
+  fitWithin,
+  loadArtSet,
+  playEchoPulse,
+  type ArtSet
+} from "./art-assets";
 
 const { ccclass, property } = _decorator;
 
@@ -73,6 +88,8 @@ export class BeyondTheUnknownGameEntry extends Component {
   private statusLabel?: Label;
   private rulesLabel?: Label;
   private progressLabel?: Label;
+  private art?: ArtSet;
+  private artReady = false;
   private mapSession?: MapSession;
   private characterSession?: CharacterSelectionSession;
   private currentCharacterId?: string;
@@ -131,6 +148,98 @@ export class BeyondTheUnknownGameEntry extends Component {
 
   onLoad(): void {
     this.buildShell();
+    void this.prepareArt();
+  }
+
+  /** Load the delivered P0 art, then dress whatever the prototype has drawn. */
+  private async prepareArt(): Promise<void> {
+    this.art = await loadArtSet();
+    this.artReady = true;
+    this.decorateScene();
+    const missing = this.art.missing;
+    if (missing.length) {
+      // Visible on purpose: a placeholder is not delivery, and the status line
+      // is where a tester sees which sprite never arrived.
+      console.warn(`[art] missing sprite frames: ${missing.join(", ")}`);
+    }
+  }
+
+  /**
+   * Attach sprites to the nodes the prototype already built.
+   *
+   * Called after loading and after every room redraw, because the redraw wipes
+   * the room's children. Placeholder Graphics are switched off only when the
+   * matching sprite really loaded, so a missing asset leaves a usable scene.
+   */
+  private decorateScene(): void {
+    if (!this.artReady || !this.art || !this.worldRoot) return;
+    const frames = this.art.frames;
+
+    const room = this.worldRoot.children.find(
+      (child) =>
+        child.name.startsWith("RoomPrototype-") || child.name === "Room01Prototype"
+    );
+    // The room is drawn in an isometric projection, so its playable area is a
+    // diamond and a rectangular backdrop fitted to it would be a narrow strip.
+    // The art goes full-bleed behind the viewport instead, and the diamond
+    // outline reads as the walkable area drawn on top of it.
+    const worldTransform = this.worldRoot.getComponent(UITransform);
+    if (worldTransform) {
+      applyRoomBackground(this.worldRoot, frames.background, {
+        width: worldTransform.width,
+        height: worldTransform.height
+      });
+    }
+
+    if (room) {
+      for (const marker of room.children) {
+        const isMechanism = marker.name.startsWith("Mechanism-");
+        const isLightMarker = marker.name === "LightMarker";
+        if (!isMechanism && !isLightMarker) continue;
+        const label = isLightMarker
+          ? undefined
+          : marker.getChildByName(`Label-${marker.name.slice("Mechanism-".length)}`);
+        const status = label?.getComponent(Label)?.string ?? "";
+        const active = status.includes("ACTIVE") || status.includes("TRIGGERED");
+        const frame = active ? frames.mechanismActive : frames.mechanismInactive;
+        const markerGraphics = marker.getComponent(Graphics);
+        if (applySprite(marker, "ArtMechanism", frame, { width: 30, height: 30, footAnchored: true })) {
+          if (markerGraphics) markerGraphics.enabled = false;
+        }
+      }
+    }
+
+    if (this.levelAvatar && frames.character) {
+      const avatarGraphics = this.levelAvatar.getComponent(Graphics);
+      const box = fitWithin(frames.character, 38, 56);
+      if (
+        applySprite(this.levelAvatar, "ArtCharacter", frames.character, {
+          width: box.width,
+          height: box.height,
+          footAnchored: true
+        })
+      ) {
+        if (avatarGraphics) avatarGraphics.enabled = false;
+      }
+    }
+
+    for (const node of this.avatars.values()) {
+      this.decorateAvatar(node);
+    }
+  }
+
+  private decorateAvatar(node: Node): void {
+    if (!this.art || !this.art.frames.character) return;
+    const box = fitWithin(this.art.frames.character, 38, 60);
+    const sprite = applySprite(node, "ArtCharacter", this.art.frames.character, {
+      width: box.width,
+      height: box.height,
+      footAnchored: true
+    });
+    if (!sprite) return;
+    sprite.setPosition(0, -12, 0);
+    const graphics = node.getComponent(Graphics);
+    if (graphics) graphics.enabled = false;
   }
 
   onDestroy(): void {
@@ -191,19 +300,57 @@ export class BeyondTheUnknownGameEntry extends Component {
     if (reached) this.moveTarget = undefined;
   }
 
+  /**
+   * Create a runtime node on the UI layer.
+   *
+   * Cocos only dispatches pointer events to UI_2D nodes. A node left on the
+   * default 3D layer still draws through the canvas camera, so the failure is
+   * invisible: buttons and the joystick render perfectly and simply never react.
+   */
+  private uiNode(name: string): Node {
+    const node = new Node(name);
+    node.layer = Layers.Enum.UI_2D;
+    return node;
+  }
+
+  /**
+   * A 2D camera for the canvas.
+   *
+   * The scene ships a perspective 3D camera, which draws a DEFAULT-layer node
+   * but not a UI_2D one, and UI input only reaches UI_2D nodes. The project
+   * needs one camera that both renders and hit-tests the interface, so the
+   * canvas gets its own orthographic camera and renders last.
+   */
+  private createUICamera(canvasNode: Node, size: { width: number; height: number }): Camera {
+    const cameraNode = this.uiNode("UICamera");
+    canvasNode.addChild(cameraNode);
+    cameraNode.setPosition(0, 0, 1000);
+    const camera = cameraNode.addComponent(Camera);
+    camera.projection = Camera.ProjectionType.ORTHO;
+    camera.orthoHeight = size.height / 2;
+    camera.near = 1;
+    camera.far = 2000;
+    camera.clearFlags = Camera.ClearFlag.SOLID_COLOR;
+    camera.clearColor = new Color(10, 18, 32, 255);
+    camera.visibility = Layers.Enum.UI_2D;
+    // Renders after the scene's 3D camera so its clear does not erase the UI.
+    camera.priority = 1073741824;
+    return camera;
+  }
+
   private buildShell(): void {
     const size = view.getVisibleSize();
-    const canvasNode = new Node("RuntimeCanvas");
+    const canvasNode = this.uiNode("RuntimeCanvas");
     this.node.addChild(canvasNode);
     canvasNode.addComponent(UITransform).setContentSize(size.width, size.height);
     const canvas = canvasNode.addComponent(Canvas);
-    canvas.cameraComponent = this.node.getComponentInChildren(Camera);
+    canvas.cameraComponent = this.createUICamera(canvasNode, size);
     canvas.alignCanvasWithScreen = true;
 
-    this.root = new Node("BeyondTheUnknownRuntime");
+    this.root = this.uiNode("BeyondTheUnknownRuntime");
     canvasNode.addChild(this.root);
 
-    const background = new Node("Background");
+    const background = this.uiNode("Background");
     this.root.addChild(background);
     background.addComponent(UITransform).setContentSize(size.width, size.height);
     const bg = background.addComponent(Graphics);
@@ -220,7 +367,7 @@ export class BeyondTheUnknownGameEntry extends Component {
       16
     );
 
-    this.worldRoot = new Node("WorldViewport");
+    this.worldRoot = this.uiNode("WorldViewport");
     this.root.addChild(this.worldRoot);
     this.worldRoot.setPosition(0, -40, 0);
     const worldTransform = this.worldRoot.addComponent(UITransform);
@@ -319,7 +466,7 @@ export class BeyondTheUnknownGameEntry extends Component {
   }
 
   private createLabel(name: string, value: string, x: number, y: number, fontSize: number): Label {
-    const node = new Node(name);
+    const node = this.uiNode(name);
     this.root!.addChild(node);
     node.setPosition(x, y, 0);
     node.addComponent(UITransform).setContentSize(900, fontSize + 16);
@@ -342,7 +489,7 @@ export class BeyondTheUnknownGameEntry extends Component {
     height: number,
     action: () => void | Promise<void>
   ): Node {
-    const node = new Node(name);
+    const node = this.uiNode(name);
     this.root!.addChild(node);
     node.setPosition(x, y, 0);
     node.addComponent(UITransform).setContentSize(width, height);
@@ -350,7 +497,14 @@ export class BeyondTheUnknownGameEntry extends Component {
     graphics.fillColor = new Color(35, 93, 123, 255);
     graphics.rect(-width / 2, -height / 2, width, height);
     graphics.fill();
-    const label = node.addComponent(Label);
+    // A node can only carry one renderable, and this one already draws its
+    // background with Graphics. Putting the Label on the button node silently
+    // fails ("Can't add renderable component"), which is why every button used
+    // to show up as an empty blue rectangle.
+    const labelNode = this.uiNode(`${name}Label`);
+    node.addChild(labelNode);
+    labelNode.addComponent(UITransform).setContentSize(width, height);
+    const label = labelNode.addComponent(Label);
     label.string = title;
     label.fontSize = 17;
     label.lineHeight = 23;
@@ -364,7 +518,7 @@ export class BeyondTheUnknownGameEntry extends Component {
   }
 
   private createVirtualJoystick(size: { width: number; height: number }): void {
-    const root = new Node("VirtualJoystick");
+    const root = this.uiNode("VirtualJoystick");
     this.root!.addChild(root);
     root.setPosition(-size.width / 2 + 88, -size.height / 2 + 160, 0);
     root.addComponent(UITransform).setContentSize(144, 144);
@@ -375,7 +529,7 @@ export class BeyondTheUnknownGameEntry extends Component {
     ring.circle(0, 0, 56);
     ring.stroke();
 
-    const knob = new Node("VirtualJoystickKnob");
+    const knob = this.uiNode("VirtualJoystickKnob");
     root.addChild(knob);
     knob.addComponent(UITransform).setContentSize(48, 48);
     const knobGraphics = knob.addComponent(Graphics);
@@ -527,7 +681,19 @@ export class BeyondTheUnknownGameEntry extends Component {
 
   private async createApi(): Promise<void> {
     const wxApi = (globalThis as any).wx;
-    if (!wxApi?.login || !wxApi?.request || !wxApi?.connectSocket) {
+    const wechatReady = Boolean(wxApi?.login && wxApi?.request && wxApi?.connectSocket);
+    if (!wechatReady && !hasWeChatApi()) {
+      // Browser preview: same code paths, fetch/WebSocket adapters instead of
+      // wx.*. The mini game build always takes the branch above.
+      this.sessionStore = new SessionStore();
+      this.api = new RestClient({
+        baseUrl: this.apiBaseUrl,
+        token: () => this.sessionStore?.accessToken(),
+        fetchImpl: createBrowserFetch()
+      });
+      return;
+    }
+    if (!wechatReady) {
       throw new Error("当前环境没有完整的微信小游戏 wx API，请在微信开发者工具中运行");
     }
     this.sessionStore = new SessionStore();
@@ -549,10 +715,13 @@ export class BeyondTheUnknownGameEntry extends Component {
       this.setStatus("正在请求微信登录码并连接共享地图…");
       await this.createApi();
       const wxApi = (globalThis as any).wx;
-      const platform = new WeChatPlatform(wxApi);
+      const wechatReady = Boolean(wxApi?.login && wxApi?.request && wxApi?.connectSocket);
+      const platform = wechatReady ? new WeChatPlatform(wxApi) : new BrowserPlatform();
       this.mapSession = new MapSession(platform, this.api!, this.sessionStore!, {
         websocketBaseUrl: this.websocketBaseUrl,
-        socketFactory: createWeChatWebSocketFactory(wxApi)
+        socketFactory: wechatReady
+          ? createWeChatWebSocketFactory(wxApi)
+          : createBrowserWebSocketFactory()
       });
       const map = await this.mapSession.enter((event) => this.onMapEvent(event));
       this.localPlayerId = this.sessionStore!.playerId();
@@ -565,6 +734,7 @@ export class BeyondTheUnknownGameEntry extends Component {
       }
       this.currentMode = "WORLD";
       this.updateJoystickVisibility();
+      this.decorateScene();
       this.upsertAvatar({
         player_id: this.localPlayerId!,
         x: map.spawn_position.x,
@@ -658,11 +828,11 @@ export class BeyondTheUnknownGameEntry extends Component {
     if (!this.worldRoot || !avatar.player_id) return;
     let node = this.avatars.get(avatar.player_id);
     if (!node) {
-      node = new Node(local ? "LocalPlayer" : `RemotePlayer-${avatar.player_id.slice(0, 8)}`);
+      node = this.uiNode(local ? "LocalPlayer" : `RemotePlayer-${avatar.player_id.slice(0, 8)}`);
       this.worldRoot.addChild(node);
       node.addComponent(UITransform).setContentSize(34, 34);
       node.addComponent(Graphics);
-      const labelNode = new Node("PlayerLabel");
+      const labelNode = this.uiNode("PlayerLabel");
       node.addChild(labelNode);
       labelNode.setPosition(0, -27, 0);
       labelNode.addComponent(UITransform).setContentSize(110, 22);
@@ -698,6 +868,7 @@ export class BeyondTheUnknownGameEntry extends Component {
     graphics.fill();
     const label = node.getChildByName("PlayerLabel")?.getComponent(Label);
     if (label) label.string = local ? "我" : (avatar.character_id ?? avatar.player_id).slice(0, 6);
+    this.decorateAvatar(node);
     node.setPosition(avatar.x * this.worldPixelsPerUnit, avatar.y * this.worldPixelsPerUnit, 0);
   }
 
@@ -819,6 +990,16 @@ export class BeyondTheUnknownGameEntry extends Component {
       const state = await this.levelSession.refreshState();
       this.applyRoomMechanismStates(state);
       this.drawPersonalRoom(this.pendingLevelName);
+      if (result.effects.length && this.worldRoot) {
+        const room = this.worldRoot.children.find(
+          (child) => child.name.startsWith("RoomPrototype-") || child.name === "Room01Prototype"
+        );
+        const target = this.prototypeLevelToLocal(
+          hiddenTarget.position_x,
+          hiddenTarget.position_y
+        );
+        if (room) playEchoPulse(room, this.art?.frames.echoPulse, target, 52);
+      }
       this.setStatus(result.effects.length ? "回声扩散：隐藏的符号显现了" : "回声没有回应");
     } catch (error) {
       this.setStatus(`回声失败：${error instanceof Error ? error.message : "请稍后重试"}`);
@@ -1276,7 +1457,7 @@ export class BeyondTheUnknownGameEntry extends Component {
     this.updatePrototypeRoomScale(size);
     const roomSize = this.prototypeRoomDimensions();
     if (this.pendingLevelId !== "LV-ROOM-01") {
-      const room = new Node(`RoomPrototype-${this.pendingLevelId}`);
+      const room = this.uiNode(`RoomPrototype-${this.pendingLevelId}`);
       this.worldRoot.addChild(room);
       room.addComponent(UITransform).setContentSize(roomSize.width, roomSize.height);
       const background = room.addComponent(Graphics);
@@ -1308,7 +1489,7 @@ export class BeyondTheUnknownGameEntry extends Component {
           : visualState === "LOCKED"
             ? new Color(220, 170, 104, 255)
             : new Color(117, 185, 220, 255);
-        const markerNode = new Node(`Mechanism-${mechanismId}`);
+        const markerNode = this.uiNode(`Mechanism-${mechanismId}`);
         room.addChild(markerNode);
         this.prototypeDepthNodes.push(markerNode);
         const markerPosition = this.prototypeLevelToLocal(
@@ -1326,7 +1507,7 @@ export class BeyondTheUnknownGameEntry extends Component {
           activated
         );
 
-        const labelNode = new Node(`Label-${mechanismId}`);
+        const labelNode = this.uiNode(`Label-${mechanismId}`);
         markerNode.addChild(labelNode);
         labelNode.setPosition(0, 20, 0);
         labelNode.addComponent(UITransform).setContentSize(170, 20);
@@ -1338,7 +1519,7 @@ export class BeyondTheUnknownGameEntry extends Component {
       }
 
       if (!completed) {
-        this.levelAvatar = new Node("PersonalLevelAvatar");
+        this.levelAvatar = this.uiNode("PersonalLevelAvatar");
         room.addChild(this.levelAvatar);
         this.levelAvatar.addComponent(UITransform).setContentSize(30, 30);
         const avatarGraphics = this.levelAvatar.addComponent(Graphics);
@@ -1354,7 +1535,7 @@ export class BeyondTheUnknownGameEntry extends Component {
       }
       this.sortPrototypeDepth();
 
-      const titleNode = new Node("RoomTitle");
+      const titleNode = this.uiNode("RoomTitle");
       this.worldRoot.addChild(titleNode);
       titleNode.setPosition(0, size.height / 2 - 30, 0);
       titleNode.addComponent(UITransform).setContentSize(size.width - 40, 28);
@@ -1364,7 +1545,7 @@ export class BeyondTheUnknownGameEntry extends Component {
       title.color = new Color(226, 237, 246, 255);
       title.horizontalAlign = Label.HorizontalAlign.CENTER;
 
-      const hintNode = new Node("RoomPrototypeHint");
+      const hintNode = this.uiNode("RoomPrototypeHint");
       this.worldRoot.addChild(hintNode);
       hintNode.setPosition(0, -size.height / 2 + 178, 0);
       hintNode.addComponent(UITransform).setContentSize(size.width - 40, 34);
@@ -1438,7 +1619,7 @@ export class BeyondTheUnknownGameEntry extends Component {
       return;
     }
 
-    const room = new Node("Room01Prototype");
+    const room = this.uiNode("Room01Prototype");
     this.worldRoot.addChild(room);
     room.addComponent(UITransform).setContentSize(roomSize.width, roomSize.height);
     const graphics = room.addComponent(Graphics);
@@ -1468,7 +1649,7 @@ export class BeyondTheUnknownGameEntry extends Component {
       visible: boolean,
       mechanismType?: string
     ) => {
-      const node = new Node(name);
+      const node = this.uiNode(name);
       room.addChild(node);
       this.prototypeDepthNodes.push(node);
       const markerPosition = this.prototypeLevelToLocal(x, y);
@@ -1539,7 +1720,7 @@ export class BeyondTheUnknownGameEntry extends Component {
     this.levelAvatar = drawMarker("Player", this.levelPosition.x, this.levelPosition.y, new Color(115, 220, 255, 255), 12, true);
     this.sortPrototypeDepth();
 
-    const labelNode = new Node("RoomTitle");
+    const labelNode = this.uiNode("RoomTitle");
     this.worldRoot.addChild(labelNode);
     labelNode.setPosition(0, size.height / 2 - 30, 0);
     labelNode.addComponent(UITransform).setContentSize(size.width - 40, 28);
@@ -1568,6 +1749,7 @@ export class BeyondTheUnknownGameEntry extends Component {
         this.createButton("RoomAbandonButton", "放弃返回", size.width / 2 - 82, -size.height / 2 + 105, 130, 38, () => this.returnToWorld())
       );
     }
+    this.decorateScene();
   }
 
   private async returnToWorld(): Promise<void> {

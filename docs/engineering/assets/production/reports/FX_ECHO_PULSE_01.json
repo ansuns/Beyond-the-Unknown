@@ -7,7 +7,7 @@
   "raw": "build/gen/raw/Game_visual_effect_sprite__a_c_2026-10-31T04-20-30.png",
   "output": "client/assets/resources/effects/FX_ECHO_PULSE_01.png",
   "raw_sha256": "b00d8c81471a737c0d51e0f8e6f7082fef85c08f53dea480d6ba4f61a2ad3313",
-  "output_sha256": "3c51cbc01e2f9c2b41d75cba7a59be461c0373d34bef022de94555754cdf3ba3",
+  "output_sha256": "6e9ebd1b889a3d46450e0c16a70c5c7a6a97735cfa5e80e9f269cbfc771b0ed3",
   "source_size": [
     1024,
     1024
@@ -37,5 +37,15 @@
   "opaque_pixels": 31623,
   "semi_pixels": 17553,
   "alpha_coverage": 0.7592638339920948,
-  "fringe_ratio": 2.6876662993522724e-05
+  "fringe_ratio": 2.6876662993522724e-05,
+  "optimized": {
+    "before_bytes": 113472,
+    "after_bytes": 75214,
+    "saved_pct": 33.7,
+    "format": "PNG",
+    "jpeg_quality": null,
+    "palette_colors": 256,
+    "mean_error": 2.01,
+    "p995_error": 11.0
+  }
 }

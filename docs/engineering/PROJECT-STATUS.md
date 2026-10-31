@@ -18,9 +18,9 @@
 | OpenAPI 路径 | 26，与 HTTP 路由 1:1 | `test_openapi_route_parity.py` |
 | 客户端 TypeScript 文件 | 21 | `client/assets/scripts` |
 | 客户端场景 | 1（`Boot.scene`） | `client/assets/scenes` |
-| 客户端单测 | main 139 / PR #126 分支 143，均 22 文件 | 本次两端实跑 |
-| 服务端单测 | 27 通过 | 本次实跑 |
-| 服务端集成测试 | 17 项，无数据库时全部跳过 | 本次实跑 |
+| 客户端单测 | 144，22 文件 | `npm test` |
+| 服务端测试 | 85 通过（含集成） | `pytest tests -q`，接真实 PostgreSQL/Redis/RabbitMQ |
+| 服务端集成测试 | 全程真实容器，0 跳过 | `TEST_DATABASE_URL`/`TEST_REDIS_URL`/`TEST_RABBITMQ_URL` |
 | GDD 章节 | 18 章 + 总览 + 2 份审核报告 | `docs/gdd` |
 
 ## 2. 资源完成率
@@ -30,8 +30,9 @@
 | 权威清单条目 | 112 | `asset-manifest.v1.json` |
 | P0 条目 | 37 | 同上 |
 | READY | **0** | `npm run validate:assets` 输出 |
+| REVIEW | **5** | 有真实文件与校验报告，缺授权与签认 |
 | IN_PROGRESS | **3** | CHR_001 的主体 / 头像 / 预览，已有独立文件与 provenance |
-| MISSING | 109 | 其余条目 |
+| MISSING | 106 | 其余条目 |
 | P1 / P2 | 24 / 51 | 同上 |
 | P0 独立文件已交付 | **3 / 37** | 有文件，但未 Cocos 导入、未真机验收，故不计 READY |
 | P0 完成率（READY 口径） | **0 / 37** | 发布门禁仍不通过 |
