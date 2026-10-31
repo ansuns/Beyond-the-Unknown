@@ -1,0 +1,906 @@
+[
+  {
+    "ratio": "16x9",
+    "window": {
+      "width": 1280,
+      "height": 720
+    },
+    "phases": {
+      "menu": {
+        "status": "美术资源 6/6",
+        "visible": {
+          "width": 960,
+          "height": 540
+        },
+        "canvas": {
+          "width": 1280,
+          "height": 720,
+          "pixels": {
+            "width": 1280,
+            "height": 720
+          }
+        },
+        "pixelsPerUnit": 1.3333,
+        "nodes": 21,
+        "interactive": 8,
+        "targets": [],
+        "overflow": [],
+        "overlaps": [],
+        "blockingOverlaps": 0,
+        "touchConflicts": [
+          {
+            "shadowed": "WorldViewport",
+            "shadowing": "VirtualJoystick",
+            "intentional": true,
+            "overlap_px": 11136,
+            "shadowed_covered": 0.041,
+            "shadowing_covered": 0.828
+          }
+        ],
+        "touchConflictDefects": 0,
+        "coveredTargets": [],
+        "safeArea": [],
+        "smallestTarget": null
+      },
+      "world": {
+        "status": "已进入共享世界 · 在线实例 2/20 · 1e3c3db7",
+        "visible": {
+          "width": 960,
+          "height": 540
+        },
+        "canvas": {
+          "width": 1280,
+          "height": 720,
+          "pixels": {
+            "width": 1280,
+            "height": 720
+          }
+        },
+        "pixelsPerUnit": 1.3333,
+        "nodes": 27,
+        "interactive": 8,
+        "targets": [],
+        "overflow": [],
+        "overlaps": [],
+        "blockingOverlaps": 0,
+        "touchConflicts": [
+          {
+            "shadowed": "WorldViewport",
+            "shadowing": "VirtualJoystick",
+            "intentional": true,
+            "overlap_px": 11136,
+            "shadowed_covered": 0.041,
+            "shadowing_covered": 0.828
+          }
+        ],
+        "touchConflictDefects": 0,
+        "coveredTargets": [],
+        "safeArea": [],
+        "smallestTarget": null,
+        "loginTapped": true
+      },
+      "room": {
+        "status": "已进入个人关卡 探索房间 1 · 原型坐标/数值待实测 · 法则可用配置 3/3",
+        "visible": {
+          "width": 960,
+          "height": 540
+        },
+        "canvas": {
+          "width": 1280,
+          "height": 720,
+          "pixels": {
+            "width": 1280,
+            "height": 720
+          }
+        },
+        "pixelsPerUnit": 1.3333,
+        "nodes": 35,
+        "interactive": 11,
+        "targets": [
+          "ExitGate",
+          "LightMarker",
+          "HiddenObject",
+          "Player"
+        ],
+        "overflow": [],
+        "overlaps": [],
+        "blockingOverlaps": 0,
+        "touchConflicts": [
+          {
+            "shadowed": "WorldViewport",
+            "shadowing": "VirtualJoystick",
+            "intentional": true,
+            "overlap_px": 11136,
+            "shadowed_covered": 0.04,
+            "shadowing_covered": 0.828
+          },
+          {
+            "shadowed": "WorldViewport",
+            "shadowing": "RoomExitButton",
+            "intentional": true,
+            "overlap_px": 5440,
+            "shadowed_covered": 0.02,
+            "shadowing_covered": 1
+          },
+          {
+            "shadowed": "WorldViewport",
+            "shadowing": "RoomEchoButton",
+            "intentional": true,
+            "overlap_px": 4800,
+            "shadowed_covered": 0.017,
+            "shadowing_covered": 1
+          },
+          {
+            "shadowed": "WorldViewport",
+            "shadowing": "RoomAbandonButton",
+            "intentional": true,
+            "overlap_px": 4160,
+            "shadowed_covered": 0.015,
+            "shadowing_covered": 1
+          }
+        ],
+        "touchConflictDefects": 0,
+        "coveredTargets": [],
+        "safeArea": [],
+        "smallestTarget": {
+          "name": "LightMarker",
+          "width_px": 29.3,
+          "height_px": 36.7,
+          "smaller_px": 29.33
+        },
+        "settledStatus": "已进入共享世界 · 在线实例 2/20 · 1e3c3db7"
+      }
+    }
+  },
+  {
+    "ratio": "18x9",
+    "window": {
+      "width": 1440,
+      "height": 720
+    },
+    "phases": {
+      "menu": {
+        "status": "美术资源 6/6",
+        "visible": {
+          "width": 960,
+          "height": 480
+        },
+        "canvas": {
+          "width": 1440,
+          "height": 720,
+          "pixels": {
+            "width": 1440,
+            "height": 720
+          }
+        },
+        "pixelsPerUnit": 1.5,
+        "nodes": 21,
+        "interactive": 8,
+        "targets": [],
+        "overflow": [],
+        "overlaps": [],
+        "blockingOverlaps": 0,
+        "touchConflicts": [
+          {
+            "shadowed": "WorldViewport",
+            "shadowing": "VirtualJoystick",
+            "intentional": true,
+            "overlap_px": 11136,
+            "shadowed_covered": 0.051,
+            "shadowing_covered": 0.828
+          }
+        ],
+        "touchConflictDefects": 0,
+        "coveredTargets": [],
+        "safeArea": [],
+        "smallestTarget": null
+      },
+      "world": {
+        "status": "已进入共享世界 · 在线实例 2/20 · 1e3c3db7",
+        "visible": {
+          "width": 960,
+          "height": 480
+        },
+        "canvas": {
+          "width": 1440,
+          "height": 720,
+          "pixels": {
+            "width": 1440,
+            "height": 720
+          }
+        },
+        "pixelsPerUnit": 1.5,
+        "nodes": 27,
+        "interactive": 8,
+        "targets": [],
+        "overflow": [],
+        "overlaps": [],
+        "blockingOverlaps": 0,
+        "touchConflicts": [
+          {
+            "shadowed": "WorldViewport",
+            "shadowing": "VirtualJoystick",
+            "intentional": true,
+            "overlap_px": 11136,
+            "shadowed_covered": 0.051,
+            "shadowing_covered": 0.828
+          }
+        ],
+        "touchConflictDefects": 0,
+        "coveredTargets": [],
+        "safeArea": [],
+        "smallestTarget": null,
+        "loginTapped": true
+      },
+      "room": {
+        "status": "已进入个人关卡 探索房间 1 · 原型坐标/数值待实测 · 法则可用配置 3/3",
+        "visible": {
+          "width": 960,
+          "height": 480
+        },
+        "canvas": {
+          "width": 1440,
+          "height": 720,
+          "pixels": {
+            "width": 1440,
+            "height": 720
+          }
+        },
+        "pixelsPerUnit": 1.5,
+        "nodes": 35,
+        "interactive": 11,
+        "targets": [
+          "ExitGate",
+          "LightMarker",
+          "HiddenObject",
+          "Player"
+        ],
+        "overflow": [],
+        "overlaps": [
+          {
+            "a": "ExitGate",
+            "b": "ArtMechanism",
+            "kind_a": "graphics",
+            "kind_b": "sprite",
+            "overlap_px": 151.8,
+            "covered_fraction_of_smaller": 0.558,
+            "severity": "blocking"
+          },
+          {
+            "a": "HiddenObject",
+            "b": "ArtCharacter",
+            "kind_a": "graphics",
+            "kind_b": "sprite",
+            "overlap_px": 36.6,
+            "covered_fraction_of_smaller": 0.066,
+            "severity": "minor"
+          }
+        ],
+        "blockingOverlaps": 1,
+        "touchConflicts": [
+          {
+            "shadowed": "WorldViewport",
+            "shadowing": "VirtualJoystick",
+            "intentional": true,
+            "overlap_px": 11136,
+            "shadowed_covered": 0.049,
+            "shadowing_covered": 0.828
+          },
+          {
+            "shadowed": "WorldViewport",
+            "shadowing": "RoomExitButton",
+            "intentional": true,
+            "overlap_px": 5440,
+            "shadowed_covered": 0.024,
+            "shadowing_covered": 1
+          },
+          {
+            "shadowed": "WorldViewport",
+            "shadowing": "RoomEchoButton",
+            "intentional": true,
+            "overlap_px": 4800,
+            "shadowed_covered": 0.021,
+            "shadowing_covered": 1
+          },
+          {
+            "shadowed": "WorldViewport",
+            "shadowing": "RoomAbandonButton",
+            "intentional": true,
+            "overlap_px": 4160,
+            "shadowed_covered": 0.018,
+            "shadowing_covered": 1
+          }
+        ],
+        "touchConflictDefects": 0,
+        "coveredTargets": [],
+        "safeArea": [],
+        "smallestTarget": {
+          "name": "LightMarker",
+          "width_px": 33,
+          "height_px": 41.3,
+          "smaller_px": 33
+        },
+        "settledStatus": "已进入共享世界 · 在线实例 1/20 · 1e3c3db7"
+      }
+    }
+  },
+  {
+    "ratio": "19.5x9",
+    "window": {
+      "width": 1560,
+      "height": 720
+    },
+    "phases": {
+      "menu": {
+        "status": "美术资源 6/6",
+        "visible": {
+          "width": 960,
+          "height": 443.0769230769231
+        },
+        "canvas": {
+          "width": 1560,
+          "height": 720,
+          "pixels": {
+            "width": 1560,
+            "height": 720
+          }
+        },
+        "pixelsPerUnit": 1.625,
+        "nodes": 21,
+        "interactive": 8,
+        "targets": [],
+        "overflow": [],
+        "overlaps": [],
+        "blockingOverlaps": 0,
+        "touchConflicts": [
+          {
+            "shadowed": "WorldViewport",
+            "shadowing": "VirtualJoystick",
+            "intentional": true,
+            "overlap_px": 11136,
+            "shadowed_covered": 0.06,
+            "shadowing_covered": 0.828
+          }
+        ],
+        "touchConflictDefects": 0,
+        "coveredTargets": [],
+        "safeArea": [],
+        "smallestTarget": null
+      },
+      "world": {
+        "status": "已进入共享世界 · 在线实例 1/20 · 1e3c3db7",
+        "visible": {
+          "width": 960,
+          "height": 443.0769230769231
+        },
+        "canvas": {
+          "width": 1560,
+          "height": 720,
+          "pixels": {
+            "width": 1560,
+            "height": 720
+          }
+        },
+        "pixelsPerUnit": 1.625,
+        "nodes": 24,
+        "interactive": 8,
+        "targets": [],
+        "overflow": [],
+        "overlaps": [],
+        "blockingOverlaps": 0,
+        "touchConflicts": [
+          {
+            "shadowed": "WorldViewport",
+            "shadowing": "VirtualJoystick",
+            "intentional": true,
+            "overlap_px": 11136,
+            "shadowed_covered": 0.06,
+            "shadowing_covered": 0.828
+          }
+        ],
+        "touchConflictDefects": 0,
+        "coveredTargets": [],
+        "safeArea": [],
+        "smallestTarget": null,
+        "loginTapped": true
+      },
+      "room": {
+        "status": "已进入个人关卡 探索房间 1 · 原型坐标/数值待实测 · 法则可用配置 3/3",
+        "visible": {
+          "width": 960,
+          "height": 443.0769230769231
+        },
+        "canvas": {
+          "width": 1560,
+          "height": 720,
+          "pixels": {
+            "width": 1560,
+            "height": 720
+          }
+        },
+        "pixelsPerUnit": 1.625,
+        "nodes": 35,
+        "interactive": 11,
+        "targets": [
+          "ExitGate",
+          "LightMarker",
+          "HiddenObject",
+          "Player"
+        ],
+        "overflow": [],
+        "overlaps": [
+          {
+            "a": "ExitGate",
+            "b": "ArtMechanism",
+            "kind_a": "graphics",
+            "kind_b": "sprite",
+            "overlap_px": 218.6,
+            "covered_fraction_of_smaller": 0.803,
+            "severity": "blocking"
+          },
+          {
+            "a": "HiddenObject",
+            "b": "ArtCharacter",
+            "kind_a": "graphics",
+            "kind_b": "sprite",
+            "overlap_px": 195,
+            "covered_fraction_of_smaller": 0.353,
+            "severity": "blocking"
+          },
+          {
+            "a": "ExitGate",
+            "b": "HiddenObject",
+            "kind_a": "graphics",
+            "kind_b": "graphics",
+            "overlap_px": 81,
+            "covered_fraction_of_smaller": 0.103,
+            "severity": "minor"
+          },
+          {
+            "a": "ArtMechanism",
+            "b": "HiddenObject",
+            "kind_a": "sprite",
+            "kind_b": "graphics",
+            "overlap_px": 49,
+            "covered_fraction_of_smaller": 0.18,
+            "severity": "minor"
+          }
+        ],
+        "blockingOverlaps": 2,
+        "touchConflicts": [
+          {
+            "shadowed": "WorldViewport",
+            "shadowing": "VirtualJoystick",
+            "intentional": true,
+            "overlap_px": 11136,
+            "shadowed_covered": 0.057,
+            "shadowing_covered": 0.828
+          },
+          {
+            "shadowed": "WorldViewport",
+            "shadowing": "RoomExitButton",
+            "intentional": true,
+            "overlap_px": 5440,
+            "shadowed_covered": 0.028,
+            "shadowing_covered": 1
+          },
+          {
+            "shadowed": "WorldViewport",
+            "shadowing": "RoomEchoButton",
+            "intentional": true,
+            "overlap_px": 4800,
+            "shadowed_covered": 0.025,
+            "shadowing_covered": 1
+          },
+          {
+            "shadowed": "WorldViewport",
+            "shadowing": "RoomAbandonButton",
+            "intentional": true,
+            "overlap_px": 4160,
+            "shadowed_covered": 0.021,
+            "shadowing_covered": 1
+          }
+        ],
+        "touchConflictDefects": 0,
+        "coveredTargets": [],
+        "safeArea": [],
+        "smallestTarget": {
+          "name": "LightMarker",
+          "width_px": 35.8,
+          "height_px": 44.7,
+          "smaller_px": 35.75
+        },
+        "settledStatus": "已进入共享世界 · 在线实例 1/20 · 1e3c3db7"
+      }
+    }
+  },
+  {
+    "ratio": "20x9",
+    "window": {
+      "width": 1600,
+      "height": 720
+    },
+    "phases": {
+      "menu": {
+        "status": "美术资源 6/6",
+        "visible": {
+          "width": 960,
+          "height": 432
+        },
+        "canvas": {
+          "width": 1600,
+          "height": 720,
+          "pixels": {
+            "width": 1600,
+            "height": 720
+          }
+        },
+        "pixelsPerUnit": 1.6667,
+        "nodes": 21,
+        "interactive": 8,
+        "targets": [],
+        "overflow": [],
+        "overlaps": [],
+        "blockingOverlaps": 0,
+        "touchConflicts": [
+          {
+            "shadowed": "WorldViewport",
+            "shadowing": "VirtualJoystick",
+            "intentional": true,
+            "overlap_px": 11136,
+            "shadowed_covered": 0.063,
+            "shadowing_covered": 0.828
+          }
+        ],
+        "touchConflictDefects": 0,
+        "coveredTargets": [],
+        "safeArea": [],
+        "smallestTarget": null
+      },
+      "world": {
+        "status": "已进入共享世界 · 在线实例 1/20 · 1e3c3db7",
+        "visible": {
+          "width": 960,
+          "height": 432
+        },
+        "canvas": {
+          "width": 1600,
+          "height": 720,
+          "pixels": {
+            "width": 1600,
+            "height": 720
+          }
+        },
+        "pixelsPerUnit": 1.6667,
+        "nodes": 24,
+        "interactive": 8,
+        "targets": [],
+        "overflow": [],
+        "overlaps": [],
+        "blockingOverlaps": 0,
+        "touchConflicts": [
+          {
+            "shadowed": "WorldViewport",
+            "shadowing": "VirtualJoystick",
+            "intentional": true,
+            "overlap_px": 11136,
+            "shadowed_covered": 0.063,
+            "shadowing_covered": 0.828
+          }
+        ],
+        "touchConflictDefects": 0,
+        "coveredTargets": [],
+        "safeArea": [],
+        "smallestTarget": null,
+        "loginTapped": true
+      },
+      "room": {
+        "status": "已进入个人关卡 探索房间 1 · 原型坐标/数值待实测 · 法则可用配置 3/3",
+        "visible": {
+          "width": 960,
+          "height": 432
+        },
+        "canvas": {
+          "width": 1600,
+          "height": 720,
+          "pixels": {
+            "width": 1600,
+            "height": 720
+          }
+        },
+        "pixelsPerUnit": 1.6667,
+        "nodes": 35,
+        "interactive": 11,
+        "targets": [
+          "ExitGate",
+          "LightMarker",
+          "HiddenObject",
+          "Player"
+        ],
+        "overflow": [],
+        "overlaps": [
+          {
+            "a": "ExitGate",
+            "b": "ArtMechanism",
+            "kind_a": "graphics",
+            "kind_b": "sprite",
+            "overlap_px": 218.6,
+            "covered_fraction_of_smaller": 0.803,
+            "severity": "blocking"
+          },
+          {
+            "a": "HiddenObject",
+            "b": "ArtCharacter",
+            "kind_a": "graphics",
+            "kind_b": "sprite",
+            "overlap_px": 195,
+            "covered_fraction_of_smaller": 0.353,
+            "severity": "blocking"
+          },
+          {
+            "a": "ExitGate",
+            "b": "RoomTitle",
+            "kind_a": "graphics",
+            "kind_b": "label",
+            "overlap_px": 193.8,
+            "covered_fraction_of_smaller": 0.168,
+            "severity": "minor"
+          },
+          {
+            "a": "ExitGate",
+            "b": "HiddenObject",
+            "kind_a": "graphics",
+            "kind_b": "graphics",
+            "overlap_px": 81,
+            "covered_fraction_of_smaller": 0.103,
+            "severity": "minor"
+          },
+          {
+            "a": "ArtMechanism",
+            "b": "HiddenObject",
+            "kind_a": "sprite",
+            "kind_b": "graphics",
+            "overlap_px": 49,
+            "covered_fraction_of_smaller": 0.18,
+            "severity": "minor"
+          }
+        ],
+        "blockingOverlaps": 2,
+        "touchConflicts": [
+          {
+            "shadowed": "WorldViewport",
+            "shadowing": "VirtualJoystick",
+            "intentional": true,
+            "overlap_px": 11136,
+            "shadowed_covered": 0.06,
+            "shadowing_covered": 0.828
+          },
+          {
+            "shadowed": "WorldViewport",
+            "shadowing": "RoomExitButton",
+            "intentional": true,
+            "overlap_px": 5440,
+            "shadowed_covered": 0.029,
+            "shadowing_covered": 1
+          },
+          {
+            "shadowed": "WorldViewport",
+            "shadowing": "RoomEchoButton",
+            "intentional": true,
+            "overlap_px": 4800,
+            "shadowed_covered": 0.026,
+            "shadowing_covered": 1
+          },
+          {
+            "shadowed": "WorldViewport",
+            "shadowing": "RoomAbandonButton",
+            "intentional": true,
+            "overlap_px": 4160,
+            "shadowed_covered": 0.023,
+            "shadowing_covered": 1
+          }
+        ],
+        "touchConflictDefects": 0,
+        "coveredTargets": [],
+        "safeArea": [],
+        "smallestTarget": {
+          "name": "LightMarker",
+          "width_px": 36.7,
+          "height_px": 45.8,
+          "smaller_px": 36.67
+        },
+        "settledStatus": "已进入共享世界 · 在线实例 1/20 · 1e3c3db7"
+      }
+    }
+  },
+  {
+    "ratio": "844x390",
+    "window": {
+      "width": 844,
+      "height": 390
+    },
+    "phases": {
+      "menu": {
+        "status": "美术资源 6/6",
+        "visible": {
+          "width": 960,
+          "height": 443.6018957345972
+        },
+        "canvas": {
+          "width": 844,
+          "height": 390,
+          "pixels": {
+            "width": 844,
+            "height": 390
+          }
+        },
+        "pixelsPerUnit": 0.8792,
+        "nodes": 21,
+        "interactive": 8,
+        "targets": [],
+        "overflow": [],
+        "overlaps": [],
+        "blockingOverlaps": 0,
+        "touchConflicts": [
+          {
+            "shadowed": "WorldViewport",
+            "shadowing": "VirtualJoystick",
+            "intentional": true,
+            "overlap_px": 11136,
+            "shadowed_covered": 0.06,
+            "shadowing_covered": 0.828
+          }
+        ],
+        "touchConflictDefects": 0,
+        "coveredTargets": [],
+        "safeArea": [],
+        "smallestTarget": null
+      },
+      "world": {
+        "status": "已进入共享世界 · 在线实例 1/20 · 1e3c3db7",
+        "visible": {
+          "width": 960,
+          "height": 443.6018957345972
+        },
+        "canvas": {
+          "width": 844,
+          "height": 390,
+          "pixels": {
+            "width": 844,
+            "height": 390
+          }
+        },
+        "pixelsPerUnit": 0.8792,
+        "nodes": 24,
+        "interactive": 8,
+        "targets": [],
+        "overflow": [],
+        "overlaps": [],
+        "blockingOverlaps": 0,
+        "touchConflicts": [
+          {
+            "shadowed": "WorldViewport",
+            "shadowing": "VirtualJoystick",
+            "intentional": true,
+            "overlap_px": 11136,
+            "shadowed_covered": 0.06,
+            "shadowing_covered": 0.828
+          }
+        ],
+        "touchConflictDefects": 0,
+        "coveredTargets": [],
+        "safeArea": [],
+        "smallestTarget": null,
+        "loginTapped": true
+      },
+      "room": {
+        "status": "已进入个人关卡 探索房间 1 · 原型坐标/数值待实测 · 法则可用配置 3/3",
+        "visible": {
+          "width": 960,
+          "height": 443.6018957345972
+        },
+        "canvas": {
+          "width": 844,
+          "height": 390,
+          "pixels": {
+            "width": 844,
+            "height": 390
+          }
+        },
+        "pixelsPerUnit": 0.8792,
+        "nodes": 35,
+        "interactive": 11,
+        "targets": [
+          "ExitGate",
+          "LightMarker",
+          "HiddenObject",
+          "Player"
+        ],
+        "overflow": [],
+        "overlaps": [
+          {
+            "a": "ExitGate",
+            "b": "ArtMechanism",
+            "kind_a": "graphics",
+            "kind_b": "sprite",
+            "overlap_px": 218.6,
+            "covered_fraction_of_smaller": 0.803,
+            "severity": "blocking"
+          },
+          {
+            "a": "HiddenObject",
+            "b": "ArtCharacter",
+            "kind_a": "graphics",
+            "kind_b": "sprite",
+            "overlap_px": 195,
+            "covered_fraction_of_smaller": 0.353,
+            "severity": "blocking"
+          },
+          {
+            "a": "ExitGate",
+            "b": "HiddenObject",
+            "kind_a": "graphics",
+            "kind_b": "graphics",
+            "overlap_px": 81,
+            "covered_fraction_of_smaller": 0.103,
+            "severity": "minor"
+          },
+          {
+            "a": "ArtMechanism",
+            "b": "HiddenObject",
+            "kind_a": "sprite",
+            "kind_b": "graphics",
+            "overlap_px": 49,
+            "covered_fraction_of_smaller": 0.18,
+            "severity": "minor"
+          }
+        ],
+        "blockingOverlaps": 2,
+        "touchConflicts": [
+          {
+            "shadowed": "WorldViewport",
+            "shadowing": "VirtualJoystick",
+            "intentional": true,
+            "overlap_px": 11136,
+            "shadowed_covered": 0.057,
+            "shadowing_covered": 0.828
+          },
+          {
+            "shadowed": "WorldViewport",
+            "shadowing": "RoomExitButton",
+            "intentional": true,
+            "overlap_px": 5440,
+            "shadowed_covered": 0.028,
+            "shadowing_covered": 1
+          },
+          {
+            "shadowed": "WorldViewport",
+            "shadowing": "RoomEchoButton",
+            "intentional": true,
+            "overlap_px": 4800,
+            "shadowed_covered": 0.025,
+            "shadowing_covered": 1
+          },
+          {
+            "shadowed": "WorldViewport",
+            "shadowing": "RoomAbandonButton",
+            "intentional": true,
+            "overlap_px": 4160,
+            "shadowed_covered": 0.021,
+            "shadowing_covered": 1
+          }
+        ],
+        "touchConflictDefects": 0,
+        "coveredTargets": [],
+        "safeArea": [],
+        "smallestTarget": {
+          "name": "LightMarker",
+          "width_px": 19.3,
+          "height_px": 24.2,
+          "smaller_px": 19.34
+        },
+        "settledStatus": "已进入共享世界 · 在线实例 1/20 · 1e3c3db7"
+      }
+    }
+  }
+]

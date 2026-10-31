@@ -69,6 +69,11 @@ import { assetService } from "./asset-service";
 
 const { ccclass, property } = _decorator;
 
+// Vertical padding `createLabel` puts around a label's text. Any layout that
+// stacks labels has to reserve exactly this much per label, or the boxes
+// overlap while the text still looks fine.
+const LABEL_BOX_EXTRA = 16;
+
 type Avatar = {
   player_id: string;
   x: number;
@@ -211,6 +216,13 @@ export class BeyondTheUnknownGameEntry extends Component {
       });
     }
 
+    // Marker sprites are sized in fixed design units while the room itself is
+    // scaled to fit the viewport. On a wide, short screen that combination puts
+    // full-size art on a shrunk room, so two objects a few units apart in level
+    // space end up drawn on top of each other - measured at 20:9 as the hidden
+    // object covering 51% of the player.
+    const artScale = Math.max(0.55, Math.min(1.5, this.levelRoomScale / 18));
+
     if (room) {
       for (const marker of room.children) {
         const isMechanism = marker.name.startsWith("Mechanism-");
@@ -223,7 +235,11 @@ export class BeyondTheUnknownGameEntry extends Component {
         const active = status.includes("ACTIVE") || status.includes("TRIGGERED");
         const frame = active ? frames.mechanismActive : frames.mechanismInactive;
         const markerGraphics = marker.getComponent(Graphics);
-        if (applySprite(marker, "ArtMechanism", frame, { width: 30, height: 30, footAnchored: true })) {
+        if (applySprite(marker, "ArtMechanism", frame, {
+          width: 30 * artScale,
+          height: 30 * artScale,
+          footAnchored: true
+        })) {
           if (markerGraphics) markerGraphics.enabled = false;
         }
       }
@@ -231,7 +247,7 @@ export class BeyondTheUnknownGameEntry extends Component {
 
     if (this.levelAvatar && frames.character) {
       const avatarGraphics = this.levelAvatar.getComponent(Graphics);
-      const box = fitWithin(frames.character, 38, 56);
+      const box = fitWithin(frames.character, 38 * artScale, 56 * artScale);
       if (
         applySprite(this.levelAvatar, "ArtCharacter", frames.character, {
           width: box.width,
@@ -368,27 +384,36 @@ export class BeyondTheUnknownGameEntry extends Component {
    * and the bottom row overlapped the world viewport. Everything below is a
    * vertical stack measured from the real edges, with a compact scale for short
    * screens instead of a fixed one.
+   *
+   * Every label box below reserves LABEL_BOX_EXTRA, the same padding
+   * `createLabel` gives the node it creates. Reserving less (this used to use
+   * +8, +6) is invisible in a screenshot and shows up only as overlap: the
+   * title covers 29% of the status line, the bottom row covers part of the
+   * rules label - measured by tools/verify-landscape.mjs at every ratio.
    */
   private computeShellLayout(size: { width: number; height: number }) {
     const compact = size.height < 560;
     const pad = compact ? 10 : 16;
 
     const titleSize = compact ? 21 : 30;
-    const titleBox = titleSize + 8;
+    const titleBox = titleSize + LABEL_BOX_EXTRA;
     const statusSize = compact ? 12 : 16;
-    const statusBox = statusSize + 6;
+    const statusBox = statusSize + LABEL_BOX_EXTRA;
     const navHeight = compact ? 30 : 44;
     const navWidth = compact ? 88 : 110;
-    const navInset = compact ? 6 : 12;
+    // The side buttons used to sit 6 units from the edge while everything else
+    // kept `pad`; tools/verify-landscape.mjs flags that as a safe-area breach,
+    // and on a phone the rounded corners and WeChat's capsule are right there.
+    const navInset = pad;
     const progressSize = compact ? 11 : 13;
-    const progressBox = progressSize + 6;
+    const progressBox = progressSize + LABEL_BOX_EXTRA;
     const bottomHeight = compact ? 40 : 54;
     const bottomWidth = compact ? 140 : 190;
     const bottomSideWidth = compact ? 150 : 210;
     const rulesSize = compact ? 12 : 14;
-    const rulesBox = rulesSize + 6;
+    const rulesBox = rulesSize + LABEL_BOX_EXTRA;
     const hintSize = 13;
-    const hintBox = hintSize + 6;
+    const hintBox = hintSize + LABEL_BOX_EXTRA;
     // A 390 px tall screen cannot afford a footer line that repeats the hint.
     const showHint = size.height >= 580;
 
@@ -604,7 +629,7 @@ export class BeyondTheUnknownGameEntry extends Component {
     const node = this.uiNode(name);
     this.root!.addChild(node);
     node.setPosition(x, y, 0);
-    node.addComponent(UITransform).setContentSize(width, fontSize + 16);
+    node.addComponent(UITransform).setContentSize(width, fontSize + LABEL_BOX_EXTRA);
     const label = node.addComponent(Label);
     label.string = value;
     label.fontSize = fontSize;
@@ -1441,17 +1466,34 @@ export class BeyondTheUnknownGameEntry extends Component {
     const gap = compact ? 6 : 10;
     const inset = compact ? 6 : 12;
     const bottom = -size.height / 2 + inset;
+    // Second row from the bottom, where "完成并结算" lives.
+    const primaryY = bottom + height / 2;
+    // First row from the bottom, where the combo / action buttons live.
+    const actionY = bottom + height + gap + height / 2;
+    // Vertical band the rows occupy, plus the title above the art. Reserving it
+    // is what keeps the buttons off the player: the room art was fitted to the
+    // whole viewport, so its bottom rows - where the avatar often stands - ended
+    // up underneath the action row. Measured overlap before this: 25% of the
+    // player hidden behind "回声 · 显形".
+    const rowsBand = inset + height * 2 + gap;
+    const titleSize = compact ? 13 : 16;
+    const titleBand = titleSize + LABEL_BOX_EXTRA;
+    const playfieldHeight = Math.max(60, size.height - rowsBand - titleBand - 8);
     return {
       compact,
       height,
       gap,
+      rowsBand,
+      titleBand,
+      playfieldHeight,
+      playfieldWidth: Math.max(120, size.width - 24),
+      // Centre of the art band: below the title, above the action rows.
+      playfieldCenterY: size.height / 2 - titleBand - playfieldHeight / 2,
       hintY: size.height / 2 - (compact ? 12 : 20),
       titleY: size.height / 2 - (compact ? 16 : 30),
-      titleSize: compact ? 13 : 16,
-      // Second row from the bottom, where "完成并结算" lives.
-      primaryY: bottom + height / 2,
-      // First row from the bottom, where the combo / action buttons live.
-      actionY: bottom + height + gap + height / 2,
+      titleSize,
+      primaryY,
+      actionY,
       sideX: size.width / 2 - (compact ? 70 : 88)
     };
   }
@@ -1637,11 +1679,16 @@ export class BeyondTheUnknownGameEntry extends Component {
     this.worldRoot.removeAllChildren();
     this.prototypeDepthNodes = [];
     const size = this.worldRoot.getComponent(UITransform).contentSize;
-    this.updatePrototypeRoomScale(size);
+    const roomLayout = this.roomControlLayout(size);
+    // Fit the room to the band that is left after the title and the action rows,
+    // not to the whole viewport: the bottom of the diamond is where the avatar
+    // often stands, and it used to end up underneath the buttons.
+    this.updatePrototypeRoomScale({ width: size.width, height: roomLayout.playfieldHeight });
     const roomSize = this.prototypeRoomDimensions();
     if (this.pendingLevelId !== "LV-ROOM-01") {
       const room = this.uiNode(`RoomPrototype-${this.pendingLevelId}`);
       this.worldRoot.addChild(room);
+      room.setPosition(0, roomLayout.playfieldCenterY, 0);
       room.addComponent(UITransform).setContentSize(roomSize.width, roomSize.height);
       const background = room.addComponent(Graphics);
       background.lineWidth = 3;
@@ -1728,7 +1775,6 @@ export class BeyondTheUnknownGameEntry extends Component {
       title.color = new Color(226, 237, 246, 255);
       title.horizontalAlign = Label.HorizontalAlign.CENTER;
 
-      const roomLayout = this.roomControlLayout(size);
       const hintNode = this.uiNode("RoomPrototypeHint");
       this.worldRoot.addChild(hintNode);
       hintNode.setPosition(0, roomLayout.hintY, 0);
@@ -1805,6 +1851,7 @@ export class BeyondTheUnknownGameEntry extends Component {
 
     const room = this.uiNode("Room01Prototype");
     this.worldRoot.addChild(room);
+    room.setPosition(0, roomLayout.playfieldCenterY, 0);
     room.addComponent(UITransform).setContentSize(roomSize.width, roomSize.height);
     const graphics = room.addComponent(Graphics);
     graphics.lineWidth = 3;
@@ -1904,7 +1951,6 @@ export class BeyondTheUnknownGameEntry extends Component {
     this.levelAvatar = drawMarker("Player", this.levelPosition.x, this.levelPosition.y, new Color(115, 220, 255, 255), 12, true);
     this.sortPrototypeDepth();
 
-    const roomLayout = this.roomControlLayout(size);
     const labelNode = this.uiNode("RoomTitle");
     this.worldRoot.addChild(labelNode);
     labelNode.setPosition(0, roomLayout.titleY, 0);
