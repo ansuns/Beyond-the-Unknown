@@ -1439,7 +1439,15 @@ export class BeyondTheUnknownGameEntry extends Component {
     graphics.stroke();
     this.drawPrototypeFloorTiles(graphics);
 
-    const drawMarker = (name: string, x: number, y: number, color: Color, radius: number, visible: boolean) => {
+    const drawMarker = (
+      name: string,
+      x: number,
+      y: number,
+      color: Color,
+      radius: number,
+      visible: boolean,
+      mechanismType?: string
+    ) => {
       const node = new Node(name);
       room.addChild(node);
       this.prototypeDepthNodes.push(node);
@@ -1448,12 +1456,20 @@ export class BeyondTheUnknownGameEntry extends Component {
       node.addComponent(UITransform).setContentSize(radius * 2, radius * 2);
       const marker = node.addComponent(Graphics);
       marker.fillColor = color;
-      marker.circle(0, 0, radius);
-      if (visible) marker.fill();
-      else {
-        marker.strokeColor = color;
-        marker.lineWidth = 2;
-        marker.stroke();
+      marker.strokeColor = color;
+      if (mechanismType) {
+        this.drawPrototypeMechanismSymbol(
+          marker,
+          getPrototypeMechanismShape(mechanismType),
+          visible
+        );
+      } else {
+        marker.circle(0, 0, radius);
+        if (visible) marker.fill();
+        else {
+          marker.lineWidth = 2;
+          marker.stroke();
+        }
       }
       return node;
     };
@@ -1469,7 +1485,15 @@ export class BeyondTheUnknownGameEntry extends Component {
     ) => {
       const descriptor = this.roomMechanismCatalog.get(mechanismId);
       if (descriptor?.position_x === null || descriptor?.position_y === null || !descriptor) return;
-      drawMarker(nodeName, descriptor.position_x, descriptor.position_y, color, radius, visible);
+      drawMarker(
+        nodeName,
+        descriptor.position_x,
+        descriptor.position_y,
+        color,
+        radius,
+        visible,
+        descriptor.mechanism_type
+      );
     };
     drawCatalogMarker(
       "HiddenObject",
