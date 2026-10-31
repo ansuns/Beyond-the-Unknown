@@ -19,7 +19,10 @@ const RATIOS = [
   { name: "16x9", width: 1280, height: 720 },
   { name: "18x9", width: 1440, height: 720 },
   { name: "19.5x9", width: 1560, height: 720 },
-  { name: "20x9", width: 1600, height: 720 }
+  { name: "20x9", width: 1600, height: 720 },
+  // The actual DevTools simulator viewport the phone gives us - the four ratios
+  // above are 720 px tall and hide what a 390 px tall screen does to the layout.
+  { name: "iphone14", width: 844, height: 390 }
 ];
 
 mkdirSync(outDir, { recursive: true });

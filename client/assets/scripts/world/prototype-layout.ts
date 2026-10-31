@@ -148,8 +148,12 @@ export function calculatePrototypeRoomScale(
   ) {
     throw new Error("Prototype room bounds and viewport size must be positive and finite");
   }
-  const availableWidth = Math.max(160, size.width - 64);
-  const availableHeight = Math.max(120, size.height - 240);
+  // `size` is the world viewport, not the window: the shell already reserved
+  // room for the title, the action rows and the footer. Subtracting another 240
+  // (as this did when it measured the whole window) double-counted that space
+  // and shrank an 844x390 phone's room to a fifth of the viewport.
+  const availableWidth = Math.max(160, size.width - 48);
+  const availableHeight = Math.max(80, size.height - 24);
   const projectedSpan = spanX + spanY;
   return Math.min(40, availableWidth / projectedSpan, availableHeight / projectedSpan);
 }

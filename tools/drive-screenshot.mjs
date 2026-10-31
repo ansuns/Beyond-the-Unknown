@@ -110,6 +110,27 @@ async function main() {
     }
   });
 
+  // The web-desktop template pins #GameDiv to a fixed 1280x960 frame, so the
+  // window size alone never changes the game viewport - at 844x390 the capture
+  // was a zoomed crop of a 1280-wide canvas. Resize the container before the
+  // engine boots, which is what a phone whose canvas fills the screen does.
+  await client.send("Page.addScriptToEvaluateOnNewDocument", {
+    source: `(() => {
+      const apply = () => {
+        const div = document.getElementById("GameDiv");
+        if (div) { div.style.width = "${width}px"; div.style.height = "${height}px"; }
+        const canvas = document.getElementById("GameCanvas");
+        if (canvas) {
+          canvas.width = ${width};
+          canvas.height = ${height};
+          canvas.style.width = "${width}px";
+          canvas.style.height = "${height}px";
+        }
+      };
+      document.addEventListener("DOMContentLoaded", apply);
+      window.addEventListener("load", apply);
+    })();`
+  });
   await client.send("Page.navigate", { url });
   await delay(6000);
 
