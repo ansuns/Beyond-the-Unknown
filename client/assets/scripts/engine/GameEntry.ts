@@ -14,6 +14,7 @@ import {
   Node,
   NodeEventType,
   profiler,
+  ResolutionPolicy,
   UITransform,
   view
 } from "cc";
@@ -66,6 +67,11 @@ import {
   type ArtSet
 } from "./art-assets";
 import { assetService } from "./asset-service";
+import {
+  readViewport,
+  resolveDesignResolution,
+  shouldRefit
+} from "./screen-fit";
 
 const { ccclass, property } = _decorator;
 
@@ -91,7 +97,15 @@ export class BeyondTheUnknownGameEntry extends Component {
   websocketBaseUrl = "ws://127.0.0.1:8000";
 
   private root?: Node;
+  private canvasNode?: Node;
   private worldRoot?: Node;
+  // The design resolution in force, in CSS pixels. Tracked so a resize can tell
+  // a real viewport change from the one-pixel churn that scrollbars cause.
+  private designSize = { width: 0, height: 0 };
+  private viewportHandler?: () => void;
+  // Re-drawn when the viewport changes: the room's geometry is derived from the
+  // viewport size, so it has to be rebuilt rather than nudged.
+  private lastRoomRender?: { levelName: string; completed: boolean };
   private statusLabel?: Label;
   private rulesLabel?: Label;
   private progressLabel?: Label;
@@ -154,13 +168,42 @@ export class BeyondTheUnknownGameEntry extends Component {
   private readonly moveSpeedPixelsPerSecond = 160;
   private readonly moveSyncIntervalSeconds = 0.12;
 
+  // Art is a subpackage: loaded on first use, memoised, and retried after a
+  // failure instead of leaving the shell permanently undecorated.
+  private artPromise?: Promise<void>;
+  private artStatus: "idle" | "loading" | "ready" | "failed" = "idle";
+
   onLoad(): void {
     // The engine's stats overlay sits at the top-left and covers the login
     // button on a phone-sized canvas, which made the HUD look broken in
     // DevTools. It is off unless someone asks for it explicitly.
     profiler.hideStats();
+    // Before anything is measured: make one design unit one CSS pixel, so the
+    // shell below is laid out for the screen the player actually has instead of
+    // for a 960x640 preview. Without this the page is cropped on a phone and
+    // padded on a desktop.
+    this.applyScreenFit();
+    this.listenForViewportChanges();
     this.buildShell();
-    void this.prepareArt();
+    // The art bundle is NOT fetched here. It is a WeChat subpackage, and pulling
+    // it at boot would download the whole subpackage before the first tap, which
+    // is the opposite of what a subpackage is for. It loads on first use:
+    // entering the shared world, or entering a room.
+  }
+
+  /**
+   * Load the art bundle once, on demand.
+   *
+   * `ensureBundle` already de-duplicates in-flight downloads; this keeps the
+   * whole art pass (bundle + sprite frames + decoration) from running twice when
+   * the world and a room both ask for it.
+   */
+  private ensureArt(): Promise<void> {
+    if (!this.artPromise) {
+      this.artStatus = "loading";
+      this.artPromise = this.prepareArt();
+    }
+    return this.artPromise;
   }
 
   /** Load the delivered P0 art, then dress whatever the prototype has drawn. */
@@ -173,6 +216,10 @@ export class BeyondTheUnknownGameEntry extends Component {
           this.setStatus(`${note} ${Math.round(percent * 100)}%`)
       });
     } catch (error) {
+      this.artStatus = "failed";
+      // A retry is worth offering: the common cause is a flaky network, and the
+      // service already backs off internally.
+      this.artPromise = undefined;
       this.setStatus(`资源加载失败：${error instanceof Error ? error.message : "未知错误"}`);
       return;
     }
@@ -180,6 +227,7 @@ export class BeyondTheUnknownGameEntry extends Component {
       this.setStatus(`美术资源 ${loaded}/${total}`)
     );
     this.artReady = true;
+    this.artStatus = "ready";
     this.decorateScene();
     const missing = this.art.missing;
     if (missing.length) {
@@ -475,12 +523,291 @@ export class BeyondTheUnknownGameEntry extends Component {
     };
   }
 
+  /**
+   * Make the design resolution the screen's own size.
+   *
+   * The project used to ship a fixed 960x640 design resolution. With a fixed
+   * design resolution the engine picks one scale factor and the visible area
+   * only lines up with the screen at one aspect ratio; everything else is
+   * cropped or padded. Deriving the design resolution from the viewport and
+   * letting the policy stretch to the frame means the visible size IS the
+   * screen, on a 16:9 phone, a 20:9 phone and a desktop window alike.
+   *
+   * EXACT_FIT rather than SHOW_ALL on purpose: SHOW_ALL keeps the whole design
+   * rectangle visible, which is the definition of a letterbox whenever the
+   * canvas and the design rectangle disagree for even one frame - and they do
+   * disagree for one frame while the canvas catches up to a resize. EXACT_FIT
+   * always covers the frame.
+   */
+  private applyScreenFit(): { width: number; height: number } | undefined {
+    const metrics = readViewport(globalThis as any);
+    if (!metrics) return undefined;
+    const design = resolveDesignResolution(metrics);
+    this.designSize = design;
+    view.setDesignResolutionSize(design.width, design.height, ResolutionPolicy.EXACT_FIT);
+    return design;
+  }
+
+  /**
+   * Refit when the screen really changes.
+   *
+   * Locked landscape on a phone means this mostly serves the browser: resizing
+   * the window used to leave the HUD laid out for the old size, so a window
+   * that shrank simply cropped the controls.
+   */
+  private listenForViewportChanges(): void {
+    if (this.viewportHandler) return;
+    const handler = () => this.handleViewportChange();
+    this.viewportHandler = handler;
+
+    const host = globalThis as any;
+    try {
+      host.wx?.onWindowResize?.(handler);
+    } catch {
+      // Older base libraries without the callback.
+    }
+    host.window?.addEventListener?.("resize", handler);
+    host.window?.addEventListener?.("orientationchange", handler);
+    try {
+      // Covers embeddings that never fire a window resize, such as an iframe
+      // resized by its parent.
+      (view as any).on?.("canvas-resize", handler);
+    } catch {
+      // Not every platform's view is an event target.
+    }
+  }
+
+  private handleViewportChange(): void {
+    const metrics = readViewport(globalThis as any);
+    if (!metrics) return;
+    const next = resolveDesignResolution(metrics);
+    if (!shouldRefit(this.designSize, next)) return;
+    this.designSize = next;
+    view.setDesignResolutionSize(next.width, next.height, ResolutionPolicy.EXACT_FIT);
+    // The new size is passed in rather than read back. Cocos applies a design
+    // resolution change to its frame on the next tick, so view.getVisibleSize()
+    // still returns the old size right here - and a shell laid out for the old
+    // width puts the left button off the left edge of the new screen. Measured:
+    // resizing 1280x720 down to 844x390 put "登录并进入世界" at x=-515.
+    this.relayoutShell(next);
+  }
+
+  private onDestroy(): void {
+    const handler = this.viewportHandler;
+    if (!handler) return;
+    this.viewportHandler = undefined;
+    const host = globalThis as any;
+    try {
+      host.wx?.offWindowResize?.(handler);
+    } catch {
+      // Nothing was registered.
+    }
+    host.window?.removeEventListener?.("resize", handler);
+    host.window?.removeEventListener?.("orientationchange", handler);
+    try {
+      (view as any).off?.("canvas-resize", handler);
+    } catch {
+      // Not every platform's view is an event target.
+    }
+  }
+
+  /**
+   * Re-place the shell for the current viewport.
+   *
+   * Every position comes from computeShellLayout, which reads the visible size,
+   * so re-running it is all a resize needs. The room is the exception: its
+   * geometry is baked into node positions and the room scale, so it is redrawn
+   * from the same state that drew it the first time.
+   */
+  private relayoutShell(sizeOverride?: { width: number; height: number }): void {
+    if (!this.root) return;
+    const size = sizeOverride ?? view.getVisibleSize();
+    const layout = this.computeShellLayout(size);
+    const labelWidth = size.width - layout.pad * 2;
+
+    if (this.canvasNode) {
+      const transform = this.canvasNode.getComponent(UITransform);
+      if (transform) transform.setContentSize(size.width, size.height);
+      const camera = this.canvasNode.getComponent(Canvas)?.cameraComponent;
+      if (camera) camera.orthoHeight = size.height / 2;
+    }
+
+    this.paintBackground(size);
+    this.placeLabel("Title", 0, layout.titleY, layout.titleSize, labelWidth);
+    this.placeLabel("Status", 0, layout.statusY, layout.statusSize, labelWidth);
+    this.placeLabel("ProgressSummary", 0, layout.progressY, layout.progressSize, labelWidth);
+    this.placeLabel("RulesStatus", 0, layout.rulesY, layout.rulesSize, labelWidth);
+
+    const hint = this.root.getChildByName("Hint");
+    if (hint) {
+      hint.active = layout.showHint;
+      if (layout.showHint) this.placeLabel("Hint", 0, layout.hintY, layout.hintSize, labelWidth);
+    }
+
+    if (this.worldRoot) {
+      this.worldRoot.setPosition(0, layout.worldY, 0);
+      this.placeWorldViewport(layout.worldWidth, layout.worldHeight);
+    }
+
+    this.placeButton(
+      "LoginButton",
+      -size.width / 2 + layout.bottomSideWidth / 2 + layout.pad,
+      layout.bottomY,
+      layout.bottomSideWidth,
+      layout.bottomHeight
+    );
+    this.placeButton("EnterLevelButton", 0, layout.bottomY, layout.bottomWidth, layout.bottomHeight);
+    this.placeButton(
+      "ReturnButton",
+      size.width / 2 - layout.bottomSideWidth / 2 - layout.pad,
+      layout.bottomY,
+      layout.bottomSideWidth,
+      layout.bottomHeight
+    );
+    this.placeButton(
+      "ProgressButton",
+      -size.width / 2 + layout.navInset + layout.navWidth / 2,
+      layout.navY,
+      layout.navWidth,
+      layout.navHeight
+    );
+    this.placeButton("CharacterButton", 0, layout.navY, layout.navWidth, layout.navHeight);
+    this.placeButton(
+      "EmoteButton",
+      size.width / 2 - layout.navInset - layout.navWidth / 2,
+      layout.navY,
+      layout.navWidth,
+      layout.navHeight
+    );
+
+    this.relayoutJoystick(size, layout);
+
+    const room = this.lastRoomRender;
+    if (this.currentMode === "PERSONAL_LEVEL" && room && !this.prototypeActionInFlight) {
+      this.drawPersonalRoom(room.levelName, room.completed);
+      this.decorateScene();
+    }
+  }
+
+  private paintBackground(size: { width: number; height: number }): void {
+    const node = this.root?.getChildByName("Background");
+    if (!node) return;
+    const transform = node.getComponent(UITransform);
+    if (transform) transform.setContentSize(size.width, size.height);
+    const graphics = node.getComponent(Graphics);
+    if (!graphics) return;
+    graphics.clear();
+    graphics.fillColor = new Color(10, 18, 32, 255);
+    graphics.rect(-size.width / 2, -size.height / 2, size.width, size.height);
+    graphics.fill();
+  }
+
+  private placeWorldViewport(width: number, height: number): void {
+    if (!this.worldRoot) return;
+    const transform = this.worldRoot.getComponent(UITransform);
+    if (transform) transform.setContentSize(width, height);
+    const graphics = this.worldRoot.getComponent(Graphics);
+    if (!graphics) return;
+    graphics.clear();
+    graphics.lineWidth = 3;
+    graphics.strokeColor = new Color(72, 112, 144, 255);
+    graphics.fillColor = new Color(17, 34, 50, 255);
+    graphics.rect(-width / 2, -height / 2, width, height);
+    graphics.fill();
+    graphics.stroke();
+  }
+
+  private placeLabel(
+    name: string,
+    x: number,
+    y: number,
+    fontSize: number,
+    width: number
+  ): void {
+    const node = this.root?.getChildByName(name);
+    if (!node) return;
+    node.setPosition(x, y, 0);
+    const transform = node.getComponent(UITransform);
+    if (transform) transform.setContentSize(width, fontSize + LABEL_BOX_EXTRA);
+    const label = node.getComponent(Label);
+    if (!label) return;
+    label.fontSize = fontSize;
+    label.lineHeight = fontSize + 8;
+  }
+
+  private placeButton(
+    name: string,
+    x: number,
+    y: number,
+    width: number,
+    height: number
+  ): void {
+    const node = this.root?.getChildByName(name);
+    if (!node) return;
+    node.setPosition(x, y, 0);
+    const transform = node.getComponent(UITransform);
+    if (transform) transform.setContentSize(width, height);
+    const graphics = node.getComponent(Graphics);
+    if (graphics) {
+      graphics.clear();
+      graphics.fillColor = new Color(35, 93, 123, 255);
+      graphics.rect(-width / 2, -height / 2, width, height);
+      graphics.fill();
+    }
+    const labelNode = node.getChildByName(`${name}Label`);
+    const labelTransform = labelNode?.getComponent(UITransform);
+    if (labelTransform) labelTransform.setContentSize(width, height);
+  }
+
+  private relayoutJoystick(
+    size: { width: number; height: number },
+    layout: {
+      joystickY: number;
+      joystickRadius: number;
+      joystickBox: number;
+      pad: number;
+    }
+  ): void {
+    const root = this.joystickRoot;
+    if (!root) return;
+    root.setPosition(
+      -size.width / 2 + layout.joystickBox / 2 + layout.pad,
+      layout.joystickY,
+      0
+    );
+    const transform = root.getComponent(UITransform);
+    if (transform) transform.setContentSize(layout.joystickBox, layout.joystickBox);
+    this.joystickRadius = layout.joystickRadius;
+
+    const ring = root.getComponent(Graphics);
+    if (ring) {
+      ring.clear();
+      ring.lineWidth = 3;
+      ring.strokeColor = new Color(150, 190, 210, 180);
+      ring.circle(0, 0, layout.joystickRadius);
+      ring.stroke();
+    }
+
+    const knob = this.joystickKnob;
+    const knobGraphics = knob?.getComponent(Graphics);
+    if (knobGraphics) {
+      knobGraphics.clear();
+      knobGraphics.fillColor = new Color(75, 145, 180, 230);
+      knobGraphics.strokeColor = new Color(190, 225, 240, 255);
+      knobGraphics.lineWidth = 2;
+      knobGraphics.circle(0, 0, layout.joystickRadius * 0.39);
+      knobGraphics.fill();
+      knobGraphics.stroke();
+    }
+  }
+
   private buildShell(): void {
     const size = view.getVisibleSize();
     const layout = this.computeShellLayout(size);
     const labelWidth = size.width - layout.pad * 2;
 
     const canvasNode = this.uiNode("RuntimeCanvas");
+    this.canvasNode = canvasNode;
     this.node.addChild(canvasNode);
     canvasNode.addComponent(UITransform).setContentSize(size.width, size.height);
     const canvas = canvasNode.addComponent(Canvas);
@@ -902,6 +1229,7 @@ export class BeyondTheUnknownGameEntry extends Component {
       }
       this.currentMode = "WORLD";
       this.updateJoystickVisibility();
+      void this.ensureArt();
       this.decorateScene();
       this.upsertAvatar({
         player_id: this.localPlayerId!,
@@ -1357,6 +1685,10 @@ export class BeyondTheUnknownGameEntry extends Component {
           this.setStatus("请先登录并进入共享世界");
           return;
         }
+        if (this.artStatus !== "ready") {
+          this.setStatus("正在加载场景资源…");
+          await this.ensureArt();
+        }
         try {
           this.setStatus("正在读取房间目录与个人进度…");
           const [catalog, progress] = await Promise.all([
@@ -1675,6 +2007,9 @@ export class BeyondTheUnknownGameEntry extends Component {
 
   private drawPersonalRoom(levelName: string, completed = false): void {
     if (!this.worldRoot) return;
+    // Remembered so a viewport change can redraw the room at the new size
+    // instead of leaving it fitted to the size it was first built for.
+    this.lastRoomRender = { levelName, completed };
     this.clearRoomControls();
     this.worldRoot.removeAllChildren();
     this.prototypeDepthNodes = [];
