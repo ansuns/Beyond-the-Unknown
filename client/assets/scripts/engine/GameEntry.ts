@@ -642,17 +642,8 @@ export class BeyondTheUnknownGameEntry extends Component {
     this.moveTarget = undefined;
     try {
       await this.flushLevelPosition();
-      if (this.prototypeGazeTargetId) {
-        try {
-          await this.levelSession.stopGaze();
-        } catch (error) {
-          // Settlement ends the run; the server-side GAZE lease will expire.
-          this.setStatus(`注视效果将在租约到期后结束：${error instanceof Error ? error.message : "网络错误"}`);
-        }
-        this.prototypeGazeTargetId = undefined;
-        this.prototypeGazeMaintainAt = 0;
-        this.prototypeGazeNextMaintainAt = 0;
-      }
+      // Do not stop GAZE before settlement: stop_gaze intentionally resets
+      // gaze-only mechanism state. Completing the run ends the effect safely.
       const result = await this.levelSession.settle(
         this.makeIdempotencyKey(`prototype-settle-${this.pendingLevelId}`)
       );
