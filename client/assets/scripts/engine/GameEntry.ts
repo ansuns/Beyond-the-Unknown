@@ -497,7 +497,7 @@ export class BeyondTheUnknownGameEntry extends Component {
   private updatePrototypeGazeMaintain(): void {
     const session = this.levelSession;
     const targetId = this.prototypeGazeTargetId;
-    if (!session || !targetId || this.prototypeGazeMaintainInFlight) return;
+    if (!session || !targetId || this.prototypeGazeMaintainInFlight || this.prototypeActionInFlight) return;
 
     const now = Date.now();
     if (now >= this.prototypeGazeMaintainAt) {
