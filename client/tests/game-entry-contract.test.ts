@@ -14,7 +14,7 @@ describe("GameEntry member contract", () => {
 
   it("detects a missing instance method", () => {
     const source = `
-      class GameEntry {
+      class BeyondTheUnknownGameEntry {
         onLoad() { this.missingUpdate(); }
       }
     `;
@@ -25,7 +25,7 @@ describe("GameEntry member contract", () => {
 
   it("allows inherited Cocos component methods and nested service calls", () => {
     const source = `
-      class GameEntry {
+      class BeyondTheUnknownGameEntry {
         private api: any;
         onLoad() { this.schedule(() => this.api.login()); }
       }
