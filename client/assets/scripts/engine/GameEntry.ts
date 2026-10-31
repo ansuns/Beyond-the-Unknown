@@ -398,7 +398,8 @@ export class BeyondTheUnknownGameEntry extends Component {
   }
 
   private onJoystickStart(event: any): void {
-    if (this.currentMode !== "WORLD" && this.currentMode !== "PERSONAL_LEVEL") return;
+    if (this.prototypeActionInFlight ||
+        (this.currentMode !== "WORLD" && this.currentMode !== "PERSONAL_LEVEL")) return;
     this.joystickActive = true;
     this.moveTarget = undefined;
     this.updateJoystickFromEvent(event);
@@ -440,7 +441,7 @@ export class BeyondTheUnknownGameEntry extends Component {
   }
 
   private updateJoystickMoveTarget(): void {
-    if (!this.joystickActive) return;
+    if (!this.joystickActive || this.prototypeActionInFlight) return;
     if (this.joystickMagnitude < 0.12) {
       this.moveTarget = undefined;
       return;
@@ -667,7 +668,7 @@ export class BeyondTheUnknownGameEntry extends Component {
   }
 
   private onWorldTouch(event: any): void {
-    if (!this.worldRoot) return;
+    if (!this.worldRoot || this.prototypeActionInFlight) return;
     this.stopJoystickMovement();
     const transform = this.worldRoot.getComponent(UITransform);
     const uiPoint = event.getUILocation();
@@ -753,7 +754,8 @@ export class BeyondTheUnknownGameEntry extends Component {
   }
 
   private async castRoomEcho(): Promise<void> {
-    if (!this.levelSession) return;
+    if (!this.levelSession || this.prototypeActionInFlight) return;
+    this.prototypeActionInFlight = true;
     this.stopJoystickMovement();
     try {
       await this.flushLevelPosition();
@@ -869,7 +871,8 @@ export class BeyondTheUnknownGameEntry extends Component {
   }
 
   private async interactHiddenEnding(): Promise<void> {
-    if (!this.levelSession) return;
+    if (!this.levelSession || this.prototypeActionInFlight) return;
+    this.prototypeActionInFlight = true;
     this.stopJoystickMovement();
     try {
       await this.flushLevelPosition();
@@ -880,6 +883,7 @@ export class BeyondTheUnknownGameEntry extends Component {
       this.roomMechanismStates.set(result.mechanism_id, result.state);
       this.applyRoomMechanismStates(await this.levelSession.refreshState());
       if (result.state.status === "TRIGGERED") {
+        this.prototypeActionInFlight = false;
         await this.settlePrototypeRoom();
       } else {
         this.drawPersonalRoom(this.pendingLevelName);
@@ -887,11 +891,14 @@ export class BeyondTheUnknownGameEntry extends Component {
       }
     } catch (error) {
       this.setStatus(`结局核心交互失败：${error instanceof Error ? error.message : "请靠近机关后重试"}`);
+    } finally {
+      this.prototypeActionInFlight = false;
     }
   }
 
   private async interactRoomExit(): Promise<void> {
-    if (!this.levelSession) return;
+    if (!this.levelSession || this.prototypeActionInFlight) return;
+    this.prototypeActionInFlight = true;
     this.stopJoystickMovement();
     try {
       await this.flushLevelPosition();
@@ -911,6 +918,8 @@ export class BeyondTheUnknownGameEntry extends Component {
       }
     } catch (error) {
       this.setStatus(`出口尚未开启或距离不足：${error instanceof Error ? error.message : "请继续探索"}`);
+    } finally {
+      this.prototypeActionInFlight = false;
     }
   }
 
