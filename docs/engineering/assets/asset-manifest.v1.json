@@ -83,37 +83,61 @@
       "asset_id": "CHR_001_PORTRAIT",
       "category": "character_portrait",
       "required": true,
-      "status": "MISSING",
+      "status": "IN_PROGRESS",
       "expected_directory": "assets/resources/characters/CHR_001/portrait",
-      "files": [],
+      "files": [
+        "assets/resources/characters/CHR_001/portrait/CHR_001_PORTRAIT_FRONT_01.png"
+      ],
       "source_chapter": "GDD 3.9 / 18.1",
       "acceptance": "角色头像可按资源ID加载",
       "priority": "P0",
-      "delivery_phase": "VERTICAL_SLICE"
+      "delivery_phase": "VERTICAL_SLICE",
+      "provenance": {
+        "source_type": "GENERATED_WITH_REVIEW",
+        "source_reference": "docs/engineering/assets/reference/CHR_001_base.png",
+        "license": "Project-owned AI-assisted artwork generated for Beyond the Unknown; no third-party IP",
+        "delivery_note": "File delivered and visually reviewed; Cocos import and device acceptance still pending."
+      }
     },
     {
       "asset_id": "CHR_001_MODEL",
       "category": "character_model",
       "required": true,
-      "status": "MISSING",
+      "status": "IN_PROGRESS",
       "expected_directory": "assets/resources/characters/CHR_001/model",
-      "files": [],
+      "files": [
+        "assets/resources/characters/CHR_001/model/CHR_001_MODEL_IDLE_S_01.png"
+      ],
       "source_chapter": "GDD 3.9 / 18.1",
       "acceptance": "角色模型或2D角色主体资源可加载",
       "priority": "P0",
-      "delivery_phase": "VERTICAL_SLICE"
+      "delivery_phase": "VERTICAL_SLICE",
+      "provenance": {
+        "source_type": "GENERATED_WITH_REVIEW",
+        "source_reference": "docs/engineering/assets/reference/CHR_001_base.png",
+        "license": "Project-owned AI-assisted artwork generated for Beyond the Unknown; no third-party IP",
+        "delivery_note": "File delivered and visually reviewed; Cocos import and device acceptance still pending."
+      }
     },
     {
       "asset_id": "CHR_001_PREVIEW",
       "category": "character_preview",
       "required": true,
-      "status": "MISSING",
+      "status": "IN_PROGRESS",
       "expected_directory": "assets/resources/characters/CHR_001/preview",
-      "files": [],
+      "files": [
+        "assets/resources/characters/CHR_001/preview/CHR_001_PREVIEW_FRONT_01.png"
+      ],
       "source_chapter": "GDD 3.9 / 18.1",
       "acceptance": "角色选择预览资源可加载",
       "priority": "P0",
-      "delivery_phase": "VERTICAL_SLICE"
+      "delivery_phase": "VERTICAL_SLICE",
+      "provenance": {
+        "source_type": "GENERATED_WITH_REVIEW",
+        "source_reference": "docs/engineering/assets/reference/CHR_001_base.png",
+        "license": "Project-owned AI-assisted artwork generated for Beyond the Unknown; no third-party IP",
+        "delivery_note": "File delivered and visually reviewed; Cocos import and device acceptance still pending."
+      }
     },
     {
       "asset_id": "CHR_001_ANIMATION_SET",

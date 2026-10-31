@@ -29,7 +29,9 @@ describe("P0 visual placeholder guard", () => {
     for (const asset of placeholders.assets) {
       const entry = manifest.entries.find((item: any) => item.asset_id === asset.asset_id);
       expect(entry, `missing manifest entry for ${asset.asset_id}`).toBeTruthy();
-      expect(entry.status).toBe("MISSING");
+      // A placeholder may later be replaced by a real delivery (IN_PROGRESS), but the
+      // placeholder definition itself must never be registered as a delivered file.
+      expect(["MISSING", "IN_PROGRESS"]).toContain(entry.status);
       expect(entry.files).not.toContain(asset.expected_directory + "/" + asset.asset_id + ".placeholder.json");
     }
     expect(manifest.status).toBe("BLOCKED_ASSETS_NOT_DELIVERED");
