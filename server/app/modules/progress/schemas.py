@@ -15,3 +15,8 @@ class RewardClaimRequest(BaseModel):
 class SeasonReviewRequest(BaseModel):
     decision: Literal["APPROVE", "REJECT"]
     note: str | None = None
+
+
+class LeaderboardRecomputeRequest(BaseModel):
+    board_type: Literal["EXPLORE", "CLEAR", "COLLECT"]
+    apply: bool = False

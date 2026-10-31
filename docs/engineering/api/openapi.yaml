@@ -416,6 +416,38 @@ paths:
       responses:
         '200': { description: Claimed (idempotent) }
         '409': { $ref: '#/components/responses/Conflict' }
+  /internal/leaderboard/{season_id}/recompute:
+    post:
+      tags: [Internal Operations]
+      operationId: recomputeLeaderboard
+      parameters:
+        - name: season_id
+          in: path
+          required: true
+          schema: { type: string, maxLength: 64 }
+        - name: X-Internal-API-Key
+          in: header
+          required: true
+          schema: { type: string }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [board_type]
+              properties:
+                board_type: { type: string, enum: [EXPLORE, CLEAR, COLLECT] }
+                apply: { type: boolean, default: false }
+      responses:
+        '200':
+          description: Ledger-versus-snapshot difference, applied when apply is true
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/EnvelopeObject' }
+        '401': { description: Invalid internal API key }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '503': { description: Internal recompute is not configured }
   /internal/seasons/{season_id}/review:
     post:
       tags: [Internal Operations]

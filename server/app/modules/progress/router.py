@@ -23,9 +23,11 @@ from app.modules.progress.repository import (
     list_player_discoveries,
     list_player_rewards,
     list_world_archive,
+    recompute_leaderboard,
     settle_level,
 )
 from app.modules.progress.schemas import (
+    LeaderboardRecomputeRequest,
     LevelSettleRequest,
     RewardClaimRequest,
     SeasonReviewRequest,
@@ -181,6 +183,35 @@ async def post_season_review(
         raise HTTPException(status_code=404, detail="Season not found") from exc
     except SeasonNotReviewable as exc:
         raise HTTPException(status_code=409, detail="Season is not in review") from exc
+    await session.commit()
+    return success_envelope(data, request.state.request_id)
+
+
+@router.post("/internal/leaderboard/{season_id}/recompute")
+async def post_leaderboard_recompute(
+    season_id: str,
+    payload: LeaderboardRecomputeRequest,
+    request: Request,
+    internal_api_key: str = Header(alias="X-Internal-API-Key"),
+    session: AsyncSession = Depends(get_session),
+) -> dict:
+    configured_key = get_settings().internal_api_key
+    if not configured_key:
+        raise HTTPException(
+            status_code=503, detail="Internal leaderboard recompute is not configured"
+        )
+    if not hmac.compare_digest(internal_api_key, configured_key):
+        raise HTTPException(status_code=401, detail="Invalid internal API key")
+    try:
+        data = await recompute_leaderboard(
+            session,
+            season_id,
+            payload.board_type,
+            payload.apply,
+            request.state.request_id,
+        )
+    except LeaderboardSeasonNotFound as exc:
+        raise HTTPException(status_code=404, detail="Season not found") from exc
     await session.commit()
     return success_envelope(data, request.state.request_id)
 

@@ -1316,3 +1316,106 @@ async def get_leaderboard(
         ),
         "is_snapshot": True,
     }
+
+
+async def recompute_leaderboard(
+    session: AsyncSession,
+    season_id: str,
+    board_type: str,
+    apply: bool,
+    request_id: str | None = None,
+) -> dict[str, Any]:
+    """Rebuild one board of one period from the score_events ledger.
+
+    GDD 13.6 requires recomputation to treat the ledger as the only authority, to
+    leave historical events untouched, and to record the before/after difference
+    for review. Snapshots are derived data, so they may be rewritten; score_events
+    never are.
+    """
+    existing_season = (
+        await session.execute(
+            text("SELECT season_id FROM seasons WHERE season_id = :season_id"),
+            {"season_id": season_id},
+        )
+    ).scalar_one_or_none()
+    if existing_season is None:
+        raise LeaderboardSeasonNotFound(season_id)
+
+    ledger_rows = (
+        await session.execute(
+            text("""
+                SELECT player_id, SUM(delta)::bigint AS score
+                FROM score_events
+                WHERE period_id = :season_id AND board_type = :board_type
+                GROUP BY player_id
+            """),
+            {"season_id": season_id, "board_type": board_type},
+        )
+    ).mappings().all()
+    snapshot_rows = (
+        await session.execute(
+            text("""
+                SELECT player_id, score, rank
+                FROM leaderboard_snapshots
+                WHERE season_id = :season_id AND board_type = :board_type
+            """),
+            {"season_id": season_id, "board_type": board_type},
+        )
+    ).mappings().all()
+
+    ledger_totals = {row["player_id"]: row["score"] for row in ledger_rows}
+    snapshot_scores = {row["player_id"]: row["score"] for row in snapshot_rows}
+
+    differences = []
+    for player_id, score in ledger_totals.items():
+        snapshot_score = snapshot_scores.get(player_id)
+        if snapshot_score != score:
+            differences.append(
+                {
+                    "player_id": str(player_id),
+                    "snapshot_score": snapshot_score,
+                    "recomputed_score": score,
+                }
+            )
+    for player_id, snapshot_score in snapshot_scores.items():
+        if player_id not in ledger_totals:
+            differences.append(
+                {
+                    "player_id": str(player_id),
+                    "snapshot_score": snapshot_score,
+                    "recomputed_score": 0,
+                }
+            )
+    differences.sort(key=lambda item: item["player_id"])
+
+    result: dict[str, Any] = {
+        "season_id": season_id,
+        "board_type": board_type,
+        "players_in_ledger": len(ledger_totals),
+        "players_in_snapshot": len(snapshot_scores),
+        "difference_count": len(differences),
+        "differences": differences[:100],
+        "truncated": len(differences) > 100,
+        "applied": False,
+    }
+    if not apply or not differences:
+        return result
+
+    # Snapshots are derived, so drop and rebuild them rather than patching rows.
+    await session.execute(
+        text("""
+            DELETE FROM leaderboard_snapshots
+            WHERE season_id = :season_id AND board_type = :board_type
+        """),
+        {"season_id": season_id, "board_type": board_type},
+    )
+    await _refresh_leaderboard_snapshot(session, season_id, board_type)
+    await session.execute(
+        text("""
+            INSERT INTO actions_log (action_type, payload, request_id)
+            VALUES ('LEADERBOARD_RECOMPUTE', CAST(:payload AS jsonb), :request_id)
+        """),
+        {"payload": json.dumps(result), "request_id": request_id},
+    )
+    result["applied"] = True
+    return result
