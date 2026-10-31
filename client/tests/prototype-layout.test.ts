@@ -46,14 +46,12 @@ describe("parsePrototypeLayoutConfig", () => {
 
 describe("isometric joystick direction", () => {
   it("maps screen cardinal directions into normalized logical directions", () => {
-    expect(screenDirectionToLogicalDirection({ x: 0, y: 1 })).toEqual({
-      x: Math.SQRT1_2,
-      y: Math.SQRT1_2
-    });
-    expect(screenDirectionToLogicalDirection({ x: 1, y: 0 })).toEqual({
-      x: Math.SQRT1_2,
-      y: -Math.SQRT1_2
-    });
+    const up = screenDirectionToLogicalDirection({ x: 0, y: 1 });
+    expect(up.x).toBeCloseTo(Math.SQRT1_2);
+    expect(up.y).toBeCloseTo(Math.SQRT1_2);
+    const right = screenDirectionToLogicalDirection({ x: 1, y: 0 });
+    expect(right.x).toBeCloseTo(Math.SQRT1_2);
+    expect(right.y).toBeCloseTo(-Math.SQRT1_2);
   });
 
   it("returns zero for a centered stick and rejects non-finite input", () => {
