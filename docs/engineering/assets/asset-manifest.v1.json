@@ -708,7 +708,7 @@
       "status": "REVIEW",
       "expected_directory": "assets/resources/maps/MAP_MAIN_001/scene",
       "files": [
-        "assets/resources/maps/MAP_MAIN_001/scene/MAP_MAIN_001_SCENE_01.png"
+        "assets/resources/maps/MAP_MAIN_001/scene/MAP_MAIN_001_SCENE_01.jpg"
       ],
       "source_chapter": "GDD 4.10 / 18.3",
       "acceptance": "主地图scene资源与地图版本一致",

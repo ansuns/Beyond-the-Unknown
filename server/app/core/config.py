@@ -19,6 +19,7 @@ class Settings(BaseSettings):
     rabbitmq_max_retries: int = 3
     wechat_app_id: str | None = None
     wechat_app_secret: str | None = None
+    local_login_enabled: bool = False
     wechat_api_url: str = "https://api.weixin.qq.com/sns/jscode2session"
     wechat_api_timeout_seconds: float = 5.0
     jwt_secret: str = _LOCAL_JWT_SECRET
@@ -35,6 +36,18 @@ class Settings(BaseSettings):
     internal_api_key: str | None = None
 
     model_config = SettingsConfigDict(env_file=".env", extra="ignore")
+
+    def local_login_allowed(self) -> bool:
+        """Local browser login: opt-in, and never in a deployed environment.
+
+        Checked at request time rather than import time so a misconfigured flag
+        cannot take the service down at boot, and so tests can flip it.
+        """
+        return self.local_login_enabled and self.app_env.lower() not in {
+            "production",
+            "prod",
+            "staging",
+        }
 
     def validate_auth_secrets(self) -> None:
         if len(self.jwt_secret) < 32 or len(self.openid_hmac_secret) < 32:

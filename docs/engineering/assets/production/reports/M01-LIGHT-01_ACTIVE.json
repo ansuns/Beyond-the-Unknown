@@ -7,7 +7,7 @@
   "raw": "build/gen/raw/Same_stone_lantern_pedestal_me_2026-10-31T04-20-14.png",
   "output": "client/assets/resources/mechanisms/M01-LIGHT-01/M01-LIGHT-01_ACTIVE_01.png",
   "raw_sha256": "4e6c0a71b4f462ae8347f552af972973370a157881a15dff863cc8922b70f5d6",
-  "output_sha256": "16a665ab0dc607f5cacab76b6095674ced6dd929bfb14ddf53f36c99142f3a34",
+  "output_sha256": "77b50a13056b427b5574724621baaa89eddf94e1811587377ef467eacbecb2f9",
   "source_size": [
     1024,
     1024
@@ -37,5 +37,15 @@
   "opaque_pixels": 34136,
   "semi_pixels": 3118,
   "alpha_coverage": 0.7823840725806451,
-  "fringe_ratio": 0.0015294587046149753
+  "fringe_ratio": 0.0015294587046149753,
+  "optimized": {
+    "before_bytes": 92701,
+    "after_bytes": 71708,
+    "saved_pct": 22.6,
+    "format": "PNG",
+    "jpeg_quality": null,
+    "palette_colors": 256,
+    "mean_error": 2.67,
+    "p995_error": 29.0
+  }
 }
