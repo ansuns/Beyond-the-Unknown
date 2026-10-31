@@ -89,9 +89,10 @@ export function getPrototypeRoomDimensions(
   if (!Number.isFinite(scale) || scale <= 0) {
     throw new Error("Prototype room scale must be a positive finite number");
   }
+  const projectedSpan = (bounds.maxX - bounds.minX) + (bounds.maxY - bounds.minY);
   return {
-    width: (bounds.maxX - bounds.minX) * scale,
-    height: (bounds.maxY - bounds.minY) * scale
+    width: projectedSpan * scale,
+    height: projectedSpan * scale
   };
 }
 
@@ -100,10 +101,17 @@ export function prototypeLevelToLocal(
   bounds: PrototypeLayoutConfig["bounds"],
   scale: number
 ): PrototypePoint {
-  const room = getPrototypeRoomDimensions(bounds, scale);
+  getPrototypeRoomDimensions(bounds, scale);
+  const centerX = (bounds.minX + bounds.maxX) / 2;
+  const centerY = (bounds.minY + bounds.maxY) / 2;
+  const logicalX = point.x - centerX;
+  const logicalY = point.y - centerY;
+
+  // GDD 4.2: screenX = (x - y) * Sx; screenY = (x + y) * Sy.
+  // The prototype uses one uniform scale for both projected axes.
   return {
-    x: -room.width / 2 + (point.x - bounds.minX) * scale,
-    y: -room.height / 2 + (point.y - bounds.minY) * scale
+    x: (logicalX - logicalY) * scale,
+    y: (logicalX + logicalY) * scale
   };
 }
 
@@ -112,10 +120,17 @@ export function prototypeLocalToLevel(
   bounds: PrototypeLayoutConfig["bounds"],
   scale: number
 ): PrototypePoint {
-  const room = getPrototypeRoomDimensions(bounds, scale);
+  getPrototypeRoomDimensions(bounds, scale);
+  const centerX = (bounds.minX + bounds.maxX) / 2;
+  const centerY = (bounds.minY + bounds.maxY) / 2;
+  const projectedX = point.x / scale;
+  const projectedY = point.y / scale;
+  const logicalX = centerX + (projectedX + projectedY) / 2;
+  const logicalY = centerY + (projectedY - projectedX) / 2;
+
   return {
-    x: Math.max(bounds.minX, Math.min(bounds.maxX, (point.x + room.width / 2) / scale + bounds.minX)),
-    y: Math.max(bounds.minY, Math.min(bounds.maxY, (point.y + room.height / 2) / scale + bounds.minY))
+    x: Math.max(bounds.minX, Math.min(bounds.maxX, logicalX)),
+    y: Math.max(bounds.minY, Math.min(bounds.maxY, logicalY))
   };
 }
 
@@ -135,5 +150,6 @@ export function calculatePrototypeRoomScale(
   }
   const availableWidth = Math.max(160, size.width - 64);
   const availableHeight = Math.max(120, size.height - 240);
-  return Math.min(40, availableWidth / spanX, availableHeight / spanY);
+  const projectedSpan = spanX + spanY;
+  return Math.min(40, availableWidth / projectedSpan, availableHeight / projectedSpan);
 }

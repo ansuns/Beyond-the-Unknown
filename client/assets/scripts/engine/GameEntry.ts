@@ -920,7 +920,16 @@ export class BeyondTheUnknownGameEntry extends Component {
       background.lineWidth = 3;
       background.strokeColor = new Color(105, 169, 190, 255);
       background.fillColor = new Color(18, 39, 55, 255);
-      background.rect(-roomSize.width / 2, -roomSize.height / 2, roomSize.width, roomSize.height);
+      const bounds = this.prototypeLayout.bounds;
+      const topLeft = this.prototypeLevelToLocal(bounds.minX, bounds.minY);
+      const topRight = this.prototypeLevelToLocal(bounds.maxX, bounds.minY);
+      const bottomRight = this.prototypeLevelToLocal(bounds.maxX, bounds.maxY);
+      const bottomLeft = this.prototypeLevelToLocal(bounds.minX, bounds.maxY);
+      background.moveTo(topLeft.x, topLeft.y);
+      background.lineTo(topRight.x, topRight.y);
+      background.lineTo(bottomRight.x, bottomRight.y);
+      background.lineTo(bottomLeft.x, bottomLeft.y);
+      background.close();
       background.fill();
       background.stroke();
 
@@ -1068,7 +1077,16 @@ export class BeyondTheUnknownGameEntry extends Component {
     graphics.lineWidth = 3;
     graphics.strokeColor = new Color(105, 169, 190, 255);
     graphics.fillColor = new Color(18, 39, 55, 255);
-    graphics.rect(-roomSize.width / 2, -roomSize.height / 2, roomSize.width, roomSize.height);
+    const bounds = this.prototypeLayout.bounds;
+    const topLeft = this.prototypeLevelToLocal(bounds.minX, bounds.minY);
+    const topRight = this.prototypeLevelToLocal(bounds.maxX, bounds.minY);
+    const bottomRight = this.prototypeLevelToLocal(bounds.maxX, bounds.maxY);
+    const bottomLeft = this.prototypeLevelToLocal(bounds.minX, bounds.maxY);
+    graphics.moveTo(topLeft.x, topLeft.y);
+    graphics.lineTo(topRight.x, topRight.y);
+    graphics.lineTo(bottomRight.x, bottomRight.y);
+    graphics.lineTo(bottomLeft.x, bottomLeft.y);
+    graphics.close();
     graphics.fill();
     graphics.stroke();
 
