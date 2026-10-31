@@ -47,7 +47,7 @@ describe("P0 visual placeholder guard", () => {
   });
 
   it("defines all ROOM-01 mechanism states without taking over server logic", () => {
-    const byId = new Map(placeholders.assets.map((asset: any) => [asset.asset_id, asset]));
+    const byId = new Map<string, any>(placeholders.assets.map((asset: any) => [asset.asset_id, asset]));
     expect(byId.get("M01-EXIT-01").contract.states).toEqual(["LOCKED", "UNLOCKABLE", "OPEN"]);
     expect(byId.get("M01-HIDEABLE-01").contract.states).toEqual(["HIDDEN", "ECHO_REVEALED", "REVEALED"]);
     expect(byId.get("M01-LIGHT-01").contract.states).toEqual(["INACTIVE", "ACTIVE"]);
