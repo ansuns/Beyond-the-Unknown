@@ -1,0 +1,41 @@
+{
+  "asset_id": "M01-LIGHT-01",
+  "task_id": "m01-light-inactive",
+  "kind": "sprite",
+  "generated_at": "2026-10-31T12:19:37+08:00",
+  "backend": "workbuddy-image-gen",
+  "raw": "build/gen/raw/Game_prop_sprite_of_a_fantasy__2026-10-31T04-19-37.png",
+  "output": "client/assets/resources/mechanisms/M01-LIGHT-01/M01-LIGHT-01_INACTIVE_01.png",
+  "raw_sha256": "0401e0e4727d1547bfc4a1ae515f38db7c643d2c341393409069761f9707f6a1",
+  "output_sha256": "64203c1eb16352a010a65da109f7174aff6b780ca0c455a699ed8e48ff0d1486",
+  "source_size": [
+    1024,
+    1024
+  ],
+  "output_size": [
+    200,
+    256
+  ],
+  "key_color": [
+    146,
+    42,
+    89
+  ],
+  "post": {
+    "max_size": 256,
+    "padding": 8
+  },
+  "checks": {
+    "has_transparency": true,
+    "has_content": true,
+    "no_key_fringe": true,
+    "no_key_bleed": true,
+    "anchor_at_bottom": true
+  },
+  "warnings": [],
+  "transparent_pixels": 10723,
+  "opaque_pixels": 15968,
+  "semi_pixels": 24509,
+  "alpha_coverage": 0.79056640625,
+  "fringe_ratio": 9.540164090822362e-05
+}

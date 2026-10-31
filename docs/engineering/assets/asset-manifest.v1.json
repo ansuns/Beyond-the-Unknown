@@ -83,7 +83,7 @@
       "asset_id": "CHR_001_PORTRAIT",
       "category": "character_portrait",
       "required": true,
-      "status": "IN_PROGRESS",
+      "status": "REVIEW",
       "expected_directory": "assets/resources/characters/CHR_001/portrait",
       "files": [
         "assets/resources/characters/CHR_001/portrait/CHR_001_PORTRAIT_FRONT_01.png"
@@ -94,16 +94,27 @@
       "delivery_phase": "VERTICAL_SLICE",
       "provenance": {
         "source_type": "GENERATED_WITH_REVIEW",
-        "source_reference": "docs/engineering/assets/reference/CHR_001_base.png",
-        "license": "UNCONFIRMED - provider terms, commercial-use rights and any AI-content labelling obligation are not yet verified; see docs/engineering/assets/AI-content-compliance.md",
-        "delivery_note": "File delivered and visually reviewed; Cocos import and device acceptance still pending."
+        "source_reference": "docs/engineering/assets/production/reports/CHR_001_PORTRAIT.json",
+        "license": "UNCONFIRMED - provider terms, commercial-use rights and any AI-content labelling obligation are not verified; see docs/engineering/assets/AI-content-compliance.md",
+        "delivery_note": "Produced by chr001-portrait on 2026-10-31T12:19:05+08:00; all automated checks passed. Cocos import and device acceptance still pending.",
+        "provider": "workbuddy-image-gen",
+        "generated_at": "2026-10-31T12:19:05+08:00",
+        "generation_prompt": "Head and shoulders character portrait icon of the same chibi boy from the reference: messy brown hair, large blue eyes, green hooded cloak with gold trim, cream tunic collar. Original cute fantasy Q-version anime style, clean line art, soft cel shading, friendly smile, facing the viewer. Framed from chest up, centred with margin. Background is one perfectly flat uniform solid magenta color #FF00FF filling the whole canvas, no gradient. No text, no border, no logo, no shadow.",
+        "post_processing": "tools/asset_pipeline.py {\"max_size\": 256, \"padding\": 8}",
+        "checks": {
+          "has_transparency": true,
+          "has_content": true,
+          "no_key_fringe": true,
+          "no_key_bleed": true,
+          "anchor_at_bottom": true
+        }
       }
     },
     {
       "asset_id": "CHR_001_MODEL",
       "category": "character_model",
       "required": true,
-      "status": "IN_PROGRESS",
+      "status": "REVIEW",
       "expected_directory": "assets/resources/characters/CHR_001/model",
       "files": [
         "assets/resources/characters/CHR_001/model/CHR_001_MODEL_IDLE_S_01.png"
@@ -114,9 +125,20 @@
       "delivery_phase": "VERTICAL_SLICE",
       "provenance": {
         "source_type": "GENERATED_WITH_REVIEW",
-        "source_reference": "docs/engineering/assets/reference/CHR_001_base.png",
-        "license": "UNCONFIRMED - provider terms, commercial-use rights and any AI-content labelling obligation are not yet verified; see docs/engineering/assets/AI-content-compliance.md",
-        "delivery_note": "File delivered and visually reviewed; Cocos import and device acceptance still pending."
+        "source_reference": "docs/engineering/assets/production/reports/CHR_001_MODEL.json",
+        "license": "UNCONFIRMED - provider terms, commercial-use rights and any AI-content labelling obligation are not verified; see docs/engineering/assets/AI-content-compliance.md",
+        "delivery_note": "Produced by chr001-model on 2026-10-31T12:17:21+08:00; all automated checks passed. Cocos import and device acceptance still pending.",
+        "provider": "workbuddy-image-gen",
+        "generated_at": "2026-10-31T12:17:21+08:00",
+        "generation_prompt": "Full body standing idle sprite of the same chibi boy from the reference image: messy brown hair, large blue eyes, green hooded cloak with gold trim, cream tunic, brown leather belt and boots, small brass lantern at his hip. Original cute fantasy Q-version style, clean thick line art, soft cel shading. Facing the viewer, standing straight, arms relaxed at sides. Entire body visible from head to boots with margin. Background is one perfectly flat uniform solid magenta color #FF00FF filling the whole canvas, no gradient. No ground, no floor, no shadow, no glow, no border, no text, no logo.",
+        "post_processing": "tools/asset_pipeline.py {\"max_size\": 512, \"padding\": 8}",
+        "checks": {
+          "has_transparency": true,
+          "has_content": true,
+          "no_key_fringe": true,
+          "no_key_bleed": true,
+          "anchor_at_bottom": true
+        }
       }
     },
     {
@@ -683,13 +705,28 @@
       "asset_id": "MAP_MAIN_001_SCENE",
       "category": "main_map",
       "required": true,
-      "status": "MISSING",
+      "status": "REVIEW",
       "expected_directory": "assets/resources/maps/MAP_MAIN_001/scene",
-      "files": [],
+      "files": [
+        "assets/resources/maps/MAP_MAIN_001/scene/MAP_MAIN_001_SCENE_01.png"
+      ],
       "source_chapter": "GDD 4.10 / 18.3",
       "acceptance": "主地图scene资源与地图版本一致",
       "priority": "P0",
-      "delivery_phase": "VERTICAL_SLICE"
+      "delivery_phase": "VERTICAL_SLICE",
+      "provenance": {
+        "source_type": "GENERATED_WITH_REVIEW",
+        "source_reference": "docs/engineering/assets/production/reports/MAP_MAIN_001_SCENE.json",
+        "provider": "workbuddy-image-gen",
+        "generated_at": "2026-10-31T12:19:20+08:00",
+        "generation_prompt": "Isometric 45-degree game scene background for a fantasy exploration hub: a quiet stone courtyard with mossy flagstones, a low broken colonnade, hanging vines, floating pale blue lanterns, distant misty green cliffs, warm afternoon light. Original cute Q-version fantasy style, soft painterly shading, clean shapes suitable for a 2.5D game map viewed from a fixed isometric camera. No characters, no UI, no text, no logos, no watermark. Wide composition that tiles cleanly at the edges.",
+        "post_processing": "tools/asset_pipeline.py {\"crop_bottom\": 0.07, \"size\": [1024, 682]}",
+        "checks": {
+          "has_content": true
+        },
+        "license": "UNCONFIRMED - provider terms, commercial-use rights and any AI-content labelling obligation are not verified; see docs/engineering/assets/AI-content-compliance.md",
+        "delivery_note": "Produced by map-main-scene on 2026-10-31T12:19:20+08:00; all automated checks passed. Cocos import and device acceptance still pending."
+      }
     },
     {
       "asset_id": "MAP_MAIN_001_GROUND",
@@ -911,13 +948,33 @@
       "asset_id": "M01-LIGHT-01",
       "category": "mechanism",
       "required": true,
-      "status": "MISSING",
+      "status": "REVIEW",
       "expected_directory": "assets/resources/mechanisms/M01-LIGHT-01",
-      "files": [],
+      "files": [
+        "assets/resources/mechanisms/M01-LIGHT-01/M01-LIGHT-01_INACTIVE_01.png",
+        "assets/resources/mechanisms/M01-LIGHT-01/M01-LIGHT-01_ACTIVE_01.png"
+      ],
       "source_chapter": "GDD 9 / 18.5",
       "acceptance": "机关M01-LIGHT-01具备状态表现、触发动效和逻辑视觉分离",
       "priority": "P0",
-      "delivery_phase": "VERTICAL_SLICE"
+      "delivery_phase": "VERTICAL_SLICE",
+      "provenance": {
+        "source_type": "GENERATED_WITH_REVIEW",
+        "source_reference": "docs/engineering/assets/production/reports/M01-LIGHT-01_ACTIVE.json",
+        "provider": "workbuddy-image-gen",
+        "generated_at": "2026-10-31T12:20:14+08:00",
+        "generation_prompt": "Same stone lantern pedestal mechanism as the reference image, now activated: the amber crystal core glows brightly with warm light, the carved runes on the stone ring light up amber, subtle warm highlights on the stone edges. Identical shape, identical camera angle and identical scale as the reference. Original cute Q-version fantasy style, clean thick outline, soft cel shading. Background is one perfectly flat uniform solid magenta color #FF00FF, no gradient. No ground, no floor, no cast shadow, no glow bleeding into the background, no text, no logo.",
+        "post_processing": "tools/asset_pipeline.py {\"max_size\": 256, \"padding\": 8}",
+        "checks": {
+          "has_transparency": true,
+          "has_content": true,
+          "no_key_fringe": true,
+          "no_key_bleed": true,
+          "anchor_at_bottom": true
+        },
+        "license": "UNCONFIRMED - provider terms, commercial-use rights and any AI-content labelling obligation are not verified; see docs/engineering/assets/AI-content-compliance.md",
+        "delivery_note": "Produced by m01-light-active on 2026-10-31T12:20:14+08:00; all automated checks passed. Cocos import and device acceptance still pending."
+      }
     },
     {
       "asset_id": "M02-BRIDGE-01",
@@ -1031,13 +1088,32 @@
       "asset_id": "FX_ECHO_PULSE_01",
       "category": "effect",
       "required": true,
-      "status": "MISSING",
+      "status": "REVIEW",
       "expected_directory": "assets/resources/effects",
-      "files": [],
+      "files": [
+        "assets/resources/effects/FX_ECHO_PULSE_01.png"
+      ],
       "source_chapter": "GDD 7 / 18.6",
       "acceptance": "特效可独立播放，不承担逻辑判定",
       "priority": "P0",
-      "delivery_phase": "VERTICAL_SLICE"
+      "delivery_phase": "VERTICAL_SLICE",
+      "provenance": {
+        "source_type": "GENERATED_WITH_REVIEW",
+        "source_reference": "docs/engineering/assets/production/reports/FX_ECHO_PULSE_01.json",
+        "provider": "workbuddy-image-gen",
+        "generated_at": "2026-10-31T12:20:30+08:00",
+        "generation_prompt": "Game visual effect sprite: a circular expanding echo pulse ring, concentric rings of pale cyan light with soft glow and small floating sparkles, one single ring centred in the frame, viewed flat from the front. Original cute fantasy style, clean shapes, bright cyan and white. Entire ring visible with margin, ring is circular not elliptical. Background is one perfectly flat uniform solid magenta color #FF00FF, no gradient. No ground, no shadow, no character, no text, no logo.",
+        "post_processing": "tools/asset_pipeline.py {\"max_size\": 256, \"padding\": 8}",
+        "checks": {
+          "has_transparency": true,
+          "has_content": true,
+          "no_key_fringe": true,
+          "no_key_bleed": true,
+          "anchor_at_bottom": true
+        },
+        "license": "UNCONFIRMED - provider terms, commercial-use rights and any AI-content labelling obligation are not verified; see docs/engineering/assets/AI-content-compliance.md",
+        "delivery_note": "Produced by fx-echo-pulse on 2026-10-31T12:20:30+08:00; all automated checks passed. Cocos import and device acceptance still pending."
+      }
     },
     {
       "asset_id": "FX_GAZE_BEAM_01",

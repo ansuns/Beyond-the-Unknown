@@ -1,0 +1,41 @@
+{
+  "asset_id": "FX_ECHO_PULSE_01",
+  "task_id": "fx-echo-pulse",
+  "kind": "sprite",
+  "generated_at": "2026-10-31T12:20:30+08:00",
+  "backend": "workbuddy-image-gen",
+  "raw": "build/gen/raw/Game_visual_effect_sprite__a_c_2026-10-31T04-20-30.png",
+  "output": "client/assets/resources/effects/FX_ECHO_PULSE_01.png",
+  "raw_sha256": "b00d8c81471a737c0d51e0f8e6f7082fef85c08f53dea480d6ba4f61a2ad3313",
+  "output_sha256": "3c51cbc01e2f9c2b41d75cba7a59be461c0373d34bef022de94555754cdf3ba3",
+  "source_size": [
+    1024,
+    1024
+  ],
+  "output_size": [
+    256,
+    253
+  ],
+  "key_color": [
+    224,
+    83,
+    249
+  ],
+  "post": {
+    "max_size": 256,
+    "padding": 8
+  },
+  "checks": {
+    "has_transparency": true,
+    "has_content": true,
+    "no_key_fringe": true,
+    "no_key_bleed": true,
+    "anchor_at_bottom": true
+  },
+  "warnings": [],
+  "transparent_pixels": 15592,
+  "opaque_pixels": 31623,
+  "semi_pixels": 17553,
+  "alpha_coverage": 0.7592638339920948,
+  "fringe_ratio": 2.6876662993522724e-05
+}

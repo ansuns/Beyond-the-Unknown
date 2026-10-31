@@ -1,0 +1,41 @@
+{
+  "asset_id": "CHR_001_PORTRAIT",
+  "task_id": "chr001-portrait",
+  "kind": "sprite",
+  "generated_at": "2026-10-31T12:19:05+08:00",
+  "backend": "workbuddy-image-gen",
+  "raw": "build/gen/raw/Head_and_shoulders_character_p_2026-10-31T04-19-05.png",
+  "output": "client/assets/resources/characters/CHR_001/portrait/CHR_001_PORTRAIT_FRONT_01.png",
+  "raw_sha256": "c894e0d0b4612ba4558656d15838eb56946a7299acc77edcd75abf9c58eddc16",
+  "output_sha256": "b2214d8cf152c6a4fd1a566c81ba6e167e199b68640ca9e199b027c279db0260",
+  "source_size": [
+    1024,
+    1024
+  ],
+  "output_size": [
+    195,
+    256
+  ],
+  "key_color": [
+    239,
+    42,
+    185
+  ],
+  "post": {
+    "max_size": 256,
+    "padding": 8
+  },
+  "checks": {
+    "has_transparency": true,
+    "has_content": true,
+    "no_key_fringe": true,
+    "no_key_bleed": true,
+    "anchor_at_bottom": true
+  },
+  "warnings": [],
+  "transparent_pixels": 16925,
+  "opaque_pixels": 29946,
+  "semi_pixels": 3049,
+  "alpha_coverage": 0.660957532051282,
+  "fringe_ratio": 0.0
+}
