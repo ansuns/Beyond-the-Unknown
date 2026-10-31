@@ -497,7 +497,7 @@ export class BeyondTheUnknownGameEntry extends Component {
   private updatePrototypeGazeMaintain(): void {
     const session = this.levelSession;
     const targetId = this.prototypeGazeTargetId;
-    if (!session || !targetId || this.prototypeGazeMaintainInFlight) return;
+    if (!session || !targetId || this.prototypeGazeMaintainInFlight || this.prototypeActionInFlight) return;
 
     const now = Date.now();
     if (now >= this.prototypeGazeMaintainAt) {
@@ -557,6 +557,7 @@ export class BeyondTheUnknownGameEntry extends Component {
 
   private async castRoomEcho(): Promise<void> {
     if (!this.levelSession) return;
+    this.moveTarget = undefined;
     try {
       await this.flushLevelPosition();
       const hiddenTarget = this.roomMechanismCatalog.get("M01-HIDEABLE-01");
@@ -583,6 +584,7 @@ export class BeyondTheUnknownGameEntry extends Component {
     if (!this.levelSession || this.prototypeActionInFlight) return;
     const { comboId, targetId, ruleIds } = definition;
     this.prototypeActionInFlight = true;
+    this.moveTarget = undefined;
     try {
       await this.flushLevelPosition();
       let matched = false;
@@ -637,19 +639,11 @@ export class BeyondTheUnknownGameEntry extends Component {
   private async settlePrototypeRoom(): Promise<void> {
     if (!this.levelSession || this.prototypeActionInFlight) return;
     this.prototypeActionInFlight = true;
+    this.moveTarget = undefined;
     try {
       await this.flushLevelPosition();
-      if (this.prototypeGazeTargetId) {
-        try {
-          await this.levelSession.stopGaze();
-        } catch (error) {
-          // Settlement ends the run; the server-side GAZE lease will expire.
-          this.setStatus(`注视效果将在租约到期后结束：${error instanceof Error ? error.message : "网络错误"}`);
-        }
-        this.prototypeGazeTargetId = undefined;
-        this.prototypeGazeMaintainAt = 0;
-        this.prototypeGazeNextMaintainAt = 0;
-      }
+      // Do not stop GAZE before settlement: stop_gaze intentionally resets
+      // gaze-only mechanism state. Completing the run ends the effect safely.
       const result = await this.levelSession.settle(
         this.makeIdempotencyKey(`prototype-settle-${this.pendingLevelId}`)
       );
@@ -678,6 +672,7 @@ export class BeyondTheUnknownGameEntry extends Component {
 
   private async interactHiddenEnding(): Promise<void> {
     if (!this.levelSession) return;
+    this.moveTarget = undefined;
     try {
       await this.flushLevelPosition();
       const result = await this.levelSession.interact(
@@ -699,6 +694,7 @@ export class BeyondTheUnknownGameEntry extends Component {
 
   private async interactRoomExit(): Promise<void> {
     if (!this.levelSession) return;
+    this.moveTarget = undefined;
     try {
       await this.flushLevelPosition();
       const result = await this.levelSession.interact(
@@ -1104,10 +1100,16 @@ export class BeyondTheUnknownGameEntry extends Component {
   }
 
   private async returnToWorld(): Promise<void> {
-    if (this.currentMode !== "PERSONAL_LEVEL" || !this.levelSession) {
-      this.setStatus("当前不在个人关卡中");
+    if (
+      this.currentMode !== "PERSONAL_LEVEL" ||
+      !this.levelSession ||
+      this.prototypeActionInFlight
+    ) {
+      this.setStatus("当前不在个人关卡中，或关卡操作尚未完成");
       return;
     }
+    this.prototypeActionInFlight = true;
+    this.moveTarget = undefined;
     try {
       this.setStatus("正在保存并放弃当前关卡…");
       // Abandon is allowed to proceed even if a best-effort position sync fails.
@@ -1136,6 +1138,8 @@ export class BeyondTheUnknownGameEntry extends Component {
       await this.loginAndEnterWorld();
     } catch (error) {
       this.setStatus(`返回世界失败：${error instanceof Error ? error.message : "未知错误"}`);
+    } finally {
+      this.prototypeActionInFlight = false;
     }
   }
 
