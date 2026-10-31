@@ -1,6 +1,9 @@
 import pytest
 
-from app.modules.levels.movement import parse_level_movement_settings
+from app.modules.levels.movement import (
+    max_allowed_movement_distance,
+    parse_level_movement_settings,
+)
 
 
 def test_parse_level_movement_settings_uses_server_owned_values() -> None:
@@ -33,3 +36,19 @@ def test_parse_level_movement_settings_rejects_invalid_speed(value: object) -> N
 def test_parse_level_movement_settings_rejects_non_object_sections() -> None:
     with pytest.raises(ValueError, match="must be objects"):
         parse_level_movement_settings({"prototype_controls": []})
+
+
+def test_max_allowed_distance_uses_configured_speed_and_existing_jitter_allowance() -> None:
+    settings = parse_level_movement_settings(
+        {"prototype_controls": {"movement_speed": 2.0}}
+    )
+
+    assert max_allowed_movement_distance(settings, 0.5) == 1.75
+    assert max_allowed_movement_distance(settings, 0.01) == 0.85
+
+
+def test_max_allowed_distance_rejects_invalid_elapsed_time() -> None:
+    settings = parse_level_movement_settings(None)
+
+    with pytest.raises(ValueError, match="elapsed time"):
+        max_allowed_movement_distance(settings, float("nan"))
