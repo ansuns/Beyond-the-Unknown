@@ -15,8 +15,10 @@ class LevelMovementSettings:
 def parse_level_movement_settings(config: dict[str, Any] | None) -> LevelMovementSettings:
     """Read the same movement speed and spawn point used by the Cocos client."""
     config = config or {}
-    controls = config.get("prototype_controls") or {}
-    spawn = config.get("prototype_spawn") or {}
+    controls = config.get("prototype_controls")
+    spawn = config.get("prototype_spawn")
+    controls = {} if controls is None else controls
+    spawn = {} if spawn is None else spawn
     if not isinstance(controls, dict) or not isinstance(spawn, dict):
         raise ValueError("level prototype movement settings must be objects")
 
