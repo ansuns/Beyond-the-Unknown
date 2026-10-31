@@ -9,7 +9,7 @@ describe("GameEntry member contract", () => {
       resolve(process.cwd(), "assets/scripts/engine/GameEntry.ts"),
       "utf8"
     );
-    expect(findUndefinedThisCalls(source)).toEqual([]);
+    expect(findUndefinedThisCalls(source, "GameEntry")).toEqual([]);
   });
 
   it("detects a missing instance method", () => {
@@ -30,6 +30,6 @@ describe("GameEntry member contract", () => {
         onLoad() { this.schedule(() => this.api.login()); }
       }
     `;
-    expect(findUndefinedThisCalls(source)).toEqual([]);
+    expect(findUndefinedThisCalls(source, "GameEntry")).toEqual([]);
   });
 });
