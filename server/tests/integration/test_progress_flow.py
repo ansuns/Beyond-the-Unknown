@@ -1057,3 +1057,92 @@ def test_leaderboard_scopes_isolate_players_and_handle_missing_snapshots() -> No
             ),
         ])
         app.dependency_overrides.clear()
+
+
+def test_score_survives_relogin_for_the_same_player() -> None:
+    """GDD 11.3 acceptance 1: after re-login the score is still there.
+
+    The same wx_code maps to the same openid, so the second login must resolve to
+    the same player rather than creating a new one.
+    """
+    from uuid import UUID
+
+    app.dependency_overrides[get_wechat_code_provider] = lambda: FakeWeChatProvider()
+    code = f"relogin-{uuid4()}"
+    player_id: UUID | None = None
+    season_id: str | None = None
+    try:
+        with TestClient(app) as client:
+            first = client.post(
+                "/api/v1/auth/login",
+                json={"wx_code": code, "request_id": "relogin-first"},
+            )
+            assert first.status_code == 200
+            first_headers = {
+                "Authorization": f"Bearer {first.json()['data']['access_token']}"
+            }
+            player_id = UUID(
+                client.get("/api/v1/player/me", headers=first_headers).json()["data"][
+                    "player_id"
+                ]
+            )
+
+            current = client.get(
+                "/api/v1/leaderboard?board_type=EXPLORE&period_type=WEEKLY",
+                headers=first_headers,
+            )
+            season_id = current.json()["data"]["season_id"]
+
+            _db_exec([
+                ("""
+                    INSERT INTO score_events
+                        (player_id, board_type, period_id, delta, reason,
+                         source_event_id, idempotency_key, created_at_utc)
+                    VALUES
+                        (:player_id, 'EXPLORE', :season_id, 7, 'EXP_DISCOVER',
+                         'relogin-score', 'relogin-score', now())
+                    ON CONFLICT (board_type, period_id, idempotency_key) DO NOTHING
+                """, {"player_id": player_id, "season_id": season_id}),
+                ("""
+                    INSERT INTO leaderboard_snapshots
+                        (season_id, board_type, player_id, score, rank, snapshot_at_utc)
+                    VALUES (:season_id, 'EXPLORE', :player_id, 7, 1, now())
+                    ON CONFLICT (season_id, board_type, player_id)
+                    DO UPDATE SET score = 7, rank = 1, snapshot_at_utc = now()
+                """, {"season_id": season_id, "player_id": player_id}),
+            ])
+
+            second = client.post(
+                "/api/v1/auth/login",
+                json={"wx_code": code, "request_id": "relogin-second"},
+            )
+            assert second.status_code == 200
+            second_headers = {
+                "Authorization": f"Bearer {second.json()['data']['access_token']}"
+            }
+            same_player = UUID(
+                client.get("/api/v1/player/me", headers=second_headers).json()["data"][
+                    "player_id"
+                ]
+            )
+            assert same_player == player_id
+
+            restored = client.get(
+                f"/api/v1/leaderboard?board_type=EXPLORE&scope=SELF&season_id={season_id}",
+                headers=second_headers,
+            )
+            assert restored.status_code == 200
+            assert restored.json()["data"]["my_rank"] == {"rank": 1, "score": 7}
+    finally:
+        if player_id is not None:
+            _db_exec([
+                (
+                    "DELETE FROM leaderboard_snapshots WHERE player_id = :player_id",
+                    {"player_id": player_id},
+                ),
+                (
+                    "DELETE FROM score_events WHERE player_id = :player_id",
+                    {"player_id": player_id},
+                ),
+            ])
+        app.dependency_overrides.clear()
