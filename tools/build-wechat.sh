@@ -34,6 +34,14 @@ if ! grep -q "build Task (wechatgame" "$log"; then
   exit 1
 fi
 
+echo "== subpackage =="
+# Cocos 3.8.8 accepts bundles[].isSubpackage and then ignores it, so the
+# artifact still ships the art inside the main package. This applies the same
+# move the engine adapter expects: assets/<bundle> -> subpackages/<bundle>,
+# a game.json declaration, and the settings registration that makes the runtime
+# fetch it lazily instead of from the main package.
+python "$root/tools/wechat_subpackage.py" --build "$output" --bundle resources
+
 echo "== package report =="
 python "$root/tools/package_gate.py" \
   --build "$output" \

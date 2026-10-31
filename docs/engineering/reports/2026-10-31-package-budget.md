@@ -10,7 +10,7 @@
 | 指标 | 数值 |
 |---|---:|
 | 整改前提交包 | **5.34 MB**，被开发者工具拒绝：`source size 5336KB exceed max limit 4MB` |
-| 当前提交包 | **2.85 MB**（2 985 985 字节） |
+| 当前提交包 | **2.85 MB** 总计；其中主包 **2.10 MB**、分包 **0.74 MB** |
 | 距 4 MB 硬限 | 剩余 1.15 MB |
 | 距 3.5 MB 预算 | 剩余 0.65 MB |
 | 重复内容 | 0 字节（按内容哈希去重后无相同文件） |
@@ -110,15 +110,35 @@ Bundle 分布：
 - 进房间前先 `ensureBundle`，状态行显示真实进度；失败时显示具体原因并保留可操作界面。
 - 构建方向已改为 `landscape`（`game.json` 实测 `deviceOrientation: landscape`）。
 
-### 未完成，且不声称完成
+### 本地分包：已真实生成
 
-1. **本地分包（WeChat subpackage）没有拆分成功**。已在构建配置中声明
-   `bundles: [{root: "db://assets/resources", isSubpackage: true}]`，
-   构建任务确实接收了该字段（日志可查），但产物仍无 `subpackages/` 目录，
-   `game.json` 也没有 `subpackages` 段。引擎侧 `onAfterBuild` 只在
-   `options.bundles[].isSubpackage` 为真且 bundle 已解析时才写入分包。
-   下一步需要在编辑器构建面板勾选「配置为分包」再导出配置，或改用
-   `stage=bundle` 的分包构建任务；**这不影响当前的包体合规**（2.85 MB 已在预算内）。
+Cocos 3.8.8 的 CLI 构建接受 `bundles[].isSubpackage` 后并不执行分包（日志里字段存在，
+产物里没有 `subpackages/`）。从 `engine-adapter.js` 反查运行时约定后，按引擎自己的
+逻辑补齐三个动作，由 `tools/wechat_subpackage.py` 完成：
+
+1. `assets/resources/` → `subpackages/resources/`；
+2. `game.json` 写入 `subpackages: [{name, root}]`；
+3. `src/settings*.json` 的 `assets.subpackages` 登记 `resources`，并从
+   `preloadBundles` 移除（否则首屏仍会下载）。
+
+微信还要求分包根目录有 `game.js` 入口，否则编译器直接报
+`未找到 subpackages/resources/game.js`；资源包没有代码，写入空入口即可。
+
+实测结果：
+
+| 项 | 值 |
+|---|---:|
+| 主包 | **2.10 MB** |
+| `subpackages/resources` | **761 KB** |
+| 合计 | 2.85 MB |
+| `game.json` | `deviceOrientation: landscape`，`subpackages` 已声明 |
+| `settings.assets.subpackages` | `["resources"]` |
+| `preloadBundles` | 只剩 `main` |
+| 开发者工具 | `cli preview` 返回 `√ preview`（此前无分包时同一命令报缺 game.js） |
+
+`build-wechat.sh` 已把该步骤串进构建；`package_gate.py` 会校验目录存在、
+入口存在、`config.*.json` 存在、settings 已登记、未预加载、主包里没有重复资源，
+任一不满足直接失败。
 2. **远程资源 Bundle 未启用**。`ASSET_CONFIG.remote.enabled = false`，
    `baseUrl` 与 `version` 为空，没有 CDN、没有备案域名。代码路径（含版本校验、
    超时、重试、失败提示）已经写好，但**没有任何一次真实远程加载被执行过**，
@@ -164,6 +184,22 @@ python tools/package_gate.py --build client/build/wechatgame-slim \
 | 4 MB 限制 | 不再触发 | 同一命令在 5.34 MB 时返回 `exceed max limit 4MB` |
 | Web 运行画面 | 通过 | `build/verify/01..05*.png`，真实点击驱动 |
 | 资源加载路径 | 走新服务 | 状态行显示“场景资源 / 美术资源 n/6” |
+
+## 9.1 横屏布局实测
+
+`tools/verify-landscape.mjs` 在四个比例下驱动真实构建，向引擎查询每个控件的世界矩形，
+再与可见区域比较（`x ∈ [-w/2, w/2]`、`y ∈ [-h/2, h/2]`），不是肉眼看图。
+
+| 比例 | 画布 | 可见区域 | 控件数 | 越界 |
+|---|---:|---:|---:|---|
+| 16:9 | 1280×720 | 960×540 | 17 | 0 |
+| 18:9 | 1440×720 | 960×480 | 17 | 0 |
+| 19.5:9 | 1560×720 | 960×443 | 17 | 0 |
+| 20:9 | 1600×720 | 960×432 | 17 | 0 |
+
+截图在 `build/verify/landscape/`。观察到的问题：设计分辨率策略为固定宽度
+（960 宽不变、可见高度 720→432），20:9 下世界视口只剩约 182px 高，
+按钮不越界但场景偏扁。这是**待优化项**，不是已解决项。
 
 ## 10. 仍未验证（不计入完成）
 

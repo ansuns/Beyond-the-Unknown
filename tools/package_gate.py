@@ -26,23 +26,84 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 from wechat_package_report import analyze, human  # noqa: E402
 
 PLATFORM_LIMIT_BYTES = 4 * 1024 * 1024
+# WeChat's total for the main package plus every local subpackage.
+PLATFORM_TOTAL_LIMIT_BYTES = 20 * 1024 * 1024
 DEFAULT_BUDGET_BYTES = int(3.5 * 1024 * 1024)
 DUPLICATE_WARN_BYTES = 64 * 1024
 
 
-def check(report: dict, budget_bytes: int, config_path: Path | None) -> tuple[list[str], list[str]]:
+def check_subpackages(build_root: Path) -> tuple[list[str], list[str]]:
+    """Verify a declared subpackage is real, registered and not double-shipped."""
+    failures: list[str] = []
+    warnings: list[str] = []
+    game_path = build_root / "game.json"
+    if not game_path.exists():
+        return failures, warnings
+    game = json.loads(game_path.read_text(encoding="utf-8"))
+    declared = game.get("subpackages") or []
+    if not declared:
+        return failures, warnings
+
+    settings_files = sorted((build_root / "src").glob("settings*.json"))
+    if not settings_files:
+        failures.append("缺少 src/settings*.json，无法确认分包是否被运行时识别")
+        return failures, warnings
+    assets = json.loads(settings_files[0].read_text(encoding="utf-8")).get("assets", {})
+    registered = set(assets.get("subpackages", []))
+    preload = {item.get("bundle") for item in assets.get("preloadBundles", [])}
+
+    for item in declared:
+        name = item.get("name")
+        root = str(item.get("root") or "").strip("/")
+        if not name or not root:
+            failures.append(f"分包声明不完整：{item}")
+            continue
+        directory = build_root / root
+        if not directory.is_dir():
+            failures.append(f"{name}: game.json 声明了 {root}/ 但目录不存在")
+            continue
+        if not (directory / "game.js").exists():
+            failures.append(f"{name}: 分包缺少 game.js，微信会拒绝编译")
+        if not any(directory.glob("config.*.json")):
+            failures.append(f"{name}: 分包里没有 config.*.json，运行时读不到资源索引")
+        if name not in registered:
+            failures.append(
+                f"{name}: 未写入 settings.assets.subpackages，运行时仍按主包路径加载"
+            )
+        if name in preload:
+            warnings.append(f"{name}: 仍在 preloadBundles 中，会拖慢首屏")
+        if (build_root / "assets" / name).exists():
+            failures.append(f"{name}: assets/{name}/ 仍然存在，资源被重复打包")
+    return failures, warnings
+
+
+def check(report: dict, budget_bytes: int, config_path: Path | None, build_root: Path | None) -> tuple[list[str], list[str]]:
     failures: list[str] = []
     warnings: list[str] = []
 
-    total = report["total_bytes"]
-    if total > budget_bytes:
+    # The platform caps the main package; subpackage bytes are counted apart.
+    main_bytes = report.get("main_bytes", report["total_bytes"])
+    if main_bytes > budget_bytes:
         failures.append(
-            f"包体 {human(total)} 超过预算 {human(budget_bytes)}（微信上限 {human(PLATFORM_LIMIT_BYTES)}）"
+            f"主包 {human(main_bytes)} 超过预算 {human(budget_bytes)}（微信上限 {human(PLATFORM_LIMIT_BYTES)}）"
         )
-    if total > PLATFORM_LIMIT_BYTES:
+    if main_bytes > PLATFORM_LIMIT_BYTES:
         failures.append(
-            f"包体 {human(total)} 超过微信 {human(PLATFORM_LIMIT_BYTES)} 硬限制，会被拒绝上传"
+            f"主包 {human(main_bytes)} 超过微信 {human(PLATFORM_LIMIT_BYTES)} 硬限制，会被拒绝上传"
         )
+    if report["total_bytes"] > PLATFORM_TOTAL_LIMIT_BYTES:
+        failures.append(
+            f"主包加全部分包 {human(report['total_bytes'])} 超过微信总包 {human(PLATFORM_TOTAL_LIMIT_BYTES)} 限制"
+        )
+    if report.get("stray_subpackage_bytes"):
+        failures.append(
+            f"subpackages/ 下有 {human(report['stray_subpackage_bytes'])} 未在 game.json 声明"
+        )
+
+    if build_root is not None:
+        sub_failures, sub_warnings = check_subpackages(build_root)
+        failures.extend(sub_failures)
+        warnings.extend(sub_warnings)
 
     # A bundle configured as a subpackage but still counted in the main total
     # means the split never happened - the exact failure this gate exists for.
@@ -56,11 +117,11 @@ def check(report: dict, budget_bytes: int, config_path: Path | None) -> tuple[li
         for bundle in declared:
             if not isinstance(bundle, dict):
                 continue
-            if bundle.get("isSubpackage") and not report.get("bundles", {}).get(
+            if bundle.get("isSubpackage") and not report.get("subpackage_bytes", {}).get(
                 bundle.get("name", "")
             ):
-                warnings.append(
-                    f"bundle {bundle.get('name')} 声明为分包，但构建产物里没有对应目录"
+                failures.append(
+                    f"bundle {bundle.get('name')} 声明为分包，但产物里没有对应分包大小"
                 )
 
     if report["duplicate_waste_bytes"] > DUPLICATE_WARN_BYTES:
@@ -100,16 +161,24 @@ def main() -> int:
         # gate locally after a build.
         payload = json.loads(args.from_report.read_text(encoding="utf-8"))
         report = payload.get("report", payload)
+        measured_root = None
     else:
         build_root = args.build
         if not (build_root / "game.json").exists():
             print(f"FAIL: {build_root} 不是微信小游戏构建产物（缺少 game.json）")
             return 2
         report = analyze(build_root.resolve(), top=20)
+        measured_root = build_root.resolve()
     budget = int(args.budget * 1024 * 1024)
-    failures, warnings = check(report, budget, args.config)
+    failures, warnings = check(report, budget, args.config, measured_root)
 
-    print(f"主包：{report['total_human']} / 预算 {human(budget)} / 上限 {human(PLATFORM_LIMIT_BYTES)}")
+    print(
+        f"主包：{report['main_human']} / 预算 {human(budget)} / "
+        f"上限 {human(PLATFORM_LIMIT_BYTES)}；总计 {report['total_human']}"
+    )
+    if report.get("subpackage_bytes"):
+        for name, size in report["subpackage_bytes"].items():
+            print(f"分包 {name}：{human(size)}")
     print(f"分类：" + ", ".join(f"{k} {human(v)}" for k, v in report["by_category"].items()))
     for item in warnings:
         print(f"WARN: {item}")

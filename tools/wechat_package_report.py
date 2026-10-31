@@ -163,9 +163,58 @@ def source_report() -> dict:
     }
 
 
+def subpackage_split(build_root: Path, files: list[tuple[Path, int]]) -> dict:
+    """Split the artifact into main package and WeChat subpackages.
+
+    The platform caps the main package at 4 MB and the sum of all local packages
+    at 20 MB, so reporting one total for a build that has subpackages is simply
+    the wrong number - the main package is what gets rejected.
+    """
+    sub_root = build_root / "subpackages"
+    declared = {}
+    game_path = build_root / "game.json"
+    if game_path.exists():
+        try:
+            game = json.loads(game_path.read_text(encoding="utf-8"))
+        except json.JSONDecodeError:
+            game = {}
+        for item in game.get("subpackages", []):
+            name = item.get("name")
+            root = item.get("root")
+            if name and root:
+                declared[name] = root
+
+    sizes: dict[str, int] = {name: 0 for name in declared}
+    main_bytes = 0
+    for path, size in files:
+        relative = path.relative_to(build_root).as_posix()
+        matched = False
+        for name, root in declared.items():
+            if relative.startswith(root.strip("/") + "/"):
+                sizes[name] += size
+                matched = True
+                break
+        if not matched:
+            main_bytes += size
+
+    # Anything physically under subpackages/ but unaccounted for in game.json is
+    # a packaging bug, not "main package weight".
+    stray = 0
+    if sub_root.is_dir():
+        for path, size in files:
+            if sub_root in path.parents:
+                relative = path.relative_to(build_root).as_posix()
+                if not any(
+                    relative.startswith(root.strip("/") + "/") for root in declared.values()
+                ):
+                    stray += size
+    return {"main_bytes": main_bytes, "subpackages": sizes, "stray_subpackage_bytes": stray}
+
+
 def analyze(build_root: Path, top: int) -> dict:
     files = walk_files(build_root)
     total = sum(size for _, size in files)
+    split = subpackage_split(build_root, files)
     by_category: dict[str, int] = defaultdict(int)
     for path, size in files:
         by_category[category_of(path, build_root)] += size
@@ -213,6 +262,10 @@ def analyze(build_root: Path, top: int) -> dict:
         ],
         "duplicate_waste_bytes": sum(group["wasted"] for group in duplicates),
         "file_count": len(files),
+        "main_bytes": split["main_bytes"],
+        "main_human": human(split["main_bytes"]),
+        "subpackage_bytes": split["subpackages"],
+        "stray_subpackage_bytes": split["stray_subpackage_bytes"],
         "source": source_report(),
     }
 
@@ -224,6 +277,12 @@ def render(report: dict) -> str:
         f"- 构建目录：`{report['build_root']}`",
         f"- 文件数：{report['file_count']}",
         f"- **总大小：{report['total_human']}**（{report['total_bytes']} 字节）",
+        f"- 主包：**{report['main_human']}**（{report['main_bytes']} 字节）"
+        + (
+            "；分包：" + "、".join(f"{k} {human(v)}" for k, v in report["subpackage_bytes"].items())
+            if report["subpackage_bytes"]
+            else "；无分包"
+        ),
         f"- 主包上限：{human(report['main_limit_bytes'])}；内部目标：{human(report['target_bytes'])}",
         f"- 距目标余量：{human(report['headroom_bytes'])}"
         + ("（已超目标）" if report["over_target"] else ""),
