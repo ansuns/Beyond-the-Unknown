@@ -47,6 +47,7 @@ import {
   type PrototypeMechanismShape
 } from "../world/prototype-mechanism-visual";
 import { LatestPositionSyncQueue } from "../world/latest-position-sync-queue";
+import { getGazeLeaseRenewalInterval } from "../world/gaze-lease-timing";
 import { formatProgressSummary } from "../ui/progress-summary";
 
 const { ccclass, property } = _decorator;
@@ -116,6 +117,8 @@ export class BeyondTheUnknownGameEntry extends Component {
     positionSyncIntervalMs: 120
   };
   private prototypeGazeTargetId: string | undefined;
+  private prototypeGazeLeaseTimeoutMs = 0;
+  private prototypeGazeRenewalIntervalMs = 0;
   private prototypeGazeMaintainAt = 0;
   private prototypeGazeNextMaintainAt = 0;
   private prototypeGazeMaintainInFlight = false;
@@ -733,6 +736,15 @@ export class BeyondTheUnknownGameEntry extends Component {
     const targetId = this.prototypeGazeTargetId;
     if (!session || !targetId || this.prototypeGazeMaintainInFlight || this.prototypeActionInFlight) return;
 
+    if (this.prototypeGazeLeaseTimeoutMs <= 0 || this.prototypeGazeRenewalIntervalMs <= 0) {
+      this.prototypeGazeTargetId = undefined;
+      this.prototypeGazeMaintainAt = 0;
+      this.prototypeGazeNextMaintainAt = 0;
+      void session.stopGaze().catch(() => undefined);
+      this.setStatus("注视租约配置无效，已停止持续注视");
+      return;
+    }
+
     const now = Date.now();
     if (now >= this.prototypeGazeMaintainAt) {
       this.prototypeGazeTargetId = undefined;
@@ -745,13 +757,12 @@ export class BeyondTheUnknownGameEntry extends Component {
     }
 
     if (now < this.prototypeGazeNextMaintainAt) return;
-    this.prototypeGazeNextMaintainAt = now + 1000;
+    this.prototypeGazeNextMaintainAt = now + this.prototypeGazeRenewalIntervalMs;
     this.prototypeGazeMaintainInFlight = true;
     void session.maintainGaze(targetId)
       .then(() => {
         if (this.levelSession === session && this.prototypeGazeTargetId === targetId) {
-          // RULE_GAZE has a 5-second server lease; renew well before it expires.
-          this.prototypeGazeMaintainAt = Date.now() + 5000;
+          this.prototypeGazeMaintainAt = Date.now() + this.prototypeGazeLeaseTimeoutMs;
         }
       })
       .catch((error) => {
@@ -821,6 +832,10 @@ export class BeyondTheUnknownGameEntry extends Component {
   ): Promise<void> {
     if (!this.levelSession || this.prototypeActionInFlight) return;
     const { comboId, targetId, ruleIds } = definition;
+    if (definition.maintainGaze && this.prototypeGazeRenewalIntervalMs <= 0) {
+      this.setStatus("服务端未提供有效的注视租约配置，已阻止施放持续注视组合");
+      return;
+    }
     this.prototypeActionInFlight = true;
     this.stopJoystickMovement();
     try {
@@ -850,8 +865,8 @@ export class BeyondTheUnknownGameEntry extends Component {
       if (ruleIds.includes("RULE_GAZE")) {
         if (matched && definition.maintainGaze) {
           this.prototypeGazeTargetId = targetId;
-          this.prototypeGazeMaintainAt = Date.now() + 5000;
-          this.prototypeGazeNextMaintainAt = Date.now() + 1000;
+          this.prototypeGazeMaintainAt = Date.now() + this.prototypeGazeLeaseTimeoutMs;
+          this.prototypeGazeNextMaintainAt = Date.now() + this.prototypeGazeRenewalIntervalMs;
         } else {
           await this.levelSession.stopGaze();
           this.prototypeGazeTargetId = undefined;
@@ -888,6 +903,8 @@ export class BeyondTheUnknownGameEntry extends Component {
       this.levelSession = undefined;
       this.levelPositionSync = undefined;
       this.prototypeGazeTargetId = undefined;
+      this.prototypeGazeLeaseTimeoutMs = 0;
+      this.prototypeGazeRenewalIntervalMs = 0;
       this.prototypeGazeMaintainAt = 0;
       this.prototypeGazeNextMaintainAt = 0;
       this.currentMode = "MENU";
@@ -1027,6 +1044,9 @@ export class BeyondTheUnknownGameEntry extends Component {
   private async finishPersonalLevel(levelName: string, runId: string): Promise<void> {
     if (!this.levelSession) return;
     const rules = await this.levelSession.listRules();
+    const gazeRule = rules.rules.find((rule) => rule.rule_id === "RULE_GAZE");
+    this.prototypeGazeLeaseTimeoutMs = gazeRule?.lease_timeout_ms ?? 0;
+    this.prototypeGazeRenewalIntervalMs = getGazeLeaseRenewalInterval(gazeRule?.lease_timeout_ms) ?? 0;
     const configured = rules.rules.filter((rule) => rule.is_unlocked);
     const ready = configured.filter((rule) => rule.config_status === "READY").length;
     if (this.rulesLabel) {
@@ -1573,6 +1593,8 @@ export class BeyondTheUnknownGameEntry extends Component {
         }
       }
       this.prototypeGazeTargetId = undefined;
+      this.prototypeGazeLeaseTimeoutMs = 0;
+      this.prototypeGazeRenewalIntervalMs = 0;
       this.prototypeGazeMaintainAt = 0;
       this.prototypeGazeNextMaintainAt = 0;
       await this.levelSession.abandon();
