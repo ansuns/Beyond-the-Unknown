@@ -146,4 +146,21 @@ describe("asset manifest contract", () => {
     expect(validateAssetManifestStructure(valid, levels).errors).toEqual([]);
   });
 
+  it("rejects provenance evidence paths outside the controlled evidence directory", () => {
+    const invalid = structuredClone(manifest);
+    const entry = invalid.entries.find((item: { asset_id: string }) => item.asset_id === "CHR_001_PORTRAIT");
+    entry.status = "READY";
+    entry.files = ["assets/resources/characters/CHR_001/portrait/portrait.png"];
+    entry.provenance = {
+      source_type: "ORIGINAL_INTERNAL",
+      source_reference: "art-source/CHR_001/portrait-v1",
+      license: "Owned original work",
+      license_evidence: "docs/engineering/assets/evidence/../../secrets.md",
+      acceptance_evidence: "docs/engineering/assets/evidence/CHR_001_PORTRAIT-acceptance.md"
+    };
+    expect(validateAssetManifestStructure(invalid, levels).errors.join("\\n")).toContain(
+      "CHR_001_PORTRAIT: provenance.license_evidence must be a safe Markdown path under docs/engineering/assets/evidence/"
+    );
+  });
+
 });
