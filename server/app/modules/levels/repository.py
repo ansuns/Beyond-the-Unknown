@@ -8,6 +8,8 @@ from uuid import UUID
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.modules.level_events.events import move_event
+from app.modules.level_events.service import publish_level_event
 from app.modules.levels.movement import (
     max_allowed_movement_distance,
     parse_level_movement_settings,
@@ -459,5 +461,11 @@ async def update_level_position(
         """),
         {"run_id": run_id, "player_id": player_id, "x": x, "y": y, "now": now},
     )
+    await session.commit()
+    # The MOVE objective and the socket update come after the position is
+    # durable, so a rollback can never leave a client believing it moved.
+    # Every accepted packet reaches this point; record_task_event keys on the
+    # run, so the second packet onwards is a cheap no-op.
+    await publish_level_event(session, move_event(player_id, run_id, x, y))
     await session.commit()
     return {"run_id": str(run_id), "x": x, "y": y}

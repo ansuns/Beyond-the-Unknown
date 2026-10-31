@@ -8,6 +8,8 @@ from uuid import UUID
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.modules.level_events.events import rule_cast_event
+from app.modules.level_events.service import publish_level_event
 from app.modules.progress.repository import record_discovery
 
 
@@ -291,6 +293,11 @@ async def cast_rule(
         result = dict(prior["result"])
         result["idempotent_replay"] = True
         await session.commit()
+        # A retry of an already accepted cast still has to reach the objective:
+        # the first attempt may have committed the cast and then lost the
+        # process before advancing the task. record_task_event dedupes by
+        # source id, so this cannot double count.
+        await publish_rule_cast_event(session, player_id, run_id, rule_id)
         return result
 
     unlocked = (
@@ -621,7 +628,21 @@ async def cast_rule(
         },
     )
     await session.commit()
+    await publish_rule_cast_event(session, player_id, run_id, rule_id)
     return result
+
+
+async def publish_rule_cast_event(
+    session: AsyncSession, player_id: UUID, run_id: UUID, rule_id: str
+) -> None:
+    """Feed the RULE_CAST objective and tell the player's socket it happened.
+
+    Runs after the cast is durable: a broadcast for a cast that later rolled back
+    would desync the client's cooldown, and an objective is only worth counting
+    once the server has committed to the effect.
+    """
+    await publish_level_event(session, rule_cast_event(player_id, run_id, rule_id))
+    await session.commit()
 
 
 async def _match_combo(

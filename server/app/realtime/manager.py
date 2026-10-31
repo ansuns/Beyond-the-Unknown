@@ -232,13 +232,32 @@ class MapConnectionManager:
         return snapshot
 
     async def _broadcast_local(
-        self, instance_id: str, sender_id: str, command: str, payload: dict[str, Any]
+        self,
+        instance_id: str,
+        sender_id: str,
+        command: str,
+        payload: dict[str, Any],
+        target_player: str | None = None,
     ) -> None:
-        targets = [
-            connection
-            for (current_instance, player_id), connection in list(self.connections.items())
-            if current_instance == instance_id and player_id != sender_id
-        ]
+        """Deliver locally.
+
+        ``target_player`` addresses one player and deliberately includes the
+        sender: a level event is private to the player who caused it, and the
+        same player may hold several connections (phone plus editor preview).
+        Without a target the classic broadcast semantics apply: everyone in the
+        instance except the sender.
+        """
+        if target_player is not None:
+            targets = []
+            connection = self.connections.get((instance_id, target_player))
+            if connection is not None:
+                targets.append(connection)
+        else:
+            targets = [
+                connection
+                for (current_instance, player_id), connection in list(self.connections.items())
+                if current_instance == instance_id and player_id != sender_id
+            ]
         for connection in targets:
             try:
                 await self._send(connection, command, payload)
@@ -246,7 +265,12 @@ class MapConnectionManager:
                 await self.detach(connection.websocket, instance_id, connection.player_id)
 
     async def _publish_event(
-        self, instance_id: str, sender_id: str, command: str, payload: dict[str, Any]
+        self,
+        instance_id: str,
+        sender_id: str,
+        command: str,
+        payload: dict[str, Any],
+        target_player: str | None = None,
     ) -> None:
         if self.redis is None:
             return
@@ -255,6 +279,7 @@ class MapConnectionManager:
             "sender_id": sender_id,
             "command": command,
             "payload": payload,
+            "target": target_player,
         }
         await self.redis.publish(
             f"map:events:{instance_id}",
@@ -273,11 +298,13 @@ class MapConnectionManager:
                     continue
                 channel = message["channel"]
                 instance_id = channel.removeprefix("map:events:")
+                target = event.get("target")
                 await self._broadcast_local(
                     instance_id,
                     event["sender_id"],
                     event["command"],
                     event["payload"],
+                    target_player=target if isinstance(target, str) else None,
                 )
             except (KeyError, TypeError, ValueError, json.JSONDecodeError):
                 continue
@@ -287,6 +314,17 @@ class MapConnectionManager:
     ) -> None:
         await self._broadcast_local(instance_id, sender_id, command, payload)
         await self._publish_event(instance_id, sender_id, command, payload)
+
+    async def send_to_player(
+        self, instance_id: str, player_id: str, command: str, payload: dict[str, Any]
+    ) -> None:
+        """Deliver to one player's connections on every node hosting them."""
+        await self._broadcast_local(
+            instance_id, player_id, command, payload, target_player=player_id
+        )
+        await self._publish_event(
+            instance_id, player_id, command, payload, target_player=player_id
+        )
 
     async def attach(
         self,
