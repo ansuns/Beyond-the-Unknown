@@ -158,6 +158,15 @@ export function validateAssetManifestStructure(manifest, levelConfig, strict = f
     } else {
       counts[entry.status] += 1;
     }
+    if (!["P0", "P1", "P2"].includes(entry.priority)) {
+      add(`${id}: priority must be P0, P1, or P2`);
+    }
+    const expectedPhase = entry.priority === "P0" ? "VERTICAL_SLICE"
+      : entry.priority === "P1" ? "FIVE_ROOMS_AND_HIDDEN_ENDING"
+      : "CONTENT_EXPANSION";
+    if (entry.delivery_phase !== expectedPhase) {
+      add(`${id}: delivery_phase must be ${expectedPhase} for priority ${entry.priority}`);
+    }
     if (entry.required !== true) add(`${id}: MVP manifest entry must be required`);
     if (!entry.expected_directory ||
         !entry.expected_directory.startsWith("assets/resources/") ||
