@@ -105,3 +105,50 @@ Redis presence listener。CI 导出 `APP_ENV=test`，干净检出没有，所以
 
 可在本机复现的检查全部通过：客户端 143 项单测、类型检查、三项内容校验，服务端 27 项单测与 lint。
 发布门禁仍有 112 项资源未 READY，因此**不具备发布条件**，这与测试通过并不矛盾。
+
+## 5. 第二轮（2026-10-31 10:30–10:55）
+
+拿到可写 PAT 后，改为「本地能跑的先跑、必须数据库的交由 CI」两段式验证。
+
+| 检查 | 位置 | 结果 |
+|---|---|---|
+| PR #126 合并后 client CI | GitHub Actions | success |
+| PR #127 `python` + `compose-smoke` | GitHub Actions | success |
+| PR #128 `python` + `compose-smoke` | GitHub Actions | success |
+| PR #129 `python` + `compose-smoke` | GitHub Actions | success |
+| PR #130 `python` + `compose-smoke` | GitHub Actions | success |
+| PR #131 首次 `python` | GitHub Actions | **failure**，见下 |
+| PR #131 修复后 `python` + `compose-smoke` | GitHub Actions | success |
+| `ruff check .` | 本机 | 通过 |
+| `pytest tests/unit` | 本机 | **23 通过** |
+| `pytest tests/integration` | 本机 | **19 skipped**（无 `TEST_DATABASE_URL`） |
+
+### 5.1 PR #131 的失败与修复（如实记录）
+
+首次 CI 失败在 `Unit and integration tests`，日志中的断言：
+
+```
+assert login.status_code == 200
+E  assert 503 == 200
+tests/integration/test_progress_flow.py:619
+```
+
+原因：新增的重算集成测试调用 `/api/v1/auth/login` 时没有像同文件其他测试那样覆盖
+`get_wechat_code_provider`，微信 provider 未配置，登录返回 503。
+
+修复：补上 `app.dependency_overrides[get_wechat_code_provider] = lambda: FakeWeChatProvider()`
+并在 `finally` 中清理。修复后本地 19 项集成测试可正常收集，CI 转绿后合并。
+
+### 5.2 新增的自动化守卫
+
+`server/tests/unit/test_openapi_route_parity.py` 断言 `app.openapi()` 的路径集合与
+`docs/engineering/api/openapi.yaml` 完全一致，且 `operationId` 不重复。
+
+变异检验（按行插入，避开 CRLF 陷阱）：
+
+| 动作 | 结果 |
+|---|---|
+| 在规范里插入 `/ghost-endpoint` | 失败：`documented but not served: ['/ghost-endpoint']` |
+| 恢复后 | 2 项通过 |
+
+该守卫在本地就拦住了 PR #131 新增端点未同步规范的问题，未进入 CI 环节。

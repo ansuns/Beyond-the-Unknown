@@ -25,6 +25,8 @@
 | KI-11 | P2 | 仓库无 `package-lock.json`，CI 用 `npm install` 非确定性装配 | `.github/workflows/client-ci.yml` | 依赖漂移风险 | 生成并提交锁文件后改用 `npm ci` |
 | KI-12 | P2 | 事务性 outbox 只在 CI 的 docker smoke 中验证 | `server-ci.yml` 的 outbox relay 步骤 | 本机无法复现 | 同 KI-08 |
 | KI-13 | P2 | 客户端仅 1 个场景 `Boot.scene`，艺术资源目录为空 | `client/assets/scenes`、`client/assets/resources` | 运行期看到的是程序化占位表现 | 随 KI-04 一并推进 |
+| KI-14 | P0 | 积分规则 `config_status=TUNING_REQUIRED`、`delta=NULL` | `0007_progress_discovery.py:210-215`；`content_readiness.py:68-71` 报 BLOCKED | 三榜在未调优环境恒为 0 分 | GDD 13.2 的 `delta` 待策划定档；不擅自填值 |
+| KI-15 | — | 成就系统只有表结构 | GDD 12.6 标记【可选扩展】，V0.2 明确不属于首期 MVP | 按范围不实现，**不是缺陷** | 启用时复用既有数据模型 |
 
 ## 环境限制（非缺陷）
 
