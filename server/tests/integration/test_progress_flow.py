@@ -929,3 +929,131 @@ def test_composite_condition_requires_every_clause_then_grants_once() -> None:
         )] if player_id else []))
         _set_test_content(False)
         app.dependency_overrides.clear()
+
+
+def test_leaderboard_scopes_isolate_players_and_handle_missing_snapshots() -> None:
+    """GDD 13.7: TOP / AROUND / SELF return the right slice, scoped to the caller."""
+    from uuid import UUID
+
+    season_id = "WEEKLY-19981228"
+    empty_season = "WEEKLY-19980202"
+    app.dependency_overrides[get_wechat_code_provider] = lambda: FakeWeChatProvider()
+    players: list[UUID] = []
+    tokens: list[dict[str, str]] = []
+    try:
+        _db_exec([
+            ("""
+                INSERT INTO seasons
+                    (season_id, season_type, start_at_utc, end_at_utc,
+                     status, settlement_status)
+                VALUES
+                    (:season_id, 'WEEKLY', '1998-12-28T00:00:00Z',
+                     '1999-01-04T00:00:00Z', 'CLOSED', 'PENDING')
+                ON CONFLICT (season_id) DO NOTHING
+            """, {"season_id": season_id}),
+            ("""
+                INSERT INTO seasons
+                    (season_id, season_type, start_at_utc, end_at_utc,
+                     status, settlement_status)
+                VALUES
+                    (:season_id, 'WEEKLY', '1998-02-02T00:00:00Z',
+                     '1998-02-09T00:00:00Z', 'CLOSED', 'PENDING')
+                ON CONFLICT (season_id) DO NOTHING
+            """, {"season_id": empty_season}),
+        ])
+
+        with TestClient(app) as client:
+            for suffix in ("a", "b"):
+                login = client.post(
+                    "/api/v1/auth/login",
+                    json={"wx_code": str(uuid4()), "request_id": f"scope-login-{suffix}"},
+                )
+                assert login.status_code == 200
+                tokens.append(
+                    {"Authorization": f"Bearer {login.json()['data']['access_token']}"}
+                )
+                players.append(
+                    UUID(
+                        client.get("/api/v1/player/me", headers=tokens[-1])
+                        .json()["data"]["player_id"]
+                    )
+                )
+
+            _db_exec([
+                ("""
+                    INSERT INTO leaderboard_snapshots
+                        (season_id, board_type, player_id, score, rank, snapshot_at_utc)
+                    VALUES
+                        (:season_id, 'EXPLORE', :a, 30, 1, now()),
+                        (:season_id, 'EXPLORE', :b, 10, 2, now())
+                    ON CONFLICT (season_id, board_type, player_id)
+                    DO UPDATE SET score = EXCLUDED.score, rank = EXCLUDED.rank
+                """, {"season_id": season_id, "a": players[0], "b": players[1]}),
+            ])
+
+            top = client.get(
+                f"/api/v1/leaderboard?board_type=EXPLORE&scope=TOP&season_id={season_id}",
+                headers=tokens[0],
+            )
+            assert top.status_code == 200
+            entries = top.json()["data"]["entries"]
+            assert [entry["player_id"] for entry in entries] == [
+                str(players[0]),
+                str(players[1]),
+            ]
+            assert entries[0]["is_self"] is True
+            assert entries[1]["is_self"] is False
+
+            # Same endpoint, different caller: the flag must follow the token, not the row.
+            other_view = client.get(
+                f"/api/v1/leaderboard?board_type=EXPLORE&scope=TOP&season_id={season_id}",
+                headers=tokens[1],
+            )
+            other_entries = other_view.json()["data"]["entries"]
+            assert other_entries[0]["is_self"] is False
+            assert other_entries[1]["is_self"] is True
+
+            self_only = client.get(
+                f"/api/v1/leaderboard?board_type=EXPLORE&scope=SELF&season_id={season_id}",
+                headers=tokens[1],
+            )
+            assert self_only.status_code == 200
+            self_entries = self_only.json()["data"]["entries"]
+            assert [entry["player_id"] for entry in self_entries] == [str(players[1])]
+            assert self_entries[0]["rank"] == 2
+
+            around = client.get(
+                f"/api/v1/leaderboard?board_type=EXPLORE&scope=AROUND&season_id={season_id}",
+                headers=tokens[1],
+            )
+            assert around.status_code == 200
+            assert {entry["player_id"] for entry in around.json()["data"]["entries"]} == {
+                str(players[0]),
+                str(players[1]),
+            }
+
+            empty = client.get(
+                f"/api/v1/leaderboard?board_type=EXPLORE&scope=TOP&season_id={empty_season}",
+                headers=tokens[0],
+            )
+            assert empty.status_code == 200
+            assert empty.json()["data"]["entries"] == []
+            assert empty.json()["data"]["my_rank"] is None
+
+            missing = client.get(
+                "/api/v1/leaderboard?board_type=EXPLORE&season_id=WEEKLY-19000101",
+                headers=tokens[0],
+            )
+            assert missing.status_code == 404
+    finally:
+        _db_exec([
+            (
+                "DELETE FROM leaderboard_snapshots WHERE season_id IN (:a, :b)",
+                {"a": season_id, "b": empty_season},
+            ),
+            (
+                "DELETE FROM seasons WHERE season_id IN (:a, :b)",
+                {"a": season_id, "b": empty_season},
+            ),
+        ])
+        app.dependency_overrides.clear()
