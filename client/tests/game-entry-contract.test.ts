@@ -18,7 +18,7 @@ describe("GameEntry member contract", () => {
         onLoad() { this.missingUpdate(); }
       }
     `;
-    expect(findUndefinedThisCalls(source, "GameEntry")).toEqual([
+    expect(findUndefinedThisCalls(source, "BeyondTheUnknownGameEntry")).toEqual([
       "undefined this.missingUpdate() at line 3"
     ]);
   });
@@ -30,6 +30,6 @@ describe("GameEntry member contract", () => {
         onLoad() { this.schedule(() => this.api.login()); }
       }
     `;
-    expect(findUndefinedThisCalls(source, "GameEntry")).toEqual([]);
+    expect(findUndefinedThisCalls(source, "BeyondTheUnknownGameEntry")).toEqual([]);
   });
 });
