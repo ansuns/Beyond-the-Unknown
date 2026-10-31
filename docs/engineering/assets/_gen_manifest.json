@@ -1,0 +1,276 @@
+{
+  "schema_version": 1,
+  "project": "Beyond the Unknown",
+  "date": "2026-10-31",
+  "source_files": [
+    "docs/engineering/assets/P0-production-handoff.md",
+    "docs/engineering/assets/asset-manifest.v1.json"
+  ],
+  "scope": {
+    "character": 4,
+    "main_map": 9,
+    "mechanisms": 3,
+    "effects": 3,
+    "ui": 6,
+    "total": 25
+  },
+  "global_art_contract": {
+    "style": "original_chibi_fantasy",
+    "projection": "45-degree-isometric",
+    "sprite_alpha": "real transparent channel required",
+    "character_anchor": "foot-contact-point",
+    "visual_logic_separation": true,
+    "server_logical_coordinates_are_authoritative": true
+  },
+  "image_generation": {
+    "tool_calls": 1,
+    "outputs": 1,
+    "kind": "composite concept board",
+    "local_path": "/mnt/data/a_wide_high_resolution_game_asset_showcase_colla.png",
+    "repo_path": null,
+    "individual_asset_files": 0,
+    "transparent_asset_validation": "NOT_DONE",
+    "usable_as_runtime_assets": false,
+    "decision": "REFERENCE_ONLY"
+  },
+  "assets": [
+    {
+      "asset_id": "CHR_001_PORTRAIT",
+      "category": "character_portrait",
+      "expected_directory": "assets/resources/characters/CHR_001/portrait",
+      "image_status": "NOT_GENERATED_INDEPENDENTLY",
+      "placeholder_status": "CREATED_IN_SHARED_INDEX",
+      "manifest_status": "MISSING",
+      "ready": false
+    },
+    {
+      "asset_id": "CHR_001_MODEL",
+      "category": "character_model",
+      "expected_directory": "assets/resources/characters/CHR_001/model",
+      "image_status": "NOT_GENERATED_INDEPENDENTLY",
+      "placeholder_status": "CREATED_IN_SHARED_INDEX",
+      "manifest_status": "MISSING",
+      "ready": false
+    },
+    {
+      "asset_id": "CHR_001_PREVIEW",
+      "category": "character_preview",
+      "expected_directory": "assets/resources/characters/CHR_001/preview",
+      "image_status": "NOT_GENERATED_INDEPENDENTLY",
+      "placeholder_status": "CREATED_IN_SHARED_INDEX",
+      "manifest_status": "MISSING",
+      "ready": false
+    },
+    {
+      "asset_id": "CHR_001_ANIMATION_SET",
+      "category": "character_animation",
+      "expected_directory": "assets/resources/characters/CHR_001/animation",
+      "image_status": "NOT_GENERATED_INDEPENDENTLY",
+      "placeholder_status": "CREATED_IN_SHARED_INDEX",
+      "manifest_status": "MISSING",
+      "ready": false
+    },
+    {
+      "asset_id": "MAP_MAIN_001_SCENE",
+      "category": "main_map",
+      "expected_directory": "assets/resources/maps/MAP_MAIN_001/scene",
+      "image_status": "NOT_GENERATED_INDEPENDENTLY",
+      "placeholder_status": "CREATED_IN_SHARED_INDEX",
+      "manifest_status": "MISSING",
+      "ready": false
+    },
+    {
+      "asset_id": "MAP_MAIN_001_GROUND",
+      "category": "main_map",
+      "expected_directory": "assets/resources/maps/MAP_MAIN_001/ground",
+      "image_status": "NOT_GENERATED_INDEPENDENTLY",
+      "placeholder_status": "CREATED_IN_SHARED_INDEX",
+      "manifest_status": "MISSING",
+      "ready": false
+    },
+    {
+      "asset_id": "MAP_MAIN_001_PROPS",
+      "category": "main_map",
+      "expected_directory": "assets/resources/maps/MAP_MAIN_001/props",
+      "image_status": "NOT_GENERATED_INDEPENDENTLY",
+      "placeholder_status": "CREATED_IN_SHARED_INDEX",
+      "manifest_status": "MISSING",
+      "ready": false
+    },
+    {
+      "asset_id": "MAP_MAIN_001_COLLISION",
+      "category": "main_map",
+      "expected_directory": "assets/resources/maps/MAP_MAIN_001/collision",
+      "image_status": "NOT_GENERATED_INDEPENDENTLY",
+      "placeholder_status": "CREATED_IN_SHARED_INDEX",
+      "manifest_status": "MISSING",
+      "ready": false
+    },
+    {
+      "asset_id": "MAP_MAIN_001_WALKABLE",
+      "category": "main_map",
+      "expected_directory": "assets/resources/maps/MAP_MAIN_001/walkable",
+      "image_status": "NOT_GENERATED_INDEPENDENTLY",
+      "placeholder_status": "CREATED_IN_SHARED_INDEX",
+      "manifest_status": "MISSING",
+      "ready": false
+    },
+    {
+      "asset_id": "MAP_MAIN_001_SPAWN",
+      "category": "main_map",
+      "expected_directory": "assets/resources/maps/MAP_MAIN_001/spawn",
+      "image_status": "NOT_GENERATED_INDEPENDENTLY",
+      "placeholder_status": "CREATED_IN_SHARED_INDEX",
+      "manifest_status": "MISSING",
+      "ready": false
+    },
+    {
+      "asset_id": "MAP_MAIN_001_ENTRANCES",
+      "category": "main_map",
+      "expected_directory": "assets/resources/maps/MAP_MAIN_001/entrances",
+      "image_status": "NOT_GENERATED_INDEPENDENTLY",
+      "placeholder_status": "CREATED_IN_SHARED_INDEX",
+      "manifest_status": "MISSING",
+      "ready": false
+    },
+    {
+      "asset_id": "MAP_MAIN_001_CAMERA",
+      "category": "main_map",
+      "expected_directory": "assets/resources/maps/MAP_MAIN_001/camera",
+      "image_status": "NOT_GENERATED_INDEPENDENTLY",
+      "placeholder_status": "CREATED_IN_SHARED_INDEX",
+      "manifest_status": "MISSING",
+      "ready": false
+    },
+    {
+      "asset_id": "MAP_MAIN_001_CONFIG",
+      "category": "main_map",
+      "expected_directory": "assets/resources/maps/MAP_MAIN_001/config",
+      "image_status": "NOT_GENERATED_INDEPENDENTLY",
+      "placeholder_status": "CREATED_IN_SHARED_INDEX",
+      "manifest_status": "MISSING",
+      "ready": false
+    },
+    {
+      "asset_id": "M01-EXIT-01",
+      "category": "mechanism",
+      "expected_directory": "assets/resources/mechanisms/M01-EXIT-01",
+      "image_status": "NOT_GENERATED_INDEPENDENTLY",
+      "placeholder_status": "CREATED_IN_SHARED_INDEX",
+      "manifest_status": "MISSING",
+      "ready": false
+    },
+    {
+      "asset_id": "M01-HIDEABLE-01",
+      "category": "mechanism",
+      "expected_directory": "assets/resources/mechanisms/M01-HIDEABLE-01",
+      "image_status": "NOT_GENERATED_INDEPENDENTLY",
+      "placeholder_status": "CREATED_IN_SHARED_INDEX",
+      "manifest_status": "MISSING",
+      "ready": false
+    },
+    {
+      "asset_id": "M01-LIGHT-01",
+      "category": "mechanism",
+      "expected_directory": "assets/resources/mechanisms/M01-LIGHT-01",
+      "image_status": "NOT_GENERATED_INDEPENDENTLY",
+      "placeholder_status": "CREATED_IN_SHARED_INDEX",
+      "manifest_status": "MISSING",
+      "ready": false
+    },
+    {
+      "asset_id": "FX_ECHO_PULSE_01",
+      "category": "effect",
+      "expected_directory": "assets/resources/effects",
+      "image_status": "NOT_GENERATED_INDEPENDENTLY",
+      "placeholder_status": "CREATED_IN_SHARED_INDEX",
+      "manifest_status": "MISSING",
+      "ready": false
+    },
+    {
+      "asset_id": "FX_GAZE_BEAM_01",
+      "category": "effect",
+      "expected_directory": "assets/resources/effects",
+      "image_status": "NOT_GENERATED_INDEPENDENTLY",
+      "placeholder_status": "CREATED_IN_SHARED_INDEX",
+      "manifest_status": "MISSING",
+      "ready": false
+    },
+    {
+      "asset_id": "FX_REVERSE_FLOW_01",
+      "category": "effect",
+      "expected_directory": "assets/resources/effects",
+      "image_status": "NOT_GENERATED_INDEPENDENTLY",
+      "placeholder_status": "CREATED_IN_SHARED_INDEX",
+      "manifest_status": "MISSING",
+      "ready": false
+    },
+    {
+      "asset_id": "UI_LOGIN",
+      "category": "ui",
+      "expected_directory": "assets/resources/ui",
+      "image_status": "NOT_GENERATED_INDEPENDENTLY",
+      "placeholder_status": "CREATED_IN_SHARED_INDEX",
+      "manifest_status": "MISSING",
+      "ready": false
+    },
+    {
+      "asset_id": "UI_MAIN_MAP_HUD",
+      "category": "ui",
+      "expected_directory": "assets/resources/ui",
+      "image_status": "NOT_GENERATED_INDEPENDENTLY",
+      "placeholder_status": "CREATED_IN_SHARED_INDEX",
+      "manifest_status": "MISSING",
+      "ready": false
+    },
+    {
+      "asset_id": "UI_INTERACTION",
+      "category": "ui",
+      "expected_directory": "assets/resources/ui",
+      "image_status": "NOT_GENERATED_INDEPENDENTLY",
+      "placeholder_status": "CREATED_IN_SHARED_INDEX",
+      "manifest_status": "MISSING",
+      "ready": false
+    },
+    {
+      "asset_id": "UI_LAW_BAR",
+      "category": "ui",
+      "expected_directory": "assets/resources/ui",
+      "image_status": "NOT_GENERATED_INDEPENDENTLY",
+      "placeholder_status": "CREATED_IN_SHARED_INDEX",
+      "manifest_status": "MISSING",
+      "ready": false
+    },
+    {
+      "asset_id": "UI_SETTLEMENT",
+      "category": "ui",
+      "expected_directory": "assets/resources/ui",
+      "image_status": "NOT_GENERATED_INDEPENDENTLY",
+      "placeholder_status": "CREATED_IN_SHARED_INDEX",
+      "manifest_status": "MISSING",
+      "ready": false
+    },
+    {
+      "asset_id": "UI_NETWORK_STATE",
+      "category": "ui",
+      "expected_directory": "assets/resources/ui",
+      "image_status": "NOT_GENERATED_INDEPENDENTLY",
+      "placeholder_status": "CREATED_IN_SHARED_INDEX",
+      "manifest_status": "MISSING",
+      "ready": false
+    }
+  ],
+  "manifest_integrity": {
+    "authoritative_manifest_modified": false,
+    "ready_fabricated": false,
+    "license_evidence_fabricated": false,
+    "acceptance_evidence_fabricated": false
+  },
+  "totals": {
+    "requested": 25,
+    "individual_images": 0,
+    "placeholders": 25,
+    "ready": 0,
+    "missing": 25
+  }
+}
