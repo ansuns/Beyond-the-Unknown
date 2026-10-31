@@ -154,6 +154,14 @@ const AUDIO_IDS = [
   "AUD_BGM_SETTLEMENT"
 ];
 
+function isSafeEvidencePath(value) {
+  return typeof value === "string" &&
+    value.startsWith("docs/engineering/assets/evidence/") &&
+    !value.startsWith("/") &&
+    !value.split("/").includes("..") &&
+    value.endsWith(".md");
+}
+
 function sameOrderedValues(actual, expected) {
   return Array.isArray(actual) && actual.length === expected.length &&
     actual.every((value, index) => value === expected[index]);
@@ -300,8 +308,7 @@ export function validateAssetManifestStructure(manifest, levelConfig, strict = f
           add(`${id}: READY requires non-empty provenance.${field}`);
         }
       }
-    }
-    for (const file of entry.files ?? []) {
+      for (const field of ["license_evidence", "acceptance_evidence"]) {\n        if (!isSafeEvidencePath(provenance?.[field])) {\n          add(`${id}: provenance.${field} must be a safe Markdown path under docs/engineering/assets/evidence/`);\n        }\n      }\n    }\n    for (const file of entry.files ?? []) {
       if (typeof file !== "string" || file.startsWith("/") ||
           file.split("/").includes("..") ||
           !file.startsWith(`${entry.expected_directory}/`)) {
