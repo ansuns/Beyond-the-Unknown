@@ -4,7 +4,8 @@ import {
   calculatePrototypeRoomScale,
   parsePrototypeLayoutConfig,
   prototypeLevelToLocal,
-  prototypeLocalToLevel
+  prototypeLocalToLevel,
+  sortIsometricDepth
 } from "../assets/scripts/world/prototype-layout";
 
 describe("parsePrototypeLayoutConfig", () => {
@@ -83,5 +84,25 @@ describe("prototype layout coordinate contract", () => {
       { ...bounds, maxX: 10 },
       { width: 320, height: 400 }
     )).toThrow(/positive and finite/);
+  });
+});
+
+describe("isometric depth sorting", () => {
+  it("draws higher projected Y behind lower projected Y", () => {
+    const ordered = sortIsometricDepth([
+      { id: "front", screenY: -50 },
+      { id: "back", screenY: 50 },
+      { id: "middle", screenY: 0 }
+    ]);
+    expect(ordered.map((item) => item.id)).toEqual(["back", "middle", "front"]);
+  });
+
+  it("uses stable ID ordering for equal projected depth without mutating input", () => {
+    const items = [
+      { id: "zeta", screenY: 10 },
+      { id: "alpha", screenY: 10 }
+    ];
+    expect(sortIsometricDepth(items).map((item) => item.id)).toEqual(["alpha", "zeta"]);
+    expect(items.map((item) => item.id)).toEqual(["zeta", "alpha"]);
   });
 });
