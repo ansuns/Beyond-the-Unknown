@@ -68,7 +68,25 @@ python tools/strip_overlay.py keyed.png final.png --mode alpha
 python tools/strip_overlay.py raw.png final.png --mode crop
 ```
 
-工具默认在区域不透明占比超过 2% 时拒绝执行，避免把美术一起裁掉；确认过再 `--force`。
+每种模式的防误伤检查不同，因为它们失败的方式不同：
+
+| 模式 | 检查 | 拒绝条件 |
+|---|---|---|
+| `alpha` | 角落区域的不透明占比 | 超过 35%（说明该处是美术，不只是水印） |
+| `crop` | 裁切深度是否够深 | 浅于 7%（盖不住水印）或深于 25%（切掉太多） |
+| `inpaint` | 输入可用性 | 边长小于 16px 或区域为空 |
+
+确认过再 `--force`。注意：**不透明占比不能用来判断 `crop` 是否安全**——普通 RGB 图没有
+alpha，按占比算永远是 100%。这正是本工具第一版的缺陷，已修复并由 `tools/tests` 的 23 项测试覆盖。
+
+## 测试
+
+```bash
+python -m pytest tools/tests -q
+```
+
+需要 `pillow numpy pytest`，`inpaint` 相关用例还需要 `opencv-python-headless`。
+CI 由 `.github/workflows/art-tools-ci.yml` 在 `tools/**` 变更时执行。
 
 ## 水印与合规
 

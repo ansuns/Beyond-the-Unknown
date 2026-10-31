@@ -1,32 +1,31 @@
 """Remove the provider's fixed corner overlay from generated images.
 
 The image backend stamps an "AI generated" mark into the bottom-right corner of
-every output. Requesting the image without it (Hunyuan `LogoAdd=0`) is the
-preferred fix, but the generation tool used here does not expose that switch, so
-this is the local fallback.
+every output. Asking the service for an unmarked image (Hunyuan `LogoAdd=0`) is
+the preferred fix, but the generation tool used here does not expose that
+switch, so this is the local fallback.
 
-Two modes:
+Three modes, each with its own guard - they fail differently, so one shared
+check cannot serve all of them:
 
-* ``alpha``   - for RGBA sprites. The mark sits outside the artwork, so clearing
-                alpha in the corner discards only the mark. No pixel is invented.
-* ``crop``    - for opaque art. Trim the band that carries the mark. Lossless:
-                no pixel is invented, but the canvas shrinks.
-* ``inpaint`` - last resort for opaque art when the canvas size must not change.
-                Requires OpenCV. Large glyph strokes over structured art come out
-                melted, so treat the result as a placeholder, not production art.
+* ``alpha``   - RGBA sprites. The mark sits outside the artwork, so clearing
+                alpha in the corner discards only the mark. Guard: refuse when
+                the corner is mostly opaque, because then it holds artwork.
+* ``crop``    - any mode, for opaque backgrounds where the mark is painted over
+                scenery. Guard: refuse when the trim is too shallow to cover the
+                mark, or so deep it eats a quarter of the image.
+* ``inpaint`` - last resort. Requires OpenCV. Large glyph strokes over
+                structured art come out melted; treat the result as a
+                placeholder, not production art.
 
-The mark is a fixed overlay, so the region is fixed too. Before touching
-anything the tool reports how much opaque content the region holds; if the
-artwork actually reaches into the corner the command refuses unless ``--force``
-is given, because then the "overlay" is partly artwork.
-
-Provenance is not handled by pixels. Assets produced this way must still be
-recorded as generated content with review, which is what
-docs/engineering/assets/asset-generation-backend-findings.md requires.
+Removing the overlay does not change what the asset is. Generated material still
+has to be recorded as generated content with review, and provider terms plus any
+applicable AI-content labelling rules still have to be confirmed separately.
 
 Usage:
-    python tools/strip_overlay.py src.png dst.png [--mode alpha|inpaint]
-        [--box 0.75,0.90,1.0,1.0] [--force]
+    python tools/strip_overlay.py src.png dst.png [--mode alpha|crop|inpaint|auto]
+        [--box 0.75,0.90,1.0,1.0] [--crop-bottom 0.072] [--crop-right 0.0]
+        [--force]
 """
 
 from __future__ import annotations
@@ -37,67 +36,119 @@ from pathlib import Path
 from PIL import Image
 
 DEFAULT_BOX = (0.75, 0.90, 1.0, 1.0)
-# Glyphs of the mark alone can cover ~7% of the corner box, so the guard only trips
+# The mark occupies roughly the bottom 7% of the frame; a shallower crop leaves
+# part of it behind, which is exactly the failure this mode must prevent.
+MARK_TOP_FRAC = 0.93
+MIN_CROP_FRAC = round(1.0 - MARK_TOP_FRAC, 3)
+MAX_CROP_FRAC = 0.25
+# The glyphs alone cover ~7% of the corner box, so the alpha guard only trips
 # when the region is mostly filled - that means artwork, not an overlay.
-OPAQUE_ALERT_RATIO = 0.35
+ALPHA_ARTWORK_RATIO = 0.35
+MIN_SIDE = 16
+
+
+class GuardError(Exception):
+    """Raised when a guard refuses to modify the image."""
 
 
 def _parse_box(value: str) -> tuple[float, float, float, float]:
     parts = [float(piece) for piece in value.split(",")]
     if len(parts) != 4 or not all(0.0 <= part <= 1.0 for part in parts):
         raise argparse.ArgumentTypeError("box must be four fractions between 0 and 1")
-    return parts[0], parts[1], parts[2], parts[3]
-
-
-def _box_pixels(size: tuple[int, int], box: tuple[float, float, float, float]) -> tuple[int, int, int, int]:
-    width, height = size
-    left = int(box[0] * width)
-    top = int(box[1] * height)
-    right = int(box[2] * width)
-    bottom = int(box[3] * height)
+    left, top, right, bottom = parts
+    if not (left < right and top < bottom):
+        raise argparse.ArgumentTypeError("box must satisfy left<right and top<bottom")
     return left, top, right, bottom
 
 
-def _opaque_ratio(image: Image.Image, rect: tuple[int, int, int, int]) -> float:
-    region = image.crop(rect)
-    if region.mode != "RGBA":
-        return 1.0
-    alpha = region.getchannel("A")
-    total = region.size[0] * region.size[1]
-    if total == 0:
+def box_pixels(
+    size: tuple[int, int], box: tuple[float, float, float, float]
+) -> tuple[int, int, int, int]:
+    width, height = size
+    left = min(int(box[0] * width), max(width - 1, 0))
+    top = min(int(box[1] * height), max(height - 1, 0))
+    right = min(max(int(box[2] * width), left + 1), width)
+    bottom = min(max(int(box[3] * height), top + 1), height)
+    return left, top, right, bottom
+
+
+def alpha_opaque_ratio(image: Image.Image, rect: tuple[int, int, int, int]) -> float:
+    """Share of pixels in ``rect`` that are opaque enough to be artwork."""
+    if image.mode != "RGBA":
+        raise GuardError(f"alpha ratio needs an RGBA image, got {image.mode}")
+    region = image.crop(rect).getchannel("A")
+    total = (rect[2] - rect[0]) * (rect[3] - rect[1])
+    if total <= 0:
         return 0.0
-    opaque = sum(alpha.histogram()[200:])
-    return opaque / total
+    return sum(region.histogram()[200:]) / total
+
+
+def check_alpha(image: Image.Image, rect: tuple[int, int, int, int], force: bool) -> str:
+    ratio = alpha_opaque_ratio(image, rect)
+    if ratio > ALPHA_ARTWORK_RATIO and not force:
+        raise GuardError(
+            f"alpha box {rect} is {ratio:.1%} opaque, so it likely holds artwork "
+            "rather than only the mark. Inspect the corner, then re-run with --force."
+        )
+    return f"opaque_ratio={ratio:.2%}"
+
+
+def check_crop(crop_bottom: float, crop_right: float, force: bool) -> str:
+    if crop_bottom < 0 or crop_right < 0:
+        raise GuardError("crop fractions must not be negative")
+    depth = max(crop_bottom, crop_right)
+    if depth <= 0:
+        raise GuardError("crop mode needs a positive --crop-bottom or --crop-right")
+    if depth < MIN_CROP_FRAC and not force:
+        raise GuardError(
+            f"cropping {depth:.3%} does not reach the mark (needs at least "
+            f"{MIN_CROP_FRAC:.1%}); part of the overlay would survive."
+        )
+    if depth > MAX_CROP_FRAC and not force:
+        raise GuardError(
+            f"cropping {depth:.1%} removes more than {MAX_CROP_FRAC:.0%} of the image; "
+            "confirm with --force if that is intended."
+        )
+    return f"crop_depth={depth:.3%}"
+
+
+def check_inpaint(image: Image.Image, rect: tuple[int, int, int, int], force: bool) -> str:
+    width, height = image.size
+    if min(width, height) < MIN_SIDE:
+        raise GuardError(f"image is {width}x{height}, too small to reconstruct a corner")
+    if (rect[2] - rect[0]) <= 0 or (rect[3] - rect[1]) <= 0:
+        raise GuardError("inpaint box is empty")
+    return f"box={rect}"
 
 
 def strip_alpha(image: Image.Image, rect: tuple[int, int, int, int]) -> Image.Image:
     out = image.convert("RGBA")
-    left, top, right, bottom = rect
-    transparent = Image.new("L", (right - left, bottom - top), 0)
     out.paste((0, 0, 0, 0), rect)
-    out.putalpha(out.getchannel("A"))
-    del transparent
     return out
 
 
+def strip_crop(image: Image.Image, crop_bottom: float, crop_right: float) -> Image.Image:
+    width, height = image.size
+    keep_w = max(1, width - int(crop_right * width))
+    keep_h = max(1, height - int(crop_bottom * height))
+    return image.crop((0, 0, keep_w, keep_h))
+
+
 def strip_inpaint(
-    image: Image.Image, rect: tuple[int, int, int, int], mask_mode: str = "pale"
+    image: Image.Image, rect: tuple[int, int, int, int], mask_mode: str = "box"
 ) -> Image.Image:
     try:
         import cv2
         import numpy as np
     except ImportError as exc:  # pragma: no cover - depends on local environment
-        raise SystemExit(
+        raise GuardError(
             "inpaint mode needs opencv: pip install opencv-python-headless"
         ) from exc
 
-    rgb = image.convert("RGB")
-    array = np.array(rgb)
+    array = np.array(image.convert("RGB"))
     mask = np.zeros(array.shape[:2], dtype=np.uint8)
     left, top, right, bottom = rect
     if mask_mode == "box":
-        # Reconstruct the whole corner: large glyph strokes leave readable ghosts
-        # when only their pale pixels are masked.
         mask[top:bottom, left:right] = 255
         radius = 7
     else:
@@ -105,8 +156,33 @@ def strip_inpaint(
         pale = (patch.min(axis=2) > 150) & (patch.max(axis=2) - patch.min(axis=2) < 40)
         mask[top:bottom, left:right] = np.where(pale, 255, 0).astype(np.uint8)
         radius = 3
-    repaired = cv2.inpaint(array, mask, radius, cv2.INPAINT_TELEA)
-    return Image.fromarray(repaired)
+    return Image.fromarray(cv2.inpaint(array, mask, radius, cv2.INPAINT_TELEA))
+
+
+def process(
+    image: Image.Image,
+    mode: str = "auto",
+    box: tuple[float, float, float, float] = DEFAULT_BOX,
+    crop_bottom: float = MIN_CROP_FRAC,
+    crop_right: float = 0.0,
+    mask_mode: str = "box",
+    force: bool = False,
+) -> tuple[Image.Image, str, str]:
+    """Return (image, mode_used, guard_note). Raises ``GuardError`` when refused."""
+    if mode == "auto":
+        mode = "alpha" if image.mode == "RGBA" else "crop"
+    if mode == "alpha" and image.mode != "RGBA":
+        raise GuardError(f"alpha mode needs an RGBA image, got {image.mode}")
+
+    rect = box_pixels(image.size, box)
+    if mode == "alpha":
+        return strip_alpha(image, rect), mode, check_alpha(image, rect, force)
+    if mode == "crop":
+        note = check_crop(crop_bottom, crop_right, force)
+        return strip_crop(image, crop_bottom, crop_right), mode, note
+    if mode == "inpaint":
+        return strip_inpaint(image, rect, mask_mode), mode, check_inpaint(image, rect, force)
+    raise GuardError(f"unknown mode {mode}")
 
 
 def main() -> None:
@@ -114,39 +190,30 @@ def main() -> None:
     parser.add_argument("source")
     parser.add_argument("destination")
     parser.add_argument("--mode", choices=["alpha", "crop", "inpaint", "auto"], default="auto")
-    parser.add_argument("--crop-bottom", type=float, default=0.072)
-    parser.add_argument("--crop-right", type=float, default=0.0)
     parser.add_argument("--box", type=_parse_box, default=DEFAULT_BOX)
+    parser.add_argument("--crop-bottom", type=float, default=MIN_CROP_FRAC)
+    parser.add_argument("--crop-right", type=float, default=0.0)
     parser.add_argument("--mask", choices=["pale", "box"], default="box")
     parser.add_argument("--force", action="store_true")
     args = parser.parse_args()
 
     with Image.open(args.source) as image:
-        rect = _box_pixels(image.size, args.box)
-        ratio = _opaque_ratio(image, rect)
-        mode = args.mode
-        if mode == "auto":
-            mode = "alpha" if image.mode == "RGBA" else "inpaint"
-        if mode == "alpha" and image.mode != "RGBA":
-            raise SystemExit(f"alpha mode needs an RGBA image, got {image.mode}")
-        if ratio > OPAQUE_ALERT_RATIO and not args.force:
-            raise SystemExit(
-                f"overlay box {rect} is {ratio:.1%} opaque; artwork may reach into the "
-                "corner. Inspect the image, then re-run with --force if the mark really "
-                "belongs there."
+        try:
+            result, mode, note = process(
+                image,
+                args.mode,
+                args.box,
+                args.crop_bottom,
+                args.crop_right,
+                args.mask,
+                args.force,
             )
-        if mode == "alpha":
-            result = strip_alpha(image, rect)
-        elif mode == "crop":
-            width, height = image.size
-            keep_w = width - int(args.crop_right * width)
-            keep_h = height - int(args.crop_bottom * height)
-            result = image.crop((0, 0, keep_w, keep_h))
-        else:
-            result = strip_inpaint(image, rect, args.mask)
-        Path(args.destination).parent.mkdir(parents=True, exist_ok=True)
-        result.save(args.destination, "PNG", optimize=True)
-    print(f"wrote {args.destination} (mode={mode}, box={rect}, opaque_ratio={ratio:.2%})")
+        except GuardError as exc:
+            raise SystemExit(str(exc)) from exc
+        out = Path(args.destination)
+        out.parent.mkdir(parents=True, exist_ok=True)
+        result.save(out, "PNG", optimize=True)
+    print(f"wrote {args.destination} (mode={mode} {note}, {result.size[0]}x{result.size[1]})")
 
 
 if __name__ == "__main__":
