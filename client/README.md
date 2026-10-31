@@ -46,7 +46,7 @@ This is a TypeScript client foundation, not yet a complete playable Cocos scene 
 
 Rule writes use the current backend routes (`/level/rule/cast`, `/level/rule/maintain`, `/level/rule/stop`). The client does not calculate rule effects, cooldowns, combo IDs, or mechanism state. Structured backend errors such as `RULE_COOLDOWN` remain available on `ApiError.details`.
 
-The server currently marks numeric law tuning and mechanism positions as `TUNING_REQUIRED`. The client must display this state and must not assume rule casting is enabled until the backend catalog reports `READY`. Scene/UI bindings and an interactive playable room are still separate integration work.
+The server currently marks numeric law tuning and mechanism positions as `TUNING_REQUIRED`. The client must display this state and must not assume rule casting is enabled until the backend catalog reports `READY`. Scene/UI bindings and a geometric playable-room prototype are now integrated in GameEntry; final art, polished HUD, collision/pathfinding and device acceptance remain separate work.
 
 
 The engine-independent LawController also validates point/object target shape from the server rule scope, tracks an active GAZE target, exposes the latest personal state snapshot, and renews GAZE only when one-third of the server lease timeout has elapsed. Call maintainGazeIfDue() from the scene update loop; it suppresses per-frame network spam. The server still validates actual target identity, range, tuning, cooldown, expiry and effects.
@@ -66,8 +66,8 @@ WorldPlaySession coordinates the existing MapSession, RestClient, PersonalLevelS
 
 - Editor target is pinned to **Cocos Creator 3.8.8** in `package.json`. Open the `client/` directory itself from Cocos Dashboard; it contains the required `package.json` and `assets/` project structure.
 - The launch scene is `assets/scenes/Boot.scene`. It attaches `BeyondTheUnknownGameEntry`, which builds a simple placeholder UI at runtime.
-- The prototype flow is WeChat login → shared-map enter → WebSocket AUTH/ENTER → remote avatar display and tap-to-move → enter the first unlocked personal room → read law catalog → abandon and return to the shared map.
-- The prototype uses generated geometric placeholders only. It does not invent final art, room geometry, mechanism positions, cooldowns, radii, or law durations. Law actions remain unavailable while the backend catalog reports `TUNING_REQUIRED`.
+- The current prototype flow is WeChat login → shared-map enter → WebSocket AUTH/ENTER → remote avatar display with tap-to-move or virtual joystick → enter the next unlocked room → use server-configured law combinations → interact with room mechanisms → server-authoritative settlement → continue through ROOM-01–05 and the unlocked hidden ending. Abandon/return-to-world remains available.
+- The prototype uses procedural geometric presentation only: room-specific isometric floor tiles, mechanism-type glyphs, placeholder avatars and a touch virtual joystick. It does not invent final art, room geometry, mechanism positions, cooldowns, radii, or law durations. Combo definitions, movement speed, spawn, bounds and interaction radius are read from server-owned level configuration; the server enforces the configured movement speed. Law actions remain unavailable while the backend catalog reports `TUNING_REQUIRED`.
 - For local WeChat DevTools testing, the default API/WebSocket endpoints are `http://127.0.0.1:8000/api/v1` and `ws://127.0.0.1:8000`. Enable local network URL validation bypass in DevTools for this local-only setup, or change the component properties to a registered HTTPS/WSS domain before testing on a real device.
 - Configure the WeChat test AppID in the editor/build profile and server-side AppID/AppSecret through environment variables only. Never place AppSecret or WeChat `session_key` in the client project or Git.
 - Cocos Creator generates `.meta` files for imported assets. The Boot scene and entry script include their initial metadata; allow the editor to update metadata if it reports a format-version change.
@@ -90,3 +90,12 @@ The engine-independent TypeScript tests continue to run with `npm test` and `npm
 ## WeChat Mini Game build
 
 See [微信小游戏构建与联调手册](../docs/engineering/wechat-mini-game-build.md) for the Cocos Creator 3.8.8 import/build steps, test AppID selection, server-only AppSecret configuration, HTTPS/WSS domain requirements and real-device acceptance checklist.
+
+
+## Current multi-room prototype boundary
+
+- ROOM-01–05 and LV-HIDDEN-01 can be entered through the current client flow; per-room combo controls are loaded from `levels.config.prototype_combos`, not hard-coded by room ID.
+- The personal-room prototype uses the GDD 4.2 45° isometric transform. The virtual joystick maps screen-space direction back into logical room direction; click-to-move remains available.
+- Mechanisms are drawn from the server catalog's canonical `mechanism_type` and state. These procedural glyphs and tile palettes are temporary playtest visuals, not approved final assets.
+- The asset manifest remains 112/112 `MISSING`; strict release-assets validation must remain blocked until real files, source/license data, Cocos import evidence and device acceptance are supplied.
+- The complete client-side movement state machine is not finished: obstacle collision, pathfinding, final character animation, multi-touch/safe-area tuning and real-device movement feel remain open.
