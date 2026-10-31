@@ -1,5 +1,7 @@
 name: client-ci
 
+# Covers engine-independent input transforms and GameEntry source-contract checks.
+
 on:
   pull_request:
     paths:
