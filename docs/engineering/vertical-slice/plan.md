@@ -213,3 +213,13 @@
 - [x] ROOM-01 与 ROOM-02～05/隐藏结局复用同一机关形状映射和 ACTIVE/LOCKED/IDLE 状态颜色规则。
 - [x] Client CI 通过，PR #114 已合并。
 - [ ] 当前机关符号仍是程序化几何原型，不是正式机关美术；正式资源、动画、音效与 Cocos/微信真机验收未完成。
+
+
+## 16. VS-6M 资源批次门禁与客户端法则租约一致性（PR #117–#120）
+- [x] 112 项正式资源全部进入 P0/P1/P2 生产批次，数量分别为 37/24/51；每项 manifest 同时记录 priority 与 delivery_phase（PR #117）。
+- [x] 资源校验器强制批次成员归属，ROOM-01 P0 核心资产不能被误降级；所有 112 项仍 required=true、MISSING，strict release-assets 门禁继续阻断发布（PR #117）。
+- [x] 客户端测试读取六个关卡配置，确保所有已配置 canonical mechanism_type 均有专用几何原型符号，不会静默退回 GENERIC（PR #118）。
+- [x] GameEntry 按服务端 rule_catalog.lease_timeout_ms 续期 GAZE；续期周期取租约的三分之一，并与 LawController 共用计算函数（PR #119）。
+- [x] GAZE 租约小于 750 ms 时视为不具备安全续期窗口，禁止启动持续注视组合；边界和非法值有单元测试（PR #120）。
+- [ ] 正式资源实物交付：112 项仍全部 MISSING；P0 37 项尚未完成美术/音频制作、授权、Cocos 导入和真机验收。
+- [ ] Cocos Creator 3.8.8 编辑器实际导入/构建、微信开发者工具构建、Android/iOS 真机联调仍需外部 GUI 与设备操作。
