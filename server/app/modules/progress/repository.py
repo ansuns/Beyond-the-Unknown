@@ -9,6 +9,7 @@ from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import get_settings
+from app.modules.progress.tasks import record_task_event
 
 
 class SettlementRunNotFound(Exception):
@@ -755,6 +756,9 @@ async def record_discovery(
                 "DISCOVERY",
                 discovery_id,
             )
+            await record_task_event(
+                session, player_id, "COLLECTION", collection["collection_id"]
+            )
 
     if catalog["score_reason"]:
         await _write_score_event(
@@ -773,6 +777,7 @@ async def record_discovery(
         "DISCOVERY",
         discovery_id,
     )
+    await record_task_event(session, player_id, "DISCOVERY", discovery_id)
     if create_snapshot:
         await _snapshot_progress(session, player_id)
     return {
@@ -1043,6 +1048,7 @@ async def settle_level(
         str(result),
         is_repeat=prior_completion is not None,
     )
+    await record_task_event(session, player_id, "SETTLEMENT", run["level_id"])
 
     unlocked_route = await _try_unlock_hidden_route(
         session, player_id

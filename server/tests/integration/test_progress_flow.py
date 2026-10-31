@@ -1215,3 +1215,93 @@ def test_tasks_are_created_per_player_and_not_duplicated_on_repeat_reads() -> No
             )
         ] if players else [])
         app.dependency_overrides.clear()
+
+
+def test_task_progress_accumulates_once_per_source_event() -> None:
+    """GDD 11.1 rules 4 and 6: events advance objectives, duplicates do not."""
+    import json
+    from uuid import UUID
+
+    from sqlalchemy.ext.asyncio import AsyncSession
+
+    from app.modules.progress.tasks import record_task_event
+
+    app.dependency_overrides[get_wechat_code_provider] = lambda: FakeWeChatProvider()
+    player_id: UUID | None = None
+    task_id = "TEST-TASK-ACCUMULATE"
+    try:
+        with TestClient(app) as client:
+            login = client.post(
+                "/api/v1/auth/login",
+                json={"wx_code": str(uuid4()), "request_id": "task-accumulate-login"},
+            )
+            assert login.status_code == 200
+            headers = {"Authorization": f"Bearer {login.json()['data']['access_token']}"}
+            player_id = UUID(
+                client.get("/api/v1/player/me", headers=headers).json()["data"]["player_id"]
+            )
+
+        progress = {
+            "task_type": "TASK_EXPLORE",
+            "title": "累加用例",
+            "objectives": [
+                {
+                    "objective_id": "OBJ-COUNT",
+                    "objective_type": "SETTLEMENT",
+                    "target_value": 3,
+                    "current_value": 0,
+                }
+            ],
+            "applied_events": [],
+        }
+        _db_exec([
+            ("""
+                INSERT INTO player_tasks (player_id, task_id, status, progress)
+                VALUES (:player_id, :task_id, 'ACTIVE', CAST(:progress AS jsonb))
+            """, {
+                "player_id": player_id,
+                "task_id": task_id,
+                "progress": json.dumps(progress, ensure_ascii=False),
+            }),
+        ])
+
+        async def emit(source: str) -> None:
+            local_engine = create_async_engine(get_settings().database_url)
+            try:
+                async with AsyncSession(local_engine) as session:
+                    await record_task_event(session, player_id, "SETTLEMENT", source)
+                    await session.commit()
+            finally:
+                await local_engine.dispose()
+
+        asyncio.run(emit("run-1"))
+        asyncio.run(emit("run-1"))  # duplicate report
+        asyncio.run(emit("run-2"))
+
+        row = _db_fetch(
+            "SELECT progress, status FROM player_tasks"
+            " WHERE player_id = :player_id AND task_id = :task_id",
+            {"player_id": player_id, "task_id": task_id},
+        )[0]
+        stored = row["progress"]
+        assert stored["objectives"][0]["current_value"] == 2, stored
+        assert len(stored["applied_events"]) == 2
+        assert row["status"] == "ACTIVE"
+
+        asyncio.run(emit("run-3"))
+        done = _db_fetch(
+            "SELECT progress, status FROM player_tasks"
+            " WHERE player_id = :player_id AND task_id = :task_id",
+            {"player_id": player_id, "task_id": task_id},
+        )[0]
+        assert done["progress"]["objectives"][0]["current_value"] == 3
+        assert done["status"] == "COMPLETED"
+    finally:
+        if player_id is not None:
+            _db_exec([
+                (
+                    "DELETE FROM player_tasks WHERE player_id = :player_id",
+                    {"player_id": player_id},
+                )
+            ])
+        app.dependency_overrides.clear()

@@ -135,3 +135,78 @@ async def list_player_tasks(
             }
         )
     return result
+
+
+async def record_task_event(
+    session: AsyncSession,
+    player_id: UUID,
+    event_type: str,
+    source_id: str,
+) -> list[str]:
+    """Advance every matching objective by one for this gameplay event (GDD 11.1 rules 4-6).
+
+    Idempotency is per task: the applied key is stored in ``progress.applied_events``
+    inside the same row, and rows are locked FOR UPDATE, so a duplicated report from
+    the client advances nothing the second time. Tasks are not created here - if a
+    player has no task yet, there is nothing to advance.
+    """
+    if not event_type or not source_id:
+        return []
+    while True:
+        rows = (
+            await session.execute(
+                text("""
+                    SELECT task_id, status, progress
+                    FROM player_tasks
+                    WHERE player_id = :player_id
+                    FOR UPDATE
+                """),
+                {"player_id": player_id},
+            )
+        ).mappings().all()
+        if not rows:
+            return []
+
+        event_key = f"{event_type}:{source_id}"
+        advanced: list[str] = []
+        for row in rows:
+            progress = row["progress"] or {}
+            applied = progress.get("applied_events") or []
+            if event_key in applied:
+                continue
+            objectives = progress.get("objectives") or []
+            touched = False
+            for objective in objectives:
+                if objective.get("objective_type") != event_type:
+                    continue
+                current = int(objective.get("current_value", 0))
+                target = int(objective.get("target_value", 0))
+                if current >= target:
+                    continue
+                objective["current_value"] = current + 1
+                touched = True
+            if not touched:
+                # Still record the key so a duplicate report cannot flip it later.
+                applied.append(event_key)
+                progress["applied_events"] = applied[-50:]
+                continue
+            applied.append(event_key)
+            progress["applied_events"] = applied[-50:]
+            status = STATUS_COMPLETED if _is_complete(progress) else row["status"]
+            await session.execute(
+                text("""
+                    UPDATE player_tasks
+                    SET progress = CAST(:progress AS jsonb),
+                        status = :status,
+                        updated_at = now()
+                    WHERE player_id = :player_id AND task_id = :task_id
+                """),
+                {
+                    "progress": json.dumps(progress, ensure_ascii=False),
+                    "status": status,
+                    "player_id": player_id,
+                    "task_id": row["task_id"],
+                },
+            )
+            advanced.append(row["task_id"])
+        return advanced
