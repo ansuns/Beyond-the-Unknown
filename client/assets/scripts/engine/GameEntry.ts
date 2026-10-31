@@ -64,6 +64,7 @@ import {
   playEchoPulse,
   type ArtSet
 } from "./art-assets";
+import { assetService } from "./asset-service";
 
 const { ccclass, property } = _decorator;
 
@@ -153,7 +154,20 @@ export class BeyondTheUnknownGameEntry extends Component {
 
   /** Load the delivered P0 art, then dress whatever the prototype has drawn. */
   private async prepareArt(): Promise<void> {
-    this.art = await loadArtSet();
+    try {
+      // The bundle must be in memory before any frame is requested; the
+      // service handles timeout, retry and de-duplication.
+      await assetService.ensureBundle("resources", {
+        onProgress: (percent, note) =>
+          this.setStatus(`${note} ${Math.round(percent * 100)}%`)
+      });
+    } catch (error) {
+      this.setStatus(`资源加载失败：${error instanceof Error ? error.message : "未知错误"}`);
+      return;
+    }
+    this.art = await loadArtSet((loaded, total) =>
+      this.setStatus(`美术资源 ${loaded}/${total}`)
+    );
     this.artReady = true;
     this.decorateScene();
     const missing = this.art.missing;

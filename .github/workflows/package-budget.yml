@@ -1,0 +1,70 @@
+name: package-budget
+
+# The 4 MB limit is enforced by WeChat at upload time, which is far too late:
+# the first submission of this project was rejected with 5336KB and cost a
+# full build-upload round trip to discover. This job makes the number visible
+# on every change that can move it.
+
+on:
+  pull_request:
+    paths:
+      - "client/assets/**"
+      - "client/build-configs/**"
+      - "tools/package_gate.py"
+      - "tools/wechat_package_report.py"
+      - ".github/workflows/package-budget.yml"
+  push:
+    branches: [main]
+    paths:
+      - "client/assets/**"
+      - "client/build-configs/**"
+  workflow_dispatch:
+
+jobs:
+  budget:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install dependencies
+        run: python -m pip install --upgrade pip pillow
+
+      - name: Report source-side asset weight
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          root = Path("client/assets")
+          total = sum(p.stat().st_size for p in root.rglob("*") if p.is_file() and p.suffix != ".meta")
+          print(f"assets (no .meta): {total/1024/1024:.2f} MB")
+          for folder in sorted({p.relative_to(root).parts[0] for p in root.rglob("*") if p.is_file()}):
+              size = sum(p.stat().st_size for p in (root / folder).rglob("*") if p.is_file())
+              print(f"  {folder:12s} {size/1024:.0f} KB")
+          PY
+
+      # A full Cocos build is not available on a hosted runner, so the gate
+      # re-checks the last verified measurement. Refresh the file locally with
+      # `python tools/package_gate.py --build client/build/wechatgame-slim --json ...`
+      # after any change that can move the number.
+      - name: Gate against the last verified measurement
+        run: |
+          python tools/package_gate.py \
+            --from-report docs/engineering/reports/package-gate.json \
+            --config client/build-configs/wechat-slim.json \
+            --budget 3.5
+
+      - name: Validate the build config stays cropped
+        run: |
+          python - <<'PY'
+          import json, sys
+          config = json.load(open("client/build-configs/wechat-slim.json", encoding="utf-8"))
+          modules = config["overwriteProjectSettings"]["includeModules"]
+          required_off = ["physics-ammo", "physics-2d-box2d", "spine-3.8", "terrain",
+                          "tiled-map", "video", "webview", "particle", "particle-2d"]
+          missing = [name for name in required_off if modules.get(name) != "off"]
+          if missing:
+              print(f"FAIL: these engine modules are no longer cropped: {missing}")
+              sys.exit(1)
+          print("PASS: engine modules still cropped", len(required_off))
+          PY
