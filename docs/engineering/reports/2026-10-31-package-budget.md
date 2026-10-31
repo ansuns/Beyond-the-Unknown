@@ -135,7 +135,17 @@ Bundle 分布：
 - `.github/workflows/package-budget.yml`：每次改动 `client/assets` 或构建配置时运行，
   并额外校验引擎裁剪项没有被悄悄改回来。
 
-本地执行：
+一键构建 + 统计（构建结束必然打印包体，不依赖人记得去测）：
+
+```bash
+bash tools/build-wechat.sh          # 默认预算 3.5 MB
+# == build ==
+# == package report ==
+# 主包：2.85 MB / 预算 3.50 MB / 上限 4.00 MB
+# PASS: 包体门禁通过
+```
+
+单独跑门禁：
 
 ```bash
 python tools/package_gate.py --build client/build/wechatgame-slim \
