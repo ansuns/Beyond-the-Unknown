@@ -1,0 +1,41 @@
+{
+  "asset_id": "M01-LIGHT-01",
+  "task_id": "m01-light-active",
+  "kind": "sprite",
+  "generated_at": "2026-10-31T12:20:14+08:00",
+  "backend": "workbuddy-image-gen",
+  "raw": "build/gen/raw/Same_stone_lantern_pedestal_me_2026-10-31T04-20-14.png",
+  "output": "client/assets/resources/mechanisms/M01-LIGHT-01/M01-LIGHT-01_ACTIVE_01.png",
+  "raw_sha256": "4e6c0a71b4f462ae8347f552af972973370a157881a15dff863cc8922b70f5d6",
+  "output_sha256": "16a665ab0dc607f5cacab76b6095674ced6dd929bfb14ddf53f36c99142f3a34",
+  "source_size": [
+    1024,
+    1024
+  ],
+  "output_size": [
+    186,
+    256
+  ],
+  "key_color": [
+    247,
+    21,
+    247
+  ],
+  "post": {
+    "max_size": 256,
+    "padding": 8
+  },
+  "checks": {
+    "has_transparency": true,
+    "has_content": true,
+    "no_key_fringe": true,
+    "no_key_bleed": true,
+    "anchor_at_bottom": true
+  },
+  "warnings": [],
+  "transparent_pixels": 10362,
+  "opaque_pixels": 34136,
+  "semi_pixels": 3118,
+  "alpha_coverage": 0.7823840725806451,
+  "fringe_ratio": 0.0015294587046149753
+}

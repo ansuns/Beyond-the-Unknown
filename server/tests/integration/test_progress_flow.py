@@ -1185,7 +1185,15 @@ def test_tasks_are_created_per_player_and_not_duplicated_on_repeat_reads() -> No
                 "RULE_CAST",
                 "SETTLEMENT",
             ]
-            assert all(objective["current_value"] == 0 for objective in tutorial["objectives"])
+            # LOGIN is the one objective that is already met at this point: the
+            # player just logged in, and that is the event it counts. The other
+            # three wait for movement, a cast and a settlement.
+            assert [objective["current_value"] for objective in tutorial["objectives"]] == [
+                1,
+                0,
+                0,
+                0,
+            ]
 
             # Repeating the read must not create a second row for the same player.
             again = client.get("/api/v1/player/tasks", headers=headers_by_player[0])

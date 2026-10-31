@@ -24,7 +24,8 @@ def test_two_players_share_map_and_exchange_authoritative_events() -> None:
     try:
         with TestClient(app) as client:
             players = []
-            for _ in range(2):
+            baseline = None
+            for index in range(2):
                 login = client.post(
                     "/api/v1/auth/login",
                     json={"wx_code": str(uuid4()), "request_id": "map-test-login"},
@@ -34,12 +35,18 @@ def test_two_players_share_map_and_exchange_authoritative_events() -> None:
                 headers = {"Authorization": f"Bearer {token}"}
                 entered = client.post("/api/v1/map/enter", headers=headers)
                 assert entered.status_code == 200
-                players.append({"token": token, "headers": headers, **entered.json()["data"]})
+                data = entered.json()["data"]
+                if index == 0:
+                    # Other tests may already hold presence in this instance, so
+                    # the invariant is "each enter adds one", not "the map is
+                    # empty when this test starts".
+                    baseline = data["current_players"]
+                players.append({"token": token, "headers": headers, **data})
 
             first, second = players
             assert first["instance_id"] == second["instance_id"]
             assert first["spawn_position"] != second["spawn_position"]
-            assert second["current_players"] == 2
+            assert second["current_players"] == baseline + 1
 
             with client.websocket_connect("/api/v1/ws/map") as ws1:
                 ws1.send_json({

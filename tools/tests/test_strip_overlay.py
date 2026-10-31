@@ -11,6 +11,7 @@ only ever exercised through a flag the documentation did not mention.
 
 from __future__ import annotations
 
+import math
 import subprocess
 import sys
 from pathlib import Path
@@ -26,6 +27,7 @@ from strip_overlay import (  # noqa: E402
     GuardError,
     alpha_opaque_ratio,
     box_pixels,
+    cut_pixels,
     process,
 )
 
@@ -52,8 +54,11 @@ class TestCropMode:
         image = make_rgb()
         result, mode, note = process(image, mode="crop")
         assert mode == "crop"
-        assert result.size == (200, 150 - int(MIN_CROP_FRAC * 150))
         assert "crop_depth" in note
+        # P0-2 regression: the trimmed rows must be at least the approved fraction,
+        # not the truncation of it. 7% of 150 is 10.5, so 11 rows go, not 10.
+        assert result.height == 150 - math.ceil(MIN_CROP_FRAC * 150)
+        assert 1 - result.height / 150 >= MIN_CROP_FRAC
 
     def test_auto_mode_uses_crop_for_rgb(self) -> None:
         result, mode, _ = process(make_rgb(), mode="auto")
@@ -133,6 +138,89 @@ class TestGeometryEdges:
     def test_tiny_image_is_refused_by_inpaint_guard(self) -> None:
         with pytest.raises(GuardError, match="too small"):
             process(Image.new("RGB", (8, 8), (0, 0, 0)), mode="inpaint")
+
+
+class TestCropRounding:
+    """The trim must never come out shallower than the fraction it was approved at.
+
+    ``int(0.07 * 150)`` is 10, i.e. 6.67% - less than the 7% the guard demanded.
+    On a 14px-tall frame it is 0, so the command reported success and removed
+    nothing. Both cases are real, both are covered here.
+    """
+
+    @pytest.mark.parametrize("height", [14, 15, 20, 150, 400, 1024, 1536])
+    def test_rgb_trim_reaches_the_approved_fraction(self, height: int) -> None:
+        result, _, _ = process(Image.new("RGB", (300, height), (5, 5, 5)), mode="crop")
+        removed = height - result.height
+        assert removed >= cut_pixels((300, height), MIN_CROP_FRAC, 0.0)[1]
+        assert removed / height >= MIN_CROP_FRAC
+
+    @pytest.mark.parametrize("height", [14, 15, 150, 1024])
+    def test_rgba_trim_reaches_the_approved_fraction(self, height: int) -> None:
+        image = Image.new("RGBA", (300, height), (5, 5, 5, 255))
+        result, _, _ = process(image, mode="crop")
+        removed = height - result.height
+        assert removed / height >= MIN_CROP_FRAC
+
+    def test_rgba_and_rgb_crop_identically(self) -> None:
+        rgb, _, _ = process(Image.new("RGB", (300, 400), (1, 2, 3)), mode="crop")
+        rgba, _, _ = process(Image.new("RGBA", (300, 400), (1, 2, 3, 255)), mode="crop")
+        assert rgb.size == rgba.size
+
+    def test_cut_pixels_rounds_up(self) -> None:
+        assert cut_pixels((300, 150), MIN_CROP_FRAC, 0.0) == (0, 11)
+        assert cut_pixels((300, 14), MIN_CROP_FRAC, 0.0) == (0, 1)
+        assert cut_pixels((300, 100), 0.0, 0.0) == (0, 0)
+
+    def test_bottom_and_right_are_both_applied(self) -> None:
+        result, _, note = process(
+            Image.new("RGB", (400, 400), (9, 9, 9)), mode="crop", crop_bottom=0.1, crop_right=0.1
+        )
+        assert result.size == (400 - 40, 400 - 40)
+        assert "cut=40x40px" in note
+
+    def test_crop_that_would_empty_the_frame_is_refused(self) -> None:
+        with pytest.raises(GuardError, match="empty image"):
+            process(Image.new("RGB", (40, 40), (0, 0, 0)), mode="crop", crop_bottom=1.0, force=True)
+
+    def test_crop_is_still_applied_when_a_frame_is_too_thin(self) -> None:
+        """A 1px frame cannot lose 7% of itself; the guard must say so."""
+        with pytest.raises(GuardError, match="empty image"):
+            process(Image.new("RGB", (40, 1), (0, 0, 0)), mode="crop")
+
+    def test_degenerate_crop_of_a_zero_height_image_is_refused(self) -> None:
+        with pytest.raises(GuardError):
+            process(Image.new("RGB", (16, 0), (0, 0, 0)), mode="crop")
+
+
+class TestBadInput:
+    def test_unknown_mode_is_rejected(self) -> None:
+        with pytest.raises(GuardError, match="unknown mode"):
+            process(Image.new("RGB", (64, 64), (0, 0, 0)), mode="blur")
+
+    def test_empty_image_passes_geometry_without_crashing(self) -> None:
+        empty = Image.new("RGBA", (0, 0))
+        with pytest.raises(GuardError, match="nothing to process"):
+            process(empty, mode="alpha")
+
+    def test_corrupt_file_exits_non_zero(self, tmp_path: Path) -> None:
+        broken = tmp_path / "broken.png"
+        broken.write_bytes(b"\x89PNG\r\n\x1a\nnot-really-a-png")
+        completed = subprocess.run(
+            [sys.executable, str(TOOLS / "strip_overlay.py"), str(broken), str(tmp_path / "o.png"), "--mode", "crop"],
+            capture_output=True,
+            text=True,
+        )
+        assert completed.returncode != 0
+        assert not (tmp_path / "o.png").exists()
+
+    def test_missing_file_exits_non_zero(self, tmp_path: Path) -> None:
+        completed = subprocess.run(
+            [sys.executable, str(TOOLS / "strip_overlay.py"), str(tmp_path / "nope.png"), str(tmp_path / "o.png")],
+            capture_output=True,
+            text=True,
+        )
+        assert completed.returncode != 0
 
 
 class TestDocumentedCommand:

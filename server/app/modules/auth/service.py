@@ -7,6 +7,7 @@ from app.core.config import Settings
 from app.core.security import create_access_token, hash_wechat_openid
 from app.modules.auth.provider import WeChatCodeProvider
 from app.modules.auth.repository import get_or_create_player
+from app.modules.level_events.service import record_login_event
 
 
 async def login_with_wechat(
@@ -16,6 +17,9 @@ async def login_with_wechat(
     openid = await provider.exchange(code)
     digest = hash_wechat_openid(openid, settings.openid_hmac_secret)
     player, is_new_player = await get_or_create_player(session, digest)
+    # Authenticate first, count the login second: a progress-side failure must
+    # never stop a player from signing in, so this is best effort by design.
+    await record_login_event(session, player["player_id"])
     token = create_access_token(
         player["player_id"], settings.jwt_secret, settings.jwt_access_token_seconds
     )

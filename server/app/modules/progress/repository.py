@@ -1,9 +1,9 @@
 import hashlib
 import json
-from datetime import UTC, date, datetime, time, timedelta
+from datetime import UTC, date, datetime, time, timedelta, tzinfo
 from typing import Any
 from uuid import UUID
-from zoneinfo import ZoneInfo
+from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -45,9 +45,30 @@ class RewardNotClaimable(Exception):
     pass
 
 
+def _server_timezone() -> tzinfo:
+    """Resolve SERVER_TIMEZONE without depending on a host tz database.
+
+    Windows ships no IANA database, so ``ZoneInfo("UTC")`` raises there even
+    though UTC is the configured default; the week and month boundaries every
+    leaderboard season keys off would then fail with a 500. UTC has an exact
+    stdlib representation, so use it directly and keep ZoneInfo for real zones.
+    A genuine IANA zone still fails loudly when tzdata is absent rather than
+    silently falling back to UTC and shifting period boundaries.
+    """
+    key = get_settings().server_timezone
+    if key.strip().upper() in {"UTC", "ETC/UTC", "GMT", "Z"}:
+        return UTC
+    try:
+        return ZoneInfo(key)
+    except ZoneInfoNotFoundError as exc:
+        raise RuntimeError(
+            f"SERVER_TIMEZONE={key!r} needs the IANA tz database; install the 'tzdata' package"
+        ) from exc
+
+
 def _periods(now: datetime) -> list[dict[str, Any]]:
-    timezone = ZoneInfo(get_settings().server_timezone)
-    local_now = now.astimezone(timezone)
+    server_tz = _server_timezone()
+    local_now = now.astimezone(server_tz)
     week_start_date = local_now.date() - timedelta(days=local_now.weekday())
     month_start_date = local_now.date().replace(day=1)
     definitions: list[tuple[str, date, date]] = [
@@ -68,8 +89,8 @@ def _periods(now: datetime) -> list[dict[str, Any]]:
     ]
     result = []
     for season_type, start_date, end_date in definitions:
-        start_local = datetime.combine(start_date, time.min, tzinfo=timezone)
-        end_local = datetime.combine(end_date, time.min, tzinfo=timezone)
+        start_local = datetime.combine(start_date, time.min, tzinfo=server_tz)
+        end_local = datetime.combine(end_date, time.min, tzinfo=server_tz)
         if season_type == "WEEKLY":
             season_id = f"WEEKLY-{start_date:%Y%m%d}"
         else:

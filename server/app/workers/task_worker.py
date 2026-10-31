@@ -4,6 +4,7 @@ import asyncio
 import json
 import logging
 from collections.abc import Awaitable, Callable
+from dataclasses import dataclass
 from datetime import UTC, datetime, timedelta
 from typing import Any
 from uuid import UUID
@@ -378,39 +379,97 @@ async def season_scheduler_loop() -> None:
         await asyncio.sleep(SEASON_SCHEDULER_SECONDS)
 
 
+@dataclass(frozen=True)
+class Topology:
+    """Queue and exchange names for one deployment.
+
+    Kept as data so the broker integration test can run the identical
+    declaration against sandbox names instead of re-implementing the topology
+    and drifting from it.
+    """
+
+    task_queue: str
+    retry_ttl_ms: int
+
+    @property
+    def retry_queue(self) -> str:
+        return self.task_queue + RETRY_QUEUE_SUFFIX
+
+    @property
+    def retry_exchange(self) -> str:
+        return RETRY_EXCHANGE
+
+    @property
+    def dead_letter_exchange(self) -> str:
+        return DEAD_LETTER_EXCHANGE
+
+    @property
+    def dead_letter_queue(self) -> str:
+        return DEAD_LETTER_QUEUE
+
+    def sandbox(self, suffix: str) -> "Topology":
+        """Same shape under test-only names."""
+        return Topology(task_queue=f"{self.task_queue}.{suffix}", retry_ttl_ms=500)
+
+
+def topology_from_settings() -> Topology:
+    settings = get_settings()
+    return Topology(
+        task_queue=settings.rabbitmq_task_queue,
+        retry_ttl_ms=settings.rabbitmq_retry_delay_ms,
+    )
+
+
+async def declare_topology(
+    channel: AbstractRobustChannel,
+    topology: Topology | None = None,
+) -> tuple[Any, AbstractExchange, AbstractExchange]:
+    """Declare the task, retry and dead-letter topology in one place.
+
+    ``main`` and the broker integration test both call this, so the topology the
+    test proves is byte-for-byte the topology production runs.
+    """
+    topology = topology or topology_from_settings()
+    dead_letter_exchange = await channel.declare_exchange(
+        topology.dead_letter_exchange, ExchangeType.DIRECT, durable=True
+    )
+    dead_letter_queue = await channel.declare_queue(topology.dead_letter_queue, durable=True)
+    await dead_letter_queue.bind(dead_letter_exchange, routing_key="failed")
+
+    retry_exchange = await channel.declare_exchange(
+        topology.retry_exchange, ExchangeType.DIRECT, durable=True
+    )
+    retry_queue = await channel.declare_queue(
+        topology.retry_queue,
+        durable=True,
+        arguments={
+            "x-message-ttl": topology.retry_ttl_ms,
+            "x-dead-letter-exchange": "",
+            "x-dead-letter-routing-key": topology.task_queue,
+        },
+    )
+    await retry_queue.bind(retry_exchange, routing_key=RETRY_ROUTING_KEY)
+
+    queue = await channel.declare_queue(
+        topology.task_queue,
+        durable=True,
+        arguments={
+            "x-dead-letter-exchange": topology.dead_letter_exchange,
+            "x-dead-letter-routing-key": "failed",
+        },
+    )
+    return queue, retry_exchange, dead_letter_exchange
+
+
 async def main() -> None:
     settings = get_settings()
+    topology = topology_from_settings()
     connection = await aio_pika.connect_robust(settings.rabbitmq_url)
     async with connection:
         channel = await connection.channel(publisher_confirms=True)
         await channel.set_qos(prefetch_count=10)
-        dead_letter_exchange = await channel.declare_exchange(
-            DEAD_LETTER_EXCHANGE, ExchangeType.DIRECT, durable=True
-        )
-        dead_letter_queue = await channel.declare_queue(DEAD_LETTER_QUEUE, durable=True)
-        await dead_letter_queue.bind(dead_letter_exchange, routing_key="failed")
-
-        retry_exchange = await channel.declare_exchange(
-            RETRY_EXCHANGE, ExchangeType.DIRECT, durable=True
-        )
-        retry_queue = await channel.declare_queue(
-            settings.rabbitmq_task_queue + RETRY_QUEUE_SUFFIX,
-            durable=True,
-            arguments={
-                "x-message-ttl": settings.rabbitmq_retry_delay_ms,
-                "x-dead-letter-exchange": "",
-                "x-dead-letter-routing-key": settings.rabbitmq_task_queue,
-            },
-        )
-        await retry_queue.bind(retry_exchange, routing_key=RETRY_ROUTING_KEY)
-
-        queue = await channel.declare_queue(
-            settings.rabbitmq_task_queue,
-            durable=True,
-            arguments={
-                "x-dead-letter-exchange": DEAD_LETTER_EXCHANGE,
-                "x-dead-letter-routing-key": "failed",
-            },
+        queue, retry_exchange, dead_letter_exchange = await declare_topology(
+            channel, topology
         )
 
         async def consume(message: AbstractIncomingMessage) -> None:

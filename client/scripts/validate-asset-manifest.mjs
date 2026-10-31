@@ -32,7 +32,7 @@ for (const entry of manifest.entries ?? []) {
 }
 
 console.log(
-  `Asset manifest: ${result.total} required entries; ${result.counts.READY} READY, ${result.counts.IN_PROGRESS} IN_PROGRESS, ${result.counts.MISSING} MISSING, ${result.counts.BLOCKED} BLOCKED.`
+  `Asset manifest: ${result.total} required entries; ${result.counts.READY} READY, ${result.counts.REVIEW} REVIEW, ${result.counts.GENERATED} GENERATED, ${result.counts.PROCESSING + result.counts.IN_PROGRESS} PROCESSING, ${result.counts.MISSING} MISSING, ${result.counts.BLOCKED} BLOCKED.`
 );
 if (!strict && result.counts.MISSING > 0) {
   console.log("Non-strict mode: missing assets are tracked work, not treated as a CI failure.");

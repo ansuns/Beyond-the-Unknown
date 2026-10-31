@@ -1,0 +1,190 @@
+{
+  "schema_version": 1,
+  "style_baseline": {
+    "id": "BTU-STYLE-01",
+    "description": "Original cute Q-version fantasy, clean thick line art, soft cel shading, warm muted palette, readable silhouette at 256px.",
+    "reference": "docs/engineering/assets/reference/CHR_001_base.png",
+    "rule": "Every character, portrait and preview derives from the CHR_001 reference by image-to-image so one design sheet stays authoritative.",
+    "note": "Reports live under docs/ so the manifest's provenance reference survives a fresh clone; raw generations stay in build/gen and are not committed."
+  },
+  "backends": [
+    {
+      "name": "workbuddy-image-gen",
+      "entry": "ImageGen tool",
+      "status": "AVAILABLE",
+      "alpha": false,
+      "reference_images": true,
+      "batch": false,
+      "notes": "Returns RGB only; backdrop must be keyed locally. Corner watermark is baked in."
+    },
+    {
+      "name": "miora",
+      "entry": "connect_cloud_service + miora_* tools",
+      "status": "NOT_EXPOSED",
+      "notes": "Only video-effect and 3D commands are wired into this workspace; no image command is reachable."
+    }
+  ],
+  "tasks": [
+    {
+      "id": "chr001-model",
+      "asset_id": "CHR_001_MODEL",
+      "kind": "sprite",
+      "state": "POSTED",
+      "backend": "workbuddy-image-gen",
+      "reference": "docs/engineering/assets/reference/CHR_001_base.png",
+      "size": "1024x1024",
+      "quality": "high",
+      "generated_at": "2026-10-31T12:17:21+08:00",
+      "raw": "build/gen/raw/Full_body_standing_idle_sprite_2026-10-31T04-17-21.png",
+      "prompt": "Full body standing idle sprite of the same chibi boy from the reference image: messy brown hair, large blue eyes, green hooded cloak with gold trim, cream tunic, brown leather belt and boots, small brass lantern at his hip. Original cute fantasy Q-version style, clean thick line art, soft cel shading. Facing the viewer, standing straight, arms relaxed at sides. Entire body visible from head to boots with margin. Background is one perfectly flat uniform solid magenta color #FF00FF filling the whole canvas, no gradient. No ground, no floor, no shadow, no glow, no border, no text, no logo.",
+      "post": {
+        "max_size": 512,
+        "padding": 8
+      },
+      "output": "client/assets/resources/characters/CHR_001/model/CHR_001_MODEL_IDLE_S_01.png",
+      "report": "docs/engineering/assets/production/reports/CHR_001_MODEL.json",
+      "posted_at": "2026-10-31T12:25:14+08:00",
+      "checks": {
+        "has_transparency": true,
+        "has_content": true,
+        "no_key_fringe": true,
+        "no_key_bleed": true,
+        "anchor_at_bottom": true
+      }
+    },
+    {
+      "id": "chr001-portrait",
+      "asset_id": "CHR_001_PORTRAIT",
+      "kind": "sprite",
+      "state": "POSTED",
+      "backend": "workbuddy-image-gen",
+      "reference": "docs/engineering/assets/reference/CHR_001_base.png",
+      "size": "1024x1024",
+      "quality": "high",
+      "generated_at": "2026-10-31T12:19:05+08:00",
+      "raw": "build/gen/raw/Head_and_shoulders_character_p_2026-10-31T04-19-05.png",
+      "prompt": "Head and shoulders character portrait icon of the same chibi boy from the reference: messy brown hair, large blue eyes, green hooded cloak with gold trim, cream tunic collar. Original cute fantasy Q-version anime style, clean line art, soft cel shading, friendly smile, facing the viewer. Framed from chest up, centred with margin. Background is one perfectly flat uniform solid magenta color #FF00FF filling the whole canvas, no gradient. No text, no border, no logo, no shadow.",
+      "post": {
+        "max_size": 256,
+        "padding": 8
+      },
+      "output": "client/assets/resources/characters/CHR_001/portrait/CHR_001_PORTRAIT_FRONT_01.png",
+      "report": "docs/engineering/assets/production/reports/CHR_001_PORTRAIT.json",
+      "posted_at": "2026-10-31T12:25:16+08:00",
+      "checks": {
+        "has_transparency": true,
+        "has_content": true,
+        "no_key_fringe": true,
+        "no_key_bleed": true,
+        "anchor_at_bottom": true
+      }
+    },
+    {
+      "id": "m01-light-inactive",
+      "asset_id": "M01-LIGHT-01",
+      "kind": "sprite",
+      "state": "POSTED",
+      "backend": "workbuddy-image-gen",
+      "reference": null,
+      "size": "1024x1024",
+      "quality": "high",
+      "generated_at": "2026-10-31T12:19:37+08:00",
+      "raw": "build/gen/raw/Game_prop_sprite_of_a_fantasy__2026-10-31T04-19-37.png",
+      "prompt": "Game prop sprite of a fantasy stone lantern pedestal mechanism, carved grey stone column with a glowing amber crystal core, runic ring around the base, moss in the crevices. Original cute Q-version fantasy style, clean thick outline, soft cel shading, three-quarter view standing upright. Entire prop visible with margin. Background is one perfectly flat uniform solid magenta color #FF00FF filling the whole canvas, no gradient. No ground, no floor, no shadow, no glow spill on the background, no text, no logo.",
+      "post": {
+        "max_size": 256,
+        "padding": 8
+      },
+      "output": "client/assets/resources/mechanisms/M01-LIGHT-01/M01-LIGHT-01_INACTIVE_01.png",
+      "report": "docs/engineering/assets/production/reports/M01-LIGHT-01_INACTIVE.json",
+      "posted_at": "2026-10-31T12:25:17+08:00",
+      "checks": {
+        "has_transparency": true,
+        "has_content": true,
+        "no_key_fringe": true,
+        "no_key_bleed": true,
+        "anchor_at_bottom": true
+      }
+    },
+    {
+      "id": "m01-light-active",
+      "asset_id": "M01-LIGHT-01",
+      "kind": "sprite",
+      "state": "POSTED",
+      "backend": "workbuddy-image-gen",
+      "reference": "client/assets/resources/mechanisms/M01-LIGHT-01/M01-LIGHT-01_INACTIVE_01.png",
+      "size": "1024x1024",
+      "quality": "high",
+      "generated_at": "2026-10-31T12:20:14+08:00",
+      "raw": "build/gen/raw/Same_stone_lantern_pedestal_me_2026-10-31T04-20-14.png",
+      "prompt": "Same stone lantern pedestal mechanism as the reference image, now activated: the amber crystal core glows brightly with warm light, the carved runes on the stone ring light up amber, subtle warm highlights on the stone edges. Identical shape, identical camera angle and identical scale as the reference. Original cute Q-version fantasy style, clean thick outline, soft cel shading. Background is one perfectly flat uniform solid magenta color #FF00FF, no gradient. No ground, no floor, no cast shadow, no glow bleeding into the background, no text, no logo.",
+      "post": {
+        "max_size": 256,
+        "padding": 8
+      },
+      "output": "client/assets/resources/mechanisms/M01-LIGHT-01/M01-LIGHT-01_ACTIVE_01.png",
+      "report": "docs/engineering/assets/production/reports/M01-LIGHT-01_ACTIVE.json",
+      "posted_at": "2026-10-31T12:25:19+08:00",
+      "checks": {
+        "has_transparency": true,
+        "has_content": true,
+        "no_key_fringe": true,
+        "no_key_bleed": true,
+        "anchor_at_bottom": true
+      }
+    },
+    {
+      "id": "fx-echo-pulse",
+      "asset_id": "FX_ECHO_PULSE_01",
+      "kind": "sprite",
+      "state": "POSTED",
+      "backend": "workbuddy-image-gen",
+      "reference": null,
+      "size": "1024x1024",
+      "quality": "high",
+      "generated_at": "2026-10-31T12:20:30+08:00",
+      "raw": "build/gen/raw/Game_visual_effect_sprite__a_c_2026-10-31T04-20-30.png",
+      "prompt": "Game visual effect sprite: a circular expanding echo pulse ring, concentric rings of pale cyan light with soft glow and small floating sparkles, one single ring centred in the frame, viewed flat from the front. Original cute fantasy style, clean shapes, bright cyan and white. Entire ring visible with margin, ring is circular not elliptical. Background is one perfectly flat uniform solid magenta color #FF00FF, no gradient. No ground, no shadow, no character, no text, no logo.",
+      "post": {
+        "max_size": 256,
+        "padding": 8
+      },
+      "output": "client/assets/resources/effects/FX_ECHO_PULSE_01.png",
+      "report": "docs/engineering/assets/production/reports/FX_ECHO_PULSE_01.json",
+      "posted_at": "2026-10-31T12:25:21+08:00",
+      "checks": {
+        "has_transparency": true,
+        "has_content": true,
+        "no_key_fringe": true,
+        "no_key_bleed": true,
+        "anchor_at_bottom": true
+      }
+    },
+    {
+      "id": "map-main-scene",
+      "asset_id": "MAP_MAIN_001_SCENE",
+      "kind": "background",
+      "state": "POSTED",
+      "backend": "workbuddy-image-gen",
+      "reference": null,
+      "size": "1536x1024",
+      "quality": "high",
+      "generated_at": "2026-10-31T12:19:20+08:00",
+      "raw": "build/gen/raw/Isometric_45_degree_game_scene_2026-10-31T04-19-20.png",
+      "prompt": "Isometric 45-degree game scene background for a fantasy exploration hub: a quiet stone courtyard with mossy flagstones, a low broken colonnade, hanging vines, floating pale blue lanterns, distant misty green cliffs, warm afternoon light. Original cute Q-version fantasy style, soft painterly shading, clean shapes suitable for a 2.5D game map viewed from a fixed isometric camera. No characters, no UI, no text, no logos, no watermark. Wide composition that tiles cleanly at the edges.",
+      "post": {
+        "crop_bottom": 0.07,
+        "size": [
+          1024,
+          682
+        ]
+      },
+      "output": "client/assets/resources/maps/MAP_MAIN_001/scene/MAP_MAIN_001_SCENE_01.png",
+      "report": "docs/engineering/assets/production/reports/MAP_MAIN_001_SCENE.json",
+      "posted_at": "2026-10-31T12:25:22+08:00",
+      "checks": {
+        "has_content": true
+      }
+    }
+  ]
+}

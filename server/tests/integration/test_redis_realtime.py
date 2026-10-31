@@ -112,3 +112,63 @@ def test_two_api_nodes_share_presence_and_fanout_with_connection_lease() -> None
             await second.close()
 
     asyncio.run(run())
+
+
+def test_player_targeted_event_reaches_only_that_player_across_nodes() -> None:
+    """LEVEL_EVENT is private: the sender must receive it, others must not.
+
+    The regular ``broadcast`` excludes the sender, which is wrong for a level
+    event - the player who cast the rule is exactly who needs the confirmation.
+    """
+
+    async def run() -> None:
+        instance_id = f"redis-test-{uuid4()}"
+        first_client = Redis.from_url(REDIS_URL, decode_responses=True)
+        second_client = Redis.from_url(REDIS_URL, decode_responses=True)
+        first = MapConnectionManager(first_client, node_id="node-a", owns_redis_client=True)
+        second = MapConnectionManager(second_client, node_id="node-b", owns_redis_client=True)
+        own_socket = FakeWebSocket()
+        other_socket = FakeWebSocket()
+        avatar = {
+            "player_id": "player-1",
+            "character_id": "CHAR_001",
+            "x": 0.0,
+            "y": 0.0,
+            "direction": "S",
+        }
+        other_avatar = {**avatar, "player_id": "player-2"}
+        try:
+            await first.start(presence_ttl_seconds=30)
+            await second.start(presence_ttl_seconds=30)
+            # player-1 is on node A, player-2 hears about them on node B.
+            await first.attach(own_socket, instance_id, "player-1", avatar)
+            await second.attach(other_socket, instance_id, "player-2", other_avatar)
+            await wait_for_command(other_socket, "ENTER")
+
+            other_before = len(other_socket.messages)
+            own_before = len(own_socket.messages)
+            await first.send_to_player(
+                instance_id,
+                "player-1",
+                "LEVEL_EVENT",
+                {"event": "RULE_CAST", "source_id": "RUN:1:RULE:RULE_ECHO"},
+            )
+
+            received = await wait_for_command(own_socket, "LEVEL_EVENT", after=own_before)
+            assert received["payload"]["event"] == "RULE_CAST"
+            assert received["payload"]["source_id"] == "RUN:1:RULE:RULE_ECHO"
+
+            # Give the foreign node a moment to (incorrectly) deliver, then prove
+            # it did not.
+            await asyncio.sleep(0.3)
+            leaked = [
+                message
+                for message in other_socket.messages[other_before:]
+                if message["cmd"] == "LEVEL_EVENT"
+            ]
+            assert leaked == []
+        finally:
+            await first.close()
+            await second.close()
+
+    asyncio.run(run())

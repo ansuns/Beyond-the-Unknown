@@ -17,8 +17,14 @@ describe("asset manifest contract", () => {
     expect(result.errors).toEqual([]);
     expect(result.expectedCount).toBe(112);
     expect(result.counts.READY).toBe(0);
+    // Every entry sits somewhere in the lifecycle: nothing is unaccounted for.
     expect(
-      result.counts.MISSING + result.counts.IN_PROGRESS + result.counts.BLOCKED
+      result.counts.MISSING +
+        result.counts.PROCESSING +
+        result.counts.IN_PROGRESS +
+        result.counts.GENERATED +
+        result.counts.REVIEW +
+        result.counts.BLOCKED
     ).toBe(112);
     expect(manifest.entries.filter((entry: any) => entry.priority === "P0")).toHaveLength(37);
     expect(manifest.entries.filter((entry: any) => entry.priority === "P1")).toHaveLength(24);

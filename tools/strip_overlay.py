@@ -31,6 +31,7 @@ Usage:
 from __future__ import annotations
 
 import argparse
+import math
 from pathlib import Path
 
 from PIL import Image
@@ -93,7 +94,9 @@ def check_alpha(image: Image.Image, rect: tuple[int, int, int, int], force: bool
     return f"opaque_ratio={ratio:.2%}"
 
 
-def check_crop(crop_bottom: float, crop_right: float, force: bool) -> str:
+def check_crop(
+    size: tuple[int, int], crop_bottom: float, crop_right: float, force: bool
+) -> str:
     if crop_bottom < 0 or crop_right < 0:
         raise GuardError("crop fractions must not be negative")
     depth = max(crop_bottom, crop_right)
@@ -109,7 +112,27 @@ def check_crop(crop_bottom: float, crop_right: float, force: bool) -> str:
             f"cropping {depth:.1%} removes more than {MAX_CROP_FRAC:.0%} of the image; "
             "confirm with --force if that is intended."
         )
-    return f"crop_depth={depth:.3%}"
+
+    # Rounding must not be allowed to quietly satisfy the fractional guard while
+    # removing nothing: a 14px-tall frame at 7% truncates to 0 rows.
+    width, height = size
+    cut_right, cut_bottom = cut_pixels(size, crop_bottom, crop_right)
+    if cut_bottom >= height or cut_right >= width:
+        raise GuardError(
+            f"cropping {cut_bottom} row(s) of {height} and {cut_right} column(s) of "
+            f"{width} would leave an empty image."
+        )
+    if crop_bottom > 0 and cut_bottom < 1:
+        raise GuardError(
+            f"image is {height}px tall, so a {crop_bottom:.1%} trim rounds to zero "
+            "rows and the mark survives."
+        )
+    if crop_right > 0 and cut_right < 1:
+        raise GuardError(
+            f"image is {width}px wide, so a {crop_right:.1%} trim rounds to zero "
+            "columns and the mark survives."
+        )
+    return f"crop_depth={depth:.3%} cut={cut_right}x{cut_bottom}px"
 
 
 def check_inpaint(image: Image.Image, rect: tuple[int, int, int, int], force: bool) -> str:
@@ -127,10 +150,28 @@ def strip_alpha(image: Image.Image, rect: tuple[int, int, int, int]) -> Image.Im
     return out
 
 
+def cut_pixels(
+    size: tuple[int, int], crop_bottom: float, crop_right: float
+) -> tuple[int, int]:
+    """Pixels to drop on the right and bottom, rounded up.
+
+    ``int()`` truncates, so the old code removed less than the fraction the guard
+    had just approved - 7% of 150 rows is 10.5, and 10 rows is 6.67%. Rounding up
+    keeps the real trim at or above the approved one.
+    """
+    width, height = size
+    # 0.07 * 400 is 28.000000000000004 in binary floating point; rounding to nine
+    # decimals first stops ceil() from adding a phantom row on exact fractions.
+    cut_right = math.ceil(round(crop_right * width, 9)) if crop_right > 0 else 0
+    cut_bottom = math.ceil(round(crop_bottom * height, 9)) if crop_bottom > 0 else 0
+    return cut_right, cut_bottom
+
+
 def strip_crop(image: Image.Image, crop_bottom: float, crop_right: float) -> Image.Image:
     width, height = image.size
-    keep_w = max(1, width - int(crop_right * width))
-    keep_h = max(1, height - int(crop_bottom * height))
+    cut_right, cut_bottom = cut_pixels(image.size, crop_bottom, crop_right)
+    keep_w = max(1, width - cut_right)
+    keep_h = max(1, height - cut_bottom)
     return image.crop((0, 0, keep_w, keep_h))
 
 
@@ -169,6 +210,9 @@ def process(
     force: bool = False,
 ) -> tuple[Image.Image, str, str]:
     """Return (image, mode_used, guard_note). Raises ``GuardError`` when refused."""
+    width, height = image.size
+    if width < 1 or height < 1:
+        raise GuardError(f"image is {width}x{height}; there is nothing to process")
     if mode == "auto":
         mode = "alpha" if image.mode == "RGBA" else "crop"
     if mode == "alpha" and image.mode != "RGBA":
@@ -178,7 +222,7 @@ def process(
     if mode == "alpha":
         return strip_alpha(image, rect), mode, check_alpha(image, rect, force)
     if mode == "crop":
-        note = check_crop(crop_bottom, crop_right, force)
+        note = check_crop(image.size, crop_bottom, crop_right, force)
         return strip_crop(image, crop_bottom, crop_right), mode, note
     if mode == "inpaint":
         return strip_inpaint(image, rect, mask_mode), mode, check_inpaint(image, rect, force)

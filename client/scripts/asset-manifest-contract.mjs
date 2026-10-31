@@ -175,7 +175,10 @@ function addExpected(expected, id, category) {
 export function validateAssetManifestStructure(manifest, levelConfig, strict = false) {
   const errors = [];
   const add = (message) => errors.push(message);
-  const counts = { MISSING: 0, IN_PROGRESS: 0, READY: 0, BLOCKED: 0 };
+  // Lifecycle: MISSING -> PROCESSING -> GENERATED -> REVIEW -> READY, with BLOCKED
+  // reachable from any state. IN_PROGRESS is the legacy name for PROCESSING and is
+  // kept so older entries stay readable.
+  const counts = { MISSING: 0, PROCESSING: 0, IN_PROGRESS: 0, GENERATED: 0, REVIEW: 0, READY: 0, BLOCKED: 0 };
   const levels = Array.isArray(levelConfig?.levels) ? levelConfig.levels : [];
   const expectedCharacters = Array.from({ length: 12 }, (_, index) =>
     `CHR_${String(index + 1).padStart(3, "0")}`
@@ -288,8 +291,11 @@ export function validateAssetManifestStructure(manifest, levelConfig, strict = f
       add(`${id}: source_chapter and acceptance are required`);
     }
     if (!Array.isArray(entry.files)) add(`${id}: files must be an array`);
-    if (entry.status === "READY" && (entry.files?.length ?? 0) === 0) {
-      add(`${id}: READY requires at least one delivered file`);
+    if (["GENERATED", "REVIEW", "READY"].includes(entry.status) && (entry.files?.length ?? 0) === 0) {
+      add(`${id}: ${entry.status} requires at least one delivered file`);
+    }
+    if (["GENERATED", "REVIEW"].includes(entry.status) && !entry.provenance?.source_reference) {
+      add(`${id}: ${entry.status} requires provenance.source_reference to the generation record`);
     }
     if (entry.status === "READY") {
       const provenance = entry.provenance;

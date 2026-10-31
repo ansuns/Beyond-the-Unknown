@@ -143,7 +143,7 @@ def test_personal_level_run_entry_is_idempotent_and_isolated() -> None:
         app.dependency_overrides.clear()
 
 
-def test_room01_echo_exit_interaction_and_settlement() -> None:
+def test_room01_echo_exit_interaction_and_settlement(tuned_rules: None) -> None:
     app.dependency_overrides[get_wechat_code_provider] = lambda: FakeWeChatProvider()
     try:
         with TestClient(app) as client:

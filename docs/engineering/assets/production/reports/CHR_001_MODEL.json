@@ -1,0 +1,41 @@
+{
+  "asset_id": "CHR_001_MODEL",
+  "task_id": "chr001-model",
+  "kind": "sprite",
+  "generated_at": "2026-10-31T12:17:21+08:00",
+  "backend": "workbuddy-image-gen",
+  "raw": "build/gen/raw/Full_body_standing_idle_sprite_2026-10-31T04-17-21.png",
+  "output": "client/assets/resources/characters/CHR_001/model/CHR_001_MODEL_IDLE_S_01.png",
+  "raw_sha256": "ac243226c2270cf794a9266684bafb21e24c3181485408ad50bad112432e3767",
+  "output_sha256": "6de08a057179da1f87d1133283b77bcfa731a860b02607ac0768049088d8a52c",
+  "source_size": [
+    1024,
+    1024
+  ],
+  "output_size": [
+    298,
+    512
+  ],
+  "key_color": [
+    248,
+    57,
+    251
+  ],
+  "post": {
+    "max_size": 512,
+    "padding": 8
+  },
+  "checks": {
+    "has_transparency": true,
+    "has_content": true,
+    "no_key_fringe": true,
+    "no_key_bleed": true,
+    "anchor_at_bottom": true
+  },
+  "warnings": [],
+  "transparent_pixels": 67437,
+  "opaque_pixels": 77490,
+  "semi_pixels": 7649,
+  "alpha_coverage": 0.5580104341442953,
+  "fringe_ratio": 0.0
+}

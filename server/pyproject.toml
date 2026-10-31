@@ -16,6 +16,8 @@ dependencies = [
   "httpx>=0.28,<1.0",
   "websockets>=13,<17.4",
   "PyJWT>=2.10,<3.0",
+  # Windows hosts ship no IANA database; ZoneInfo needs this for real zones.
+  "tzdata>=2025.1",
 ]
 
 [dependency-groups]
