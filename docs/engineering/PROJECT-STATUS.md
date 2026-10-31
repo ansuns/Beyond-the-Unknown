@@ -53,6 +53,7 @@
 | 结算 | `POST /level/settle` | 集成 1 | 已实现未验证 |
 | 探索/收藏/档案 | `modules/progress` | 集成 1 | 已实现未验证 |
 | 奖励领取 | `progress` + `rewards` 表 | 集成 1 | 已实现未验证 |
+| 奖励条件 SCORE 阈值 | `_grant_score_conditions` | 集成 1（CI 通过） | **已验证**（GDD 11.7） |
 | 三榜排行 | `GET /leaderboard` | 集成 2（CI 通过） | **已验证**（含 `season_id` 历史赛季查询） |
 | 赛季与周榜 | `season_service` + `seasons` 表 | 集成 2（CI 通过） | **已验证** |
 | 排行重算 | `POST /internal/leaderboard/{season_id}/recompute` | 集成 1（CI 通过） | **已验证**（GDD 13.6，流水只读、差异入审计日志） |
@@ -147,7 +148,7 @@ PR #127 与 #128 的 `compose-smoke` 在 GitHub 托管 runner 上通过，包含
 
 **待做（按优先级）**
 
-1. **服务端 MVP 缺口**：`player_tasks` 个人任务（GDD 11.1，有表无代码）；奖励条件 `SCORE` / `COMPOSITE` 分支未求值（GDD 11.7）；进度落库无 outbox 补偿（GDD 11.3）。三项都需要 PostgreSQL，可继续走 CI 验证。
+1. **服务端 MVP 缺口**：`player_tasks` 个人任务（GDD 11.1，有表无代码）；`COMPOSITE` 组合条件未求值（GDD 11.7 剩余部分）；进度落库无 outbox 补偿（GDD 11.3）。三项都需要 PostgreSQL，可继续走 CI 验证。
 2. **积分数值定档**（B-7）：需策划给出 13.2 的 `delta`，否则三榜恒为 0。
 3. **资源**：水印处置决策 + CHR_001 基准图，然后按 `P0-production-handoff.md` §10 推进。
 4. **客户端**：补齐 `UI_SETTLEMENT`、`UI_LAW_BAR` 状态机测试；场景与组件挂接需 Cocos Creator（B-2）。

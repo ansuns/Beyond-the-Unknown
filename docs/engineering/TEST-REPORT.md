@@ -193,3 +193,33 @@ python tools/strip_overlay.py keyed.png out.png --mode alpha --box 0.84,0.93,1.0
 
 工具测试通过只说明工具行为正确，**不说明资源可发布**。授权与 AI 生成内容标识事项记录在
 `assets/AI-content-compliance.md`，其中 C-1～C-4 未确认前，生成资源保持 `IN_PROGRESS`。
+
+## 7. 第四轮（2026-10-31 11:35–11:50）：GDD 11.7 SCORE 奖励条件
+
+### 7.1 结果
+
+| 检查 | 结果 |
+|---|---|
+| `ruff check .` | 通过 |
+| `pytest tests/unit` | 23 通过 |
+| `pytest tests/integration`（本机） | 20 skipped，无 PostgreSQL |
+| CI `python` | 通过（第 3 次提交后） |
+| CI `compose-smoke` | 通过 |
+
+### 7.2 连续三次 CI 失败记录
+
+这一项改了三次才绿，前两次都是我的测试缺陷，全部保留记录：
+
+| 次数 | 失败现象 | 根因 |
+|---|---|---|
+| 1 | `A value is required for bind parameter '8'` | `condition_config` 以内联字面量写入，SQLAlchemy 的 `text()` 把 `:8` 当绑定参数。改为 `CAST(:config AS jsonb)` + 参数绑定 |
+| 1（连带） | `test_rule_flow` 三项失败（503/422/position 0.0） | 种子数据写在 `try` 之外，异常后 `finally` 未执行，`_set_test_content(True)` 留在共享库，污染后续模块 |
+| 2 | `got Future attached to a different loop` | 复用应用全局 `engine`，它在 TestClient 的事件循环里创建；改在 `asyncio.run` 里用会跨循环并毁掉连接池 |
+
+第 2 次失败同样连带 `test_rule_flow`——说明**集成测试之间共享数据库状态**，一处未清理会波及其他模块。
+修复方式是各自建独立引擎并 `dispose()`，且种子一律放在 `try` 内。
+
+### 7.3 局限
+
+第 7.1 节的本机结论只有单测；集成测试的通过证据全部来自 CI。本机没有 PostgreSQL，**无法复现**，
+这一点不能含混。
