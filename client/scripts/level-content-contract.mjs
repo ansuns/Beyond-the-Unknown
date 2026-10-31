@@ -31,9 +31,35 @@ export function validateLevelContentConfig(config) {
     }
     entranceIds.add(level.entrance_id);
 
+    if (!Number.isInteger(level.estimated_duration_seconds) || level.estimated_duration_seconds <= 0) {
+      add(`${level.level_id}: estimated_duration_seconds must be a positive integer`);
+    }
+    const allowedRules = new Set(["RULE_ECHO", "RULE_GAZE", "RULE_REVERSE"]);
+    const requiredLaws = Array.isArray(level.required_laws) ? level.required_laws : [];
+    if (requiredLaws.length === 0) add(`${level.level_id}: required_laws must not be empty`);
+    if (new Set(requiredLaws).size !== requiredLaws.length) {
+      add(`${level.level_id}: duplicate required_laws`);
+    }
+    for (const rule of requiredLaws) {
+      if (!allowedRules.has(rule)) add(`${level.level_id}: unknown required law ${rule}`);
+    }
+    const discoveries = Array.isArray(level.discoveries) ? level.discoveries : [];
+    if (new Set(discoveries).size !== discoveries.length) {
+      add(`${level.level_id}: duplicate discoveries`);
+    }
+    if (discoveries.some((id) => typeof id !== "string" || !id.trim())) {
+      add(`${level.level_id}: discoveries must contain non-empty string IDs`);
+    }
+
     const mechanisms = Array.isArray(level.mechanisms) ? level.mechanisms : [];
     const localMechanisms = new Set();
     for (const mechanism of mechanisms) {
+      if (typeof mechanism.mechanism_type !== "string" || !mechanism.mechanism_type.trim()) {
+        add(`${level.level_id}: mechanism ${mechanism.mechanism_id ?? ""} requires mechanism_type`);
+      }
+      if (typeof mechanism.initial_state !== "string" || !mechanism.initial_state.trim()) {
+        add(`${level.level_id}: mechanism ${mechanism.mechanism_id ?? ""} requires initial_state`);
+      }
       const id = mechanism.mechanism_id;
       if (!id || localMechanisms.has(id) || mechanismIds.has(id)) {
         add(`${level.level_id}: missing or duplicate mechanism_id ${id ?? ""}`);
@@ -123,7 +149,8 @@ export function validateLevelContentConfig(config) {
           add(`${level.level_id}: prototype combo ${combo.combo_id} references missing target ${combo.target_mechanism_id}`);
         }
         if (!Array.isArray(combo.rule_sequence) || combo.rule_sequence.length !== 2 ||
-            combo.rule_sequence.some((rule) => !["RULE_ECHO", "RULE_GAZE", "RULE_REVERSE"].includes(rule))) {
+            combo.rule_sequence.some((rule) => !allowedRules.has(rule)) ||
+            new Set(combo.rule_sequence).size !== combo.rule_sequence.length) {
           add(`${level.level_id}: prototype combo ${combo.combo_id} must define exactly two known law rules`);
         }
         if (typeof combo.display_name !== "string" || !combo.display_name.trim()) {
