@@ -57,17 +57,17 @@ describe("level content contract", () => {
   it("rejects unknown or duplicated required laws", () => {
     const unknown = structuredClone(config);
     unknown.levels[0].required_laws = ["RULE_TIME"];
-    expect(validateLevelContentConfig(unknown).join("\\n")).toContain("LV-ROOM-01: unknown required law RULE_TIME");
+    expect(validateLevelContentConfig(unknown).join("\n")).toContain("LV-ROOM-01: unknown required law RULE_TIME");
     const duplicate = structuredClone(config);
     duplicate.levels[0].required_laws = ["RULE_ECHO", "RULE_ECHO"];
-    expect(validateLevelContentConfig(duplicate).join("\\n")).toContain("LV-ROOM-01: duplicate required_laws");
+    expect(validateLevelContentConfig(duplicate).join("\n")).toContain("LV-ROOM-01: duplicate required_laws");
   });
 
   it("rejects invalid durations and incomplete mechanism state definitions", () => {
     const invalid = structuredClone(config);
     invalid.levels[0].estimated_duration_seconds = 0;
     delete invalid.levels[0].mechanisms[0].initial_state;
-    const errors = validateLevelContentConfig(invalid).join("\\n");
+    const errors = validateLevelContentConfig(invalid).join("\n");
     expect(errors).toContain("LV-ROOM-01: estimated_duration_seconds must be a positive integer");
     expect(errors).toContain("LV-ROOM-01: mechanism M01-HIDEABLE-01 requires initial_state");
   });
@@ -75,12 +75,12 @@ describe("level content contract", () => {
   it("rejects duplicate laws in a prototype combo sequence", () => {
     const invalid = structuredClone(config);
     invalid.levels[1].prototype_combos[0].rule_sequence = ["RULE_ECHO", "RULE_ECHO"];
-    expect(validateLevelContentConfig(invalid).join("\\n")).toContain("LV-ROOM-02: prototype combo COMBO-001 must define exactly two known law rules");
+    expect(validateLevelContentConfig(invalid).join("\n")).toContain("LV-ROOM-02: prototype combo COMBO-001 must define exactly two known law rules");
   });
 
   it("rejects duplicate discovery IDs within a room", () => {
     const invalid = structuredClone(config);
     invalid.levels[0].discoveries = ["DIS_RULE_ECHO", "DIS_RULE_ECHO"];
-    expect(validateLevelContentConfig(invalid).join("\\n")).toContain("LV-ROOM-01: duplicate discoveries");
+    expect(validateLevelContentConfig(invalid).join("\n")).toContain("LV-ROOM-01: duplicate discoveries");
   });
 });
