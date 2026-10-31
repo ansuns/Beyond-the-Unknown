@@ -17,6 +17,9 @@ describe("asset manifest contract", () => {
     expect(result.errors).toEqual([]);
     expect(result.expectedCount).toBe(112);
     expect(result.counts.MISSING).toBe(112);
+    expect(manifest.entries.filter((entry: any) => entry.priority === "P0")).toHaveLength(37);
+    expect(manifest.entries.filter((entry: any) => entry.priority === "P1")).toHaveLength(24);
+    expect(manifest.entries.filter((entry: any) => entry.priority === "P2")).toHaveLength(51);
   });
 
   it("rejects an asset directory that does not match its canonical asset ID", () => {
@@ -87,4 +90,32 @@ describe("asset manifest contract", () => {
     );
     expect(result.errors.join("\n")).toContain("release blocker status=MISSING");
   });
+
+  it("rejects a delivery phase that does not match the asset priority", () => {
+    const invalid = structuredClone(manifest);
+    invalid.entries[0].delivery_phase = "CONTENT_EXPANSION";
+    expect(validateAssetManifestStructure(invalid, levels).errors.join("\n")).toContain(
+      "CHR_001_PORTRAIT: delivery_phase must be VERTICAL_SLICE for priority P0"
+    );
+  });
+
+  it("rejects an asset without a valid delivery priority", () => {
+    const invalid = structuredClone(manifest);
+    invalid.entries[0].priority = "P3";
+    expect(validateAssetManifestStructure(invalid, levels).errors.join("\n")).toContain(
+      "CHR_001_PORTRAIT: priority must be P0, P1, or P2"
+    );
+  });
+
+
+  it("rejects moving a critical ROOM-01 asset out of the P0 vertical slice", () => {
+    const invalid = structuredClone(manifest);
+    const entry = invalid.entries.find((item: { asset_id: string }) => item.asset_id === "M01-EXIT-01");
+    entry.priority = "P1";
+    entry.delivery_phase = "FIVE_ROOMS_AND_HIDDEN_ENDING";
+    expect(validateAssetManifestStructure(invalid, levels).errors.join("\\n")).toContain(
+      "M01-EXIT-01: priority must be P0 per the approved production plan"
+    );
+  });
+
 });

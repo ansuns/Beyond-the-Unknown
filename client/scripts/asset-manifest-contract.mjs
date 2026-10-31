@@ -44,6 +44,99 @@ const UI_IDS = [
   "UI_NETWORK_STATE"
 ];
 
+const P0_ASSET_IDS = new Set([
+  "CHR_001_PORTRAIT",
+  "CHR_001_MODEL",
+  "CHR_001_PREVIEW",
+  "CHR_001_ANIMATION_SET",
+  "MAP_MAIN_001_SCENE",
+  "MAP_MAIN_001_GROUND",
+  "MAP_MAIN_001_PROPS",
+  "MAP_MAIN_001_COLLISION",
+  "MAP_MAIN_001_WALKABLE",
+  "MAP_MAIN_001_SPAWN",
+  "MAP_MAIN_001_ENTRANCES",
+  "MAP_MAIN_001_CAMERA",
+  "MAP_MAIN_001_CONFIG",
+  "LV-ROOM-01_GEOMETRY",
+  "M01-EXIT-01",
+  "M01-HIDEABLE-01",
+  "M01-LIGHT-01",
+  "FX_ECHO_PULSE_01",
+  "FX_GAZE_BEAM_01",
+  "FX_REVERSE_FLOW_01",
+  "UI_LOGIN",
+  "UI_MAIN_MAP_HUD",
+  "UI_INTERACTION",
+  "UI_LAW_BAR",
+  "UI_SETTLEMENT",
+  "UI_NETWORK_STATE",
+  "AUD_UI_CLICK",
+  "AUD_INTERACTION",
+  "AUD_ECHO",
+  "AUD_GAZE",
+  "AUD_REVERSE",
+  "AUD_DISCOVERY",
+  "AUD_SETTLEMENT_CLEAR",
+  "AUD_NETWORK_DISCONNECT",
+  "AUD_NETWORK_RECONNECT",
+  "AUD_BGM_MAIN_MAP",
+  "AUD_BGM_ROOM"
+]);
+const P2_ASSET_IDS = new Set([
+  "CHR_002_PORTRAIT",
+  "CHR_002_MODEL",
+  "CHR_002_PREVIEW",
+  "CHR_002_ANIMATION_SET",
+  "CHR_003_PORTRAIT",
+  "CHR_003_MODEL",
+  "CHR_003_PREVIEW",
+  "CHR_003_ANIMATION_SET",
+  "CHR_004_PORTRAIT",
+  "CHR_004_MODEL",
+  "CHR_004_PREVIEW",
+  "CHR_004_ANIMATION_SET",
+  "CHR_005_PORTRAIT",
+  "CHR_005_MODEL",
+  "CHR_005_PREVIEW",
+  "CHR_005_ANIMATION_SET",
+  "CHR_006_PORTRAIT",
+  "CHR_006_MODEL",
+  "CHR_006_PREVIEW",
+  "CHR_006_ANIMATION_SET",
+  "CHR_007_PORTRAIT",
+  "CHR_007_MODEL",
+  "CHR_007_PREVIEW",
+  "CHR_007_ANIMATION_SET",
+  "CHR_008_PORTRAIT",
+  "CHR_008_MODEL",
+  "CHR_008_PREVIEW",
+  "CHR_008_ANIMATION_SET",
+  "CHR_009_PORTRAIT",
+  "CHR_009_MODEL",
+  "CHR_009_PREVIEW",
+  "CHR_009_ANIMATION_SET",
+  "CHR_010_PORTRAIT",
+  "CHR_010_MODEL",
+  "CHR_010_PREVIEW",
+  "CHR_010_ANIMATION_SET",
+  "CHR_011_PORTRAIT",
+  "CHR_011_MODEL",
+  "CHR_011_PREVIEW",
+  "CHR_011_ANIMATION_SET",
+  "CHR_012_PORTRAIT",
+  "CHR_012_MODEL",
+  "CHR_012_PREVIEW",
+  "CHR_012_ANIMATION_SET",
+  "UI_CHARACTER_SELECT",
+  "UI_DISCOVERY",
+  "UI_LEADERBOARD",
+  "UI_COLLECTION",
+  "UI_REWARD",
+  "UI_PROFILE",
+  "AUD_SOCIAL_ACTION"
+]);
+
 const AUDIO_IDS = [
   "AUD_UI_CLICK",
   "AUD_INTERACTION",
@@ -157,6 +250,20 @@ export function validateAssetManifestStructure(manifest, levelConfig, strict = f
       add(`${id}: invalid status ${entry.status}`);
     } else {
       counts[entry.status] += 1;
+    }
+    const expectedPriority = P0_ASSET_IDS.has(id) ? "P0"
+      : P2_ASSET_IDS.has(id) ? "P2" : "P1";
+    if (entry.priority !== expectedPriority) {
+      add(`${id}: priority must be ${expectedPriority} per the approved production plan`);
+    }
+    if (!["P0", "P1", "P2"].includes(entry.priority)) {
+      add(`${id}: priority must be P0, P1, or P2`);
+    }
+    const expectedPhase = entry.priority === "P0" ? "VERTICAL_SLICE"
+      : entry.priority === "P1" ? "FIVE_ROOMS_AND_HIDDEN_ENDING"
+      : "CONTENT_EXPANSION";
+    if (entry.delivery_phase !== expectedPhase) {
+      add(`${id}: delivery_phase must be ${expectedPhase} for priority ${entry.priority}`);
     }
     if (entry.required !== true) add(`${id}: MVP manifest entry must be required`);
     if (!entry.expected_directory ||
