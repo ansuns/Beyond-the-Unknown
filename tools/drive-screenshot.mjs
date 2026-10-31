@@ -299,20 +299,16 @@ async function main() {
   await delay(2000);
   await shot("04-room-moved");
 
-  // Echo only reaches two units, so walk toward the hidden object first by
-  // tapping inside the room; the server rejects a cast from the spawn point.
-  for (const [tapX, tapY] of [[597, 410], [597, 410]]) {
-    await client.send("Input.dispatchMouseEvent", { type: "mouseMoved", x: tapX, y: tapY });
-    await delay(80);
-    await client.send("Input.dispatchMouseEvent", {
-      type: "mousePressed", x: tapX, y: tapY, button: "left", buttons: 1, clickCount: 1
-    });
-    await delay(80);
-    await client.send("Input.dispatchMouseEvent", {
-      type: "mouseReleased", x: tapX, y: tapY, button: "left", buttons: 0, clickCount: 1
-    });
-    await delay(1200);
-  }
+  // Echo only reaches two units of level space, so walk to the hidden object
+  // before casting; a cast from the spawn point is refused by design (the
+  // server compares against the player's authoritative position, not the tap).
+  // Tapping the marker itself sets the walk target to that exact point, which
+  // works at any canvas size - the old version used page pixels tuned to a
+  // 1280-wide canvas and simply missed the room on a phone.
+  // ROOM-01 draws its markers as "HiddenObject" / "LightMarker" / "ExitGate".
+  await clickNode("HiddenObject");
+  await delay(6000);
+  await shot("04b-room-near-hidden");
 
   // "回声 · 显形" casts RULE_ECHO at the hidden object; the pulse sprite only
   // exists during the tween, so the screenshot has to be taken immediately.

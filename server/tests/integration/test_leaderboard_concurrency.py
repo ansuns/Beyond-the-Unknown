@@ -14,7 +14,7 @@ from uuid import uuid4
 import pytest
 from sqlalchemy import text
 
-from app.core.database import SessionFactory
+from app.core.database import SessionFactory, engine
 from app.modules.progress.repository import recompute_leaderboard
 
 
@@ -24,6 +24,25 @@ pytestmark = pytest.mark.skipif(
 )
 
 BOARD = "EXPLORE"
+
+
+def run_scenario(scenario) -> None:
+    """Run one scenario on its own event loop and leave no connections behind.
+
+    `engine` is module level, so its pool is bound to whichever loop opened the
+    connections first. Each test here calls `asyncio.run`, which creates a new
+    loop; without disposing the pool the second test reuses sockets owned by a
+    closed loop and dies with "Event loop is closed" - which looks like a
+    leaderboard bug but is only leaked state between tests.
+    """
+
+    async def wrapper() -> None:
+        try:
+            await scenario()
+        finally:
+            await engine.dispose()
+
+    asyncio.run(wrapper())
 
 
 async def create_season(season_id: str) -> None:
@@ -139,7 +158,7 @@ def test_concurrent_recompute_does_not_duplicate_or_lose_players() -> None:
         assert sum(row["score"] for row in rows) == 85
         assert max(row["rank"] for row in rows) == 4
 
-    asyncio.run(scenario())
+    run_scenario(scenario)
 
 
 def test_recompute_is_idempotent() -> None:
@@ -156,7 +175,7 @@ def test_recompute_is_idempotent() -> None:
         assert second["difference_count"] == 0
         assert (await snapshot(season_id))[0]["score"] == 7
 
-    asyncio.run(scenario())
+    run_scenario(scenario)
 
 
 def test_recompute_never_touches_the_ledger() -> None:
@@ -173,7 +192,7 @@ def test_recompute_never_touches_the_ledger() -> None:
 
         assert await ledger(season_id) == before
 
-    asyncio.run(scenario())
+    run_scenario(scenario)
 
 
 def test_tied_scores_share_a_rank_and_order_is_stable() -> None:
@@ -194,7 +213,7 @@ def test_tied_scores_share_a_rank_and_order_is_stable() -> None:
         assert tied[0]["rank"] == tied[1]["rank"] == 1
         assert first[-1]["rank"] == 2
 
-    asyncio.run(scenario())
+    run_scenario(scenario)
 
 
 def test_rolled_back_recompute_leaves_the_previous_snapshot() -> None:
@@ -226,4 +245,4 @@ def test_rolled_back_recompute_leaves_the_previous_snapshot() -> None:
         assert await snapshot(season_id) == good
         assert sum(row["delta"] for row in await ledger(season_id)) == 8
 
-    asyncio.run(scenario())
+    run_scenario(scenario)

@@ -18,7 +18,7 @@ import {
   view
 } from "cc";
 
-import { RestClient } from "../network/rest-client";
+import { ApiError, RestClient } from "../network/rest-client";
 import type { LawRuleId, MapServerEvent, PersonalLevelState } from "../network/types";
 import { createWeChatFetch, createWeChatWebSocketFactory } from "../platform/wechat-network";
 import {
@@ -1145,7 +1145,18 @@ export class BeyondTheUnknownGameEntry extends Component {
       }
       this.setStatus(result.effects.length ? "回声扩散：隐藏的符号显现了" : "回声没有回应");
     } catch (error) {
-      this.setStatus(`回声失败：${error instanceof Error ? error.message : "请稍后重试"}`);
+      // A 422 here is not a bug: RULE_ECHO only reveals targets within the rule
+      // radius of the player's authoritative position, so casting from across
+      // the room is refused on purpose. Say that instead of echoing the API text.
+      const outOfRange =
+        error instanceof ApiError &&
+        error.status === 422 &&
+        error.message.includes("target");
+      this.setStatus(
+        outOfRange
+          ? "回声范围外：先走近隐藏的符号再施放"
+          : `回声失败：${error instanceof Error ? error.message : "请稍后重试"}`
+      );
     } finally {
       this.prototypeActionInFlight = false;
     }
