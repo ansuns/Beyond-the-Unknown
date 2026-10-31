@@ -37,6 +37,7 @@ import {
   parsePrototypeLayoutConfig,
   prototypeLevelToLocal,
   prototypeLocalToLevel,
+  screenDirectionToLogicalDirection,
   type PrototypeLayoutConfig
 } from "../world/prototype-layout";
 import { LatestPositionSyncQueue } from "../world/latest-position-sync-queue";
@@ -82,6 +83,12 @@ export class BeyondTheUnknownGameEntry extends Component {
   private levelMoveSendElapsed = 0;
   private levelPosition = { x: 1, y: 4 };
   private levelAvatar?: Node;
+  private joystickRoot?: Node;
+  private joystickKnob?: Node;
+  private joystickActive = false;
+  private joystickMagnitude = 0;
+  private joystickScreenDirection = { x: 0, y: 0 };
+  private readonly joystickRadius = 48;
   private levelPositionSync?: LatestPositionSyncQueue;
   private readonly roomControlNodes: Node[] = [];
   private roomMechanismStates = new Map<string, Record<string, unknown>>();
@@ -116,16 +123,19 @@ export class BeyondTheUnknownGameEntry extends Component {
   }
 
   onDestroy(): void {
+    this.stopJoystickMovement();
     this.mapSession?.dispose();
     this.mapSession = undefined;
   }
 
   update(deltaTime: number): void {
     if (this.currentMode === "PERSONAL_LEVEL") {
+      this.updateJoystickMoveTarget();
       this.updatePrototypeGazeMaintain();
       this.updatePersonalLevelMovement(deltaTime);
       return;
     }
+    if (this.currentMode === "WORLD") this.updateJoystickMoveTarget();
     if (
       this.currentMode !== "WORLD" ||
       !this.moveTarget ||
@@ -142,7 +152,7 @@ export class BeyondTheUnknownGameEntry extends Component {
     const dy = this.moveTarget.y - currentY;
     const distance = Math.hypot(dx, dy);
     const speedUnits = this.moveSpeedPixelsPerSecond / this.worldPixelsPerUnit;
-    const step = speedUnits * Math.max(0, deltaTime);
+    const step = speedUnits * Math.max(0, deltaTime) * (this.joystickActive ? this.joystickMagnitude : 1);
     const reached = distance <= step || distance < 0.001;
     const nextX = reached ? this.moveTarget.x : currentX + (dx / distance) * step;
     const nextY = reached ? this.moveTarget.y : currentY + (dy / distance) * step;
@@ -293,6 +303,7 @@ export class BeyondTheUnknownGameEntry extends Component {
       -size.height / 2 + 18,
       13
     );
+    this.createVirtualJoystick(size);
   }
 
   private createLabel(name: string, value: string, x: number, y: number, fontSize: number): Label {
@@ -340,6 +351,131 @@ export class BeyondTheUnknownGameEntry extends Component {
     return node;
   }
 
+  private createVirtualJoystick(size: { width: number; height: number }): void {
+    const root = new Node("VirtualJoystick");
+    this.root!.addChild(root);
+    root.setPosition(-size.width / 2 + 88, -size.height / 2 + 160, 0);
+    root.addComponent(UITransform).setContentSize(144, 144);
+
+    const ring = root.addComponent(Graphics);
+    ring.lineWidth = 3;
+    ring.strokeColor = new Color(150, 190, 210, 180);
+    ring.circle(0, 0, 56);
+    ring.stroke();
+
+    const knob = new Node("VirtualJoystickKnob");
+    root.addChild(knob);
+    knob.addComponent(UITransform).setContentSize(48, 48);
+    const knobGraphics = knob.addComponent(Graphics);
+    knobGraphics.fillColor = new Color(75, 145, 180, 230);
+    knobGraphics.strokeColor = new Color(190, 225, 240, 255);
+    knobGraphics.lineWidth = 2;
+    knobGraphics.circle(0, 0, 22);
+    knobGraphics.fill();
+    knobGraphics.stroke();
+
+    this.joystickRoot = root;
+    this.joystickKnob = knob;
+    root.active = false;
+    root.on(NodeEventType.TOUCH_START, this.onJoystickStart, this);
+    root.on(NodeEventType.TOUCH_MOVE, this.onJoystickMove, this);
+    root.on(NodeEventType.TOUCH_END, this.onJoystickEnd, this);
+    root.on(NodeEventType.TOUCH_CANCEL, this.onJoystickEnd, this);
+  }
+
+  private updateJoystickVisibility(): void {
+    const visible = this.currentMode === "WORLD" || this.currentMode === "PERSONAL_LEVEL";
+    if (this.joystickRoot) this.joystickRoot.active = visible;
+    if (!visible) this.stopJoystickMovement();
+  }
+
+  private stopJoystickMovement(): void {
+    this.joystickActive = false;
+    this.joystickMagnitude = 0;
+    this.joystickScreenDirection = { x: 0, y: 0 };
+    this.moveTarget = undefined;
+    this.joystickKnob?.setPosition(0, 0, 0);
+  }
+
+  private onJoystickStart(event: any): void {
+    if (this.currentMode !== "WORLD" && this.currentMode !== "PERSONAL_LEVEL") return;
+    this.joystickActive = true;
+    this.moveTarget = undefined;
+    this.updateJoystickFromEvent(event);
+  }
+
+  private onJoystickMove(event: any): void {
+    if (!this.joystickActive) return;
+    this.updateJoystickFromEvent(event);
+  }
+
+  private onJoystickEnd(): void {
+    this.stopJoystickMovement();
+  }
+
+  private updateJoystickFromEvent(event: any): void {
+    if (!this.joystickRoot) return;
+    const location = event.getUILocation();
+    const visible = view.getVisibleSize();
+    const localX = location.x - visible.width / 2 - this.joystickRoot.position.x;
+    const localY = location.y - visible.height / 2 - this.joystickRoot.position.y;
+    const distance = Math.hypot(localX, localY);
+    if (distance < 8) {
+      this.joystickMagnitude = 0;
+      this.joystickScreenDirection = { x: 0, y: 0 };
+      this.joystickKnob?.setPosition(0, 0, 0);
+      return;
+    }
+
+    const magnitude = Math.min(1, distance / this.joystickRadius);
+    const direction = { x: localX / distance, y: localY / distance };
+    const knobDistance = magnitude * this.joystickRadius;
+    this.joystickMagnitude = magnitude;
+    this.joystickScreenDirection = direction;
+    this.joystickKnob?.setPosition(
+      direction.x * knobDistance,
+      direction.y * knobDistance,
+      0
+    );
+  }
+
+  private updateJoystickMoveTarget(): void {
+    if (!this.joystickActive) return;
+    if (this.joystickMagnitude < 0.12) {
+      this.moveTarget = undefined;
+      return;
+    }
+
+    const direction = this.currentMode === "PERSONAL_LEVEL"
+      ? screenDirectionToLogicalDirection(this.joystickScreenDirection)
+      : this.joystickScreenDirection;
+    const lookAhead = 10;
+
+    if (this.currentMode === "PERSONAL_LEVEL") {
+      const bounds = this.prototypeLayout.bounds;
+      this.moveTarget = {
+        x: Math.max(bounds.minX, Math.min(bounds.maxX, this.levelPosition.x + direction.x * lookAhead)),
+        y: Math.max(bounds.minY, Math.min(bounds.maxY, this.levelPosition.y + direction.y * lookAhead))
+      };
+      return;
+    }
+
+    const avatar = this.localPlayerId ? this.avatars.get(this.localPlayerId) : undefined;
+    const transform = this.worldRoot?.getComponent(UITransform);
+    if (!avatar || !transform) return;
+    const currentX = avatar.position.x / this.worldPixelsPerUnit;
+    const currentY = avatar.position.y / this.worldPixelsPerUnit;
+    const margin = 20;
+    const minX = (-transform.width / 2 + margin) / this.worldPixelsPerUnit;
+    const maxX = (transform.width / 2 - margin) / this.worldPixelsPerUnit;
+    const minY = (-transform.height / 2 + margin) / this.worldPixelsPerUnit;
+    const maxY = (transform.height / 2 - margin) / this.worldPixelsPerUnit;
+    this.moveTarget = {
+      x: Math.max(minX, Math.min(maxX, currentX + direction.x * lookAhead)),
+      y: Math.max(minY, Math.min(maxY, currentY + direction.y * lookAhead))
+    };
+  }
+
   private setStatus(message: string): void {
     if (this.statusLabel) this.statusLabel.string = message;
   }
@@ -362,6 +498,7 @@ export class BeyondTheUnknownGameEntry extends Component {
   }
 
   private async loginAndEnterWorld(): Promise<void> {
+    this.stopJoystickMovement();
     try {
       this.clearRoomControls();
       this.worldRoot?.removeAllChildren();
@@ -386,6 +523,7 @@ export class BeyondTheUnknownGameEntry extends Component {
         this.currentCharacterId = undefined;
       }
       this.currentMode = "WORLD";
+      this.updateJoystickVisibility();
       this.upsertAvatar({
         player_id: this.localPlayerId!,
         x: map.spawn_position.x,
@@ -530,6 +668,7 @@ export class BeyondTheUnknownGameEntry extends Component {
 
   private onWorldTouch(event: any): void {
     if (!this.worldRoot) return;
+    this.stopJoystickMovement();
     const transform = this.worldRoot.getComponent(UITransform);
     const uiPoint = event.getUILocation();
     const visible = view.getVisibleSize();
@@ -595,7 +734,7 @@ export class BeyondTheUnknownGameEntry extends Component {
     const dx = this.moveTarget.x - this.levelPosition.x;
     const dy = this.moveTarget.y - this.levelPosition.y;
     const distance = Math.hypot(dx, dy);
-    const step = this.prototypeLayout.movementSpeed * Math.max(0, deltaTime);
+    const step = this.prototypeLayout.movementSpeed * Math.max(0, deltaTime) * (this.joystickActive ? this.joystickMagnitude : 1);
     const reached = distance <= step || distance < 0.001;
     this.levelPosition = reached
       ? { ...this.moveTarget }
@@ -615,7 +754,7 @@ export class BeyondTheUnknownGameEntry extends Component {
 
   private async castRoomEcho(): Promise<void> {
     if (!this.levelSession) return;
-    this.moveTarget = undefined;
+    this.stopJoystickMovement();
     try {
       await this.flushLevelPosition();
       const hiddenTarget = this.roomMechanismCatalog.get("M01-HIDEABLE-01");
@@ -642,7 +781,7 @@ export class BeyondTheUnknownGameEntry extends Component {
     if (!this.levelSession || this.prototypeActionInFlight) return;
     const { comboId, targetId, ruleIds } = definition;
     this.prototypeActionInFlight = true;
-    this.moveTarget = undefined;
+    this.stopJoystickMovement();
     try {
       await this.flushLevelPosition();
       let matched = false;
@@ -697,7 +836,7 @@ export class BeyondTheUnknownGameEntry extends Component {
   private async settlePrototypeRoom(): Promise<void> {
     if (!this.levelSession || this.prototypeActionInFlight) return;
     this.prototypeActionInFlight = true;
-    this.moveTarget = undefined;
+    this.stopJoystickMovement();
     try {
       await this.flushLevelPosition();
       // Do not stop GAZE before settlement: stop_gaze intentionally resets
@@ -711,6 +850,7 @@ export class BeyondTheUnknownGameEntry extends Component {
       this.prototypeGazeMaintainAt = 0;
       this.prototypeGazeNextMaintainAt = 0;
       this.currentMode = "MENU";
+      this.updateJoystickVisibility();
       this.moveTarget = undefined;
       this.drawPersonalRoom("探索完成", true);
       const unlockMessage = result.unlocked_hidden_level_id
@@ -730,7 +870,7 @@ export class BeyondTheUnknownGameEntry extends Component {
 
   private async interactHiddenEnding(): Promise<void> {
     if (!this.levelSession) return;
-    this.moveTarget = undefined;
+    this.stopJoystickMovement();
     try {
       await this.flushLevelPosition();
       const result = await this.levelSession.interact(
@@ -752,7 +892,7 @@ export class BeyondTheUnknownGameEntry extends Component {
 
   private async interactRoomExit(): Promise<void> {
     if (!this.levelSession) return;
-    this.moveTarget = undefined;
+    this.stopJoystickMovement();
     try {
       await this.flushLevelPosition();
       const result = await this.levelSession.interact(
@@ -763,6 +903,7 @@ export class BeyondTheUnknownGameEntry extends Component {
       if (result.state.status === "TRIGGERED") {
         const settled = await this.levelSession.settle(this.makeIdempotencyKey("room01-settle"));
         this.currentMode = "MENU";
+        this.updateJoystickVisibility();
         this.levelSession = undefined;
         this.levelPositionSync = undefined;
         this.drawPersonalRoom("探索完成", true);
@@ -774,6 +915,7 @@ export class BeyondTheUnknownGameEntry extends Component {
   }
 
   private async enterFirstRoom(): Promise<void> {
+    this.stopJoystickMovement();
     if (this.currentMode === "PERSONAL_LEVEL" && this.levelSession?.activeRun()) {
       try {
         const run = await this.levelSession.start();
@@ -813,6 +955,7 @@ export class BeyondTheUnknownGameEntry extends Component {
       this.prototypeGazeMaintainAt = 0;
       this.prototypeGazeNextMaintainAt = 0;
       this.currentMode = "PERSONAL_LEVEL";
+      this.updateJoystickVisibility();
       this.moveTarget = undefined;
       this.mapSession.leave();
       this.clearAvatars();
@@ -1185,7 +1328,7 @@ export class BeyondTheUnknownGameEntry extends Component {
       return;
     }
     this.prototypeActionInFlight = true;
-    this.moveTarget = undefined;
+    this.stopJoystickMovement();
     try {
       this.setStatus("正在保存并放弃当前关卡…");
       // Abandon is allowed to proceed even if a best-effort position sync fails.
