@@ -37,6 +37,7 @@ import {
   parsePrototypeLayoutConfig,
   prototypeLevelToLocal,
   prototypeLocalToLevel,
+  sortIsometricDepth,
   type PrototypeLayoutConfig
 } from "../world/prototype-layout";
 import { LatestPositionSyncQueue } from "../world/latest-position-sync-queue";
@@ -82,6 +83,7 @@ export class BeyondTheUnknownGameEntry extends Component {
   private levelMoveSendElapsed = 0;
   private levelPosition = { x: 1, y: 4 };
   private levelAvatar?: Node;
+  private prototypeDepthNodes: Node[] = [];
   private levelPositionSync?: LatestPositionSyncQueue;
   private readonly roomControlNodes: Node[] = [];
   private roomMechanismStates = new Map<string, Record<string, unknown>>();
@@ -602,6 +604,7 @@ export class BeyondTheUnknownGameEntry extends Component {
       : { x: this.levelPosition.x + dx / distance * step, y: this.levelPosition.y + dy / distance * step };
     const avatarPosition = this.prototypeLevelToLocal(this.levelPosition.x, this.levelPosition.y);
     this.levelAvatar.setPosition(avatarPosition.x, avatarPosition.y, 0);
+    this.sortPrototypeDepth();
     this.levelMoveSendElapsed += deltaTime;
     if (
       this.levelMoveSendElapsed >= this.prototypeLayout.positionSyncIntervalMs / 1000 ||
@@ -905,10 +908,22 @@ export class BeyondTheUnknownGameEntry extends Component {
     this.roomControlNodes.length = 0;
   }
 
+  private sortPrototypeDepth(): void {
+    const ordered = sortIsometricDepth(
+      this.prototypeDepthNodes.map((node) => ({
+        id: node.name,
+        screenY: node.position.y,
+        node
+      }))
+    );
+    ordered.forEach((item, index) => item.node.setSiblingIndex(index));
+  }
+
   private drawPersonalRoom(levelName: string, completed = false): void {
     if (!this.worldRoot) return;
     this.clearRoomControls();
     this.worldRoot.removeAllChildren();
+    this.prototypeDepthNodes = [];
     const size = this.worldRoot.getComponent(UITransform).contentSize;
     this.updatePrototypeRoomScale(size);
     const roomSize = this.prototypeRoomDimensions();
@@ -946,6 +961,7 @@ export class BeyondTheUnknownGameEntry extends Component {
             : new Color(117, 185, 220, 255);
         const markerNode = new Node(`Mechanism-${mechanismId}`);
         room.addChild(markerNode);
+        this.prototypeDepthNodes.push(markerNode);
         const markerPosition = this.prototypeLevelToLocal(
           descriptor.position_x,
           descriptor.position_y
@@ -984,7 +1000,9 @@ export class BeyondTheUnknownGameEntry extends Component {
           this.levelPosition.y
         );
         this.levelAvatar.setPosition(avatarPosition.x, avatarPosition.y, 0);
+        this.prototypeDepthNodes.push(this.levelAvatar);
       }
+      this.sortPrototypeDepth();
 
       const titleNode = new Node("RoomTitle");
       this.worldRoot.addChild(titleNode);
@@ -1093,6 +1111,7 @@ export class BeyondTheUnknownGameEntry extends Component {
     const drawMarker = (name: string, x: number, y: number, color: Color, radius: number, visible: boolean) => {
       const node = new Node(name);
       room.addChild(node);
+      this.prototypeDepthNodes.push(node);
       const markerPosition = this.prototypeLevelToLocal(x, y);
       node.setPosition(markerPosition.x, markerPosition.y, 0);
       node.addComponent(UITransform).setContentSize(radius * 2, radius * 2);
@@ -1143,6 +1162,7 @@ export class BeyondTheUnknownGameEntry extends Component {
       exitOpen
     );
     this.levelAvatar = drawMarker("Player", this.levelPosition.x, this.levelPosition.y, new Color(115, 220, 255, 255), 12, true);
+    this.sortPrototypeDepth();
 
     const labelNode = new Node("RoomTitle");
     this.worldRoot.addChild(labelNode);
