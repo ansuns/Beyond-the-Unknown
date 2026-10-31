@@ -1024,8 +1024,8 @@
       "files": [],
       "source_chapter": "GDD 7 / 18.6",
       "acceptance": "特效可独立播放，不承担逻辑判定",
-      "priority": "P1",
-      "delivery_phase": "FIVE_ROOMS_AND_HIDDEN_ENDING"
+      "priority": "P0",
+      "delivery_phase": "VERTICAL_SLICE"
     },
     {
       "asset_id": "FX_REVERSE_FLOW_01",
@@ -1036,8 +1036,8 @@
       "files": [],
       "source_chapter": "GDD 7 / 18.6",
       "acceptance": "特效可独立播放，不承担逻辑判定",
-      "priority": "P1",
-      "delivery_phase": "FIVE_ROOMS_AND_HIDDEN_ENDING"
+      "priority": "P0",
+      "delivery_phase": "VERTICAL_SLICE"
     },
     {
       "asset_id": "FX_ROOM_CLEAR_01",
@@ -1048,8 +1048,8 @@
       "files": [],
       "source_chapter": "GDD 7 / 18.6",
       "acceptance": "特效可独立播放，不承担逻辑判定",
-      "priority": "P0",
-      "delivery_phase": "VERTICAL_SLICE"
+      "priority": "P1",
+      "delivery_phase": "FIVE_ROOMS_AND_HIDDEN_ENDING"
     },
     {
       "asset_id": "FX_ROOM_CLEAR_02",
@@ -1180,8 +1180,8 @@
       "files": [],
       "source_chapter": "GDD 16 / 18.7",
       "acceptance": "UI_DISCOVERY具备安全区适配、加载态和缺失降级",
-      "priority": "P0",
-      "delivery_phase": "VERTICAL_SLICE"
+      "priority": "P2",
+      "delivery_phase": "CONTENT_EXPANSION"
     },
     {
       "asset_id": "UI_SETTLEMENT",
@@ -1204,8 +1204,8 @@
       "files": [],
       "source_chapter": "GDD 16 / 18.7",
       "acceptance": "UI_LEADERBOARD具备安全区适配、加载态和缺失降级",
-      "priority": "P1",
-      "delivery_phase": "FIVE_ROOMS_AND_HIDDEN_ENDING"
+      "priority": "P2",
+      "delivery_phase": "CONTENT_EXPANSION"
     },
     {
       "asset_id": "UI_COLLECTION",
@@ -1216,8 +1216,8 @@
       "files": [],
       "source_chapter": "GDD 16 / 18.7",
       "acceptance": "UI_COLLECTION具备安全区适配、加载态和缺失降级",
-      "priority": "P1",
-      "delivery_phase": "FIVE_ROOMS_AND_HIDDEN_ENDING"
+      "priority": "P2",
+      "delivery_phase": "CONTENT_EXPANSION"
     },
     {
       "asset_id": "UI_REWARD",
@@ -1228,8 +1228,8 @@
       "files": [],
       "source_chapter": "GDD 16 / 18.7",
       "acceptance": "UI_REWARD具备安全区适配、加载态和缺失降级",
-      "priority": "P1",
-      "delivery_phase": "FIVE_ROOMS_AND_HIDDEN_ENDING"
+      "priority": "P2",
+      "delivery_phase": "CONTENT_EXPANSION"
     },
     {
       "asset_id": "UI_PROFILE",
@@ -1240,8 +1240,8 @@
       "files": [],
       "source_chapter": "GDD 16 / 18.7",
       "acceptance": "UI_PROFILE具备安全区适配、加载态和缺失降级",
-      "priority": "P1",
-      "delivery_phase": "FIVE_ROOMS_AND_HIDDEN_ENDING"
+      "priority": "P2",
+      "delivery_phase": "CONTENT_EXPANSION"
     },
     {
       "asset_id": "UI_NETWORK_STATE",
@@ -1300,8 +1300,8 @@
       "files": [],
       "source_chapter": "GDD 18.8",
       "acceptance": "AUD_GAZE触发点、音量、循环/优先级符合音频规范",
-      "priority": "P1",
-      "delivery_phase": "FIVE_ROOMS_AND_HIDDEN_ENDING"
+      "priority": "P0",
+      "delivery_phase": "VERTICAL_SLICE"
     },
     {
       "asset_id": "AUD_REVERSE",
@@ -1312,8 +1312,8 @@
       "files": [],
       "source_chapter": "GDD 18.8",
       "acceptance": "AUD_REVERSE触发点、音量、循环/优先级符合音频规范",
-      "priority": "P1",
-      "delivery_phase": "FIVE_ROOMS_AND_HIDDEN_ENDING"
+      "priority": "P0",
+      "delivery_phase": "VERTICAL_SLICE"
     },
     {
       "asset_id": "AUD_DISCOVERY",
@@ -1324,8 +1324,8 @@
       "files": [],
       "source_chapter": "GDD 18.8",
       "acceptance": "AUD_DISCOVERY触发点、音量、循环/优先级符合音频规范",
-      "priority": "P1",
-      "delivery_phase": "FIVE_ROOMS_AND_HIDDEN_ENDING"
+      "priority": "P0",
+      "delivery_phase": "VERTICAL_SLICE"
     },
     {
       "asset_id": "AUD_SETTLEMENT_CLEAR",
