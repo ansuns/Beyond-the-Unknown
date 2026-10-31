@@ -4,7 +4,8 @@ import {
   calculatePrototypeRoomScale,
   parsePrototypeLayoutConfig,
   prototypeLevelToLocal,
-  prototypeLocalToLevel
+  prototypeLocalToLevel,
+  screenDirectionToLogicalDirection
 } from "../assets/scripts/world/prototype-layout";
 
 describe("parsePrototypeLayoutConfig", () => {
@@ -40,6 +41,24 @@ describe("parsePrototypeLayoutConfig", () => {
       ...validConfig,
       prototype_controls: { movement_speed: 3 }
     })).toThrow(/invalid values/);
+  });
+});
+
+describe("isometric joystick direction", () => {
+  it("maps screen cardinal directions into normalized logical directions", () => {
+    expect(screenDirectionToLogicalDirection({ x: 0, y: 1 })).toEqual({
+      x: Math.SQRT1_2,
+      y: Math.SQRT1_2
+    });
+    expect(screenDirectionToLogicalDirection({ x: 1, y: 0 })).toEqual({
+      x: Math.SQRT1_2,
+      y: -Math.SQRT1_2
+    });
+  });
+
+  it("returns zero for a centered stick and rejects non-finite input", () => {
+    expect(screenDirectionToLogicalDirection({ x: 0, y: 0 })).toEqual({ x: 0, y: 0 });
+    expect(() => screenDirectionToLogicalDirection({ x: Number.NaN, y: 0 })).toThrow(/finite/);
   });
 });
 
