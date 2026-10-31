@@ -42,3 +42,20 @@ def parse_level_movement_settings(config: dict[str, Any] | None) -> LevelMovemen
         spawn_x=spawn_x,
         spawn_y=spawn_y,
     )
+
+
+def max_allowed_movement_distance(
+    settings: LevelMovementSettings,
+    elapsed_seconds: float,
+    jitter_allowance: float = 0.75,
+) -> float:
+    if (
+        isinstance(elapsed_seconds, bool)
+        or not isinstance(elapsed_seconds, (int, float))
+        or not math.isfinite(elapsed_seconds)
+        or elapsed_seconds < 0
+        or not math.isfinite(jitter_allowance)
+        or jitter_allowance < 0
+    ):
+        raise ValueError("movement elapsed time and jitter allowance must be finite and non-negative")
+    return settings.movement_speed * max(0.05, float(elapsed_seconds)) + jitter_allowance
