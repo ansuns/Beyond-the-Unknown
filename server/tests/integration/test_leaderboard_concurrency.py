@@ -17,7 +17,6 @@ from sqlalchemy import text
 from app.core.database import SessionFactory, engine
 from app.modules.progress.repository import recompute_leaderboard
 
-
 pytestmark = pytest.mark.skipif(
     not os.getenv("TEST_DATABASE_URL"),
     reason="Set TEST_DATABASE_URL and apply Alembic migrations for PostgreSQL integration tests",
