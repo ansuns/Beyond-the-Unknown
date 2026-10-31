@@ -536,3 +536,58 @@ def test_internal_season_review_requires_key_and_can_reject(monkeypatch) -> None
             ),
             ("DELETE FROM seasons WHERE season_id = :season_id", {"season_id": season_id}),
         ])
+
+
+def test_leaderboard_serves_explicit_season_and_rejects_unknown_one() -> None:
+    """GDD 13.7 lists season_id as a request field; unknown seasons must not silently
+    fall back to the current period."""
+    app.dependency_overrides[get_wechat_code_provider] = lambda: FakeWeChatProvider()
+    try:
+        with TestClient(app) as client:
+            login = client.post(
+                "/api/v1/auth/login",
+                json={"wx_code": str(uuid4()), "request_id": "lb-season-login"},
+            )
+            assert login.status_code == 200
+            headers = {"Authorization": f"Bearer {login.json()['data']['access_token']}"}
+            assert client.post("/api/v1/map/enter", headers=headers).status_code == 200
+
+            weekly = client.get(
+                "/api/v1/leaderboard?board_type=EXPLORE&period_type=WEEKLY",
+                headers=headers,
+            )
+            assert weekly.status_code == 200
+            weekly_id = weekly.json()["data"]["season_id"]
+
+            echoed = client.get(
+                f"/api/v1/leaderboard?board_type=EXPLORE&season_id={weekly_id}",
+                headers=headers,
+            )
+            assert echoed.status_code == 200
+            assert echoed.json()["data"]["season_id"] == weekly_id
+            assert echoed.json()["data"]["period_type"] == "WEEKLY"
+
+            monthly = client.get(
+                "/api/v1/leaderboard?board_type=EXPLORE&period_type=MONTHLY",
+                headers=headers,
+            )
+            assert monthly.status_code == 200
+            monthly_id = monthly.json()["data"]["season_id"]
+            assert monthly_id.startswith("MONTHLY-")
+
+            # period_type is derived from the season itself, not from the default value.
+            derived = client.get(
+                f"/api/v1/leaderboard?board_type=EXPLORE&season_id={monthly_id}",
+                headers=headers,
+            )
+            assert derived.status_code == 200
+            assert derived.json()["data"]["period_type"] == "MONTHLY"
+            assert derived.json()["data"]["season_id"] == monthly_id
+
+            unknown = client.get(
+                "/api/v1/leaderboard?board_type=EXPLORE&season_id=WEEKLY-19990104",
+                headers=headers,
+            )
+            assert unknown.status_code == 404
+    finally:
+        app.dependency_overrides.clear()

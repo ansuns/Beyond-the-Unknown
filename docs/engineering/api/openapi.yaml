@@ -178,8 +178,10 @@ paths:
         - { name: period_type, in: query, schema: { type: string, enum: [WEEKLY, MONTHLY], default: WEEKLY } }
         - { name: scope, in: query, schema: { type: string, enum: [TOP, AROUND, SELF], default: TOP } }
         - { name: limit, in: query, schema: { type: integer, minimum: 1, maximum: 50, default: 20 } }
+        - { name: season_id, in: query, schema: { type: string, minLength: 3, maxLength: 64 } }
       responses:
         '200': { description: Period-scoped immutable score snapshot view }
+        '404': { description: Requested leaderboard season does not exist }
   /level/enter:
     post:
       tags: [Level]
@@ -221,6 +223,55 @@ paths:
         '200': { description: Run transitioned to RUNNING (idempotent) }
         '404': { $ref: '#/components/responses/NotFound' }
         '409': { $ref: '#/components/responses/Conflict' }
+  /level/position:
+    post:
+      tags: [Level]
+      operationId: updateLevelPosition
+      parameters: [{ $ref: '#/components/parameters/RequestId' }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [run_id, x, y]
+              properties:
+                run_id: { type: string, format: uuid }
+                x: { type: number }
+                y: { type: number }
+      responses:
+        '200':
+          description: Authoritative position accepted for the active run
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/EnvelopeObject' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409': { $ref: '#/components/responses/Conflict' }
+        '422': { description: Position is outside the configured room bounds }
+  /level/mechanism/interact:
+    post:
+      tags: [Rules]
+      operationId: interactWithMechanism
+      parameters: [{ $ref: '#/components/parameters/RequestId' }, { $ref: '#/components/parameters/IdempotencyKey' }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [run_id, mechanism_id]
+              properties:
+                run_id: { type: string, format: uuid }
+                mechanism_id: { type: string, maxLength: 100 }
+      responses:
+        '200':
+          description: Mechanism interaction accepted
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/EnvelopeObject' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409': { $ref: '#/components/responses/Conflict' }
+        '422': { description: Mechanism is not interactable from the current position }
   /level/abandon:
     post:
       tags: [Level]
@@ -339,26 +390,6 @@ paths:
             application/json:
               schema: { $ref: '#/components/schemas/EnvelopeObject' }
         '409': { $ref: '#/components/responses/Conflict' }
-  /discovery:
-    get:
-      tags: [Discovery]
-      operationId: listDiscoveries
-      responses:
-        '200':
-          description: Current player's discoveries
-          content:
-            application/json:
-              schema: { $ref: '#/components/schemas/EnvelopeObject' }
-  /collection:
-    get:
-      tags: [Collection]
-      operationId: listCollections
-      responses:
-        '200':
-          description: Current player's collection
-          content:
-            application/json:
-              schema: { $ref: '#/components/schemas/EnvelopeObject' }
   /reward:
     get:
       tags: [Reward]
@@ -385,43 +416,6 @@ paths:
       responses:
         '200': { description: Claimed (idempotent) }
         '409': { $ref: '#/components/responses/Conflict' }
-  /leaderboard/{type}:
-    get:
-      tags: [Leaderboard]
-      operationId: getLeaderboard
-      parameters:
-        - name: type
-          in: path
-          required: true
-          schema: { type: string, enum: [EXPLORE, CLEAR, COLLECT] }
-        - name: season_id
-          in: query
-          schema: { type: string }
-        - name: scope
-          in: query
-          schema: { type: string, enum: [top, around, self], default: top }
-      responses:
-        '200':
-          description: Leaderboard page
-          content:
-            application/json:
-              schema: { $ref: '#/components/schemas/EnvelopeObject' }
-  /season:
-    get:
-      tags: [Leaderboard]
-      operationId: getCurrentSeasons
-      responses:
-        '200': { description: Current weekly and monthly periods }
-  /world-archive:
-    get:
-      tags: [Archive]
-      operationId: listWorldArchive
-      responses:
-        '200':
-          description: Global first-discovery archive
-          content:
-            application/json:
-              schema: { $ref: '#/components/schemas/EnvelopeObject' }
   /internal/seasons/{season_id}/review:
     post:
       tags: [Internal Operations]

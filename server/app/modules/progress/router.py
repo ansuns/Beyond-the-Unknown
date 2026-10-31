@@ -9,6 +9,7 @@ from app.core.config import get_settings
 from app.core.database import get_session
 from app.modules.progress.repository import (
     IncompleteObjectives,
+    LeaderboardSeasonNotFound,
     RewardNotClaimable,
     RewardNotFound,
     SettlementConfigIncomplete,
@@ -191,10 +192,16 @@ async def get_leaderboard_endpoint(
     period_type: Literal["WEEKLY", "MONTHLY"] = "WEEKLY",
     scope: Literal["TOP", "AROUND", "SELF"] = "TOP",
     limit: int = Query(default=20, ge=1, le=50),
+    season_id: str | None = Query(default=None, min_length=3, max_length=64),
     player_id=Depends(get_current_player_id),
     session: AsyncSession = Depends(get_session),
 ) -> dict:
-    data = await get_leaderboard(
-        session, player_id, board_type, period_type, scope, limit
-    )
+    try:
+        data = await get_leaderboard(
+            session, player_id, board_type, period_type, scope, limit, season_id
+        )
+    except LeaderboardSeasonNotFound as exc:
+        raise HTTPException(
+            status_code=404, detail="Leaderboard season not found"
+        ) from exc
     return success_envelope(data, request.state.request_id)
