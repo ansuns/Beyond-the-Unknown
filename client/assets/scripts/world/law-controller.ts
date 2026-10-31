@@ -102,7 +102,8 @@ export class LawController {
     const leaseTimeout = rule?.lease_timeout_ms;
     if (!leaseTimeout || leaseTimeout <= 0) return undefined;
     const currentTime = this.now();
-    const interval = Math.max(250, Math.floor(leaseTimeout / 3));
+    const interval = getGazeLeaseRenewalInterval(leaseTimeout);
+    if (interval === undefined) return undefined;
     if (currentTime - this.lastGazeMaintainAt < interval) return undefined;
     const result = await this.session.maintainGaze(this.gazeTargetId);
     this.lastGazeMaintainAt = currentTime;
