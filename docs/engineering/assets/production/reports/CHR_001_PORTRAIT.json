@@ -7,7 +7,7 @@
   "raw": "build/gen/raw/Head_and_shoulders_character_p_2026-10-31T04-19-05.png",
   "output": "client/assets/resources/characters/CHR_001/portrait/CHR_001_PORTRAIT_FRONT_01.png",
   "raw_sha256": "c894e0d0b4612ba4558656d15838eb56946a7299acc77edcd75abf9c58eddc16",
-  "output_sha256": "b2214d8cf152c6a4fd1a566c81ba6e167e199b68640ca9e199b027c279db0260",
+  "output_sha256": "c094c6b34ccf139aec8982ac5a8e5f5a431d637ea98be4a9232c06ed4deeac60",
   "source_size": [
     1024,
     1024
@@ -37,5 +37,15 @@
   "opaque_pixels": 29946,
   "semi_pixels": 3049,
   "alpha_coverage": 0.660957532051282,
-  "fringe_ratio": 0.0
+  "fringe_ratio": 0.0,
+  "optimized": {
+    "before_bytes": 83209,
+    "after_bytes": 62612,
+    "saved_pct": 24.8,
+    "format": "PNG",
+    "jpeg_quality": null,
+    "palette_colors": 256,
+    "mean_error": 2.0,
+    "p995_error": 24.0
+  }
 }

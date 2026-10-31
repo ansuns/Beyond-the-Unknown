@@ -1,0 +1,34 @@
+{
+  "platform": "wechatgame",
+  "debug": false,
+  "md5Cache": true,
+  "buildPath": "project://build",
+  "outputName": "wechatgame-slim",
+  "packages": {
+    "wechatgame": {
+      "appid": "wx79cbf35bf4aa11f3",
+      "orientation": "portrait"
+    }
+  },
+  "overwriteProjectSettings": {
+    "includeModules": {
+      "physics": "off",
+      "physics-2d": "off",
+      "spine-3.8": "off",
+      "dragon-bones": "off",
+      "terrain": "off",
+      "tiled-map": "off",
+      "particle": "off",
+      "particle-2d": "off",
+      "video": "off",
+      "webview": "off",
+      "marionette": "off",
+      "skeletal-animation": "off",
+      "light-probe": "off",
+      "primitive": "off",
+      "intersection-2d": "off",
+      "mask": "off",
+      "rich-text": "off"
+    }
+  }
+}

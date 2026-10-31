@@ -7,7 +7,7 @@
   "raw": "build/gen/raw/Game_prop_sprite_of_a_fantasy__2026-10-31T04-19-37.png",
   "output": "client/assets/resources/mechanisms/M01-LIGHT-01/M01-LIGHT-01_INACTIVE_01.png",
   "raw_sha256": "0401e0e4727d1547bfc4a1ae515f38db7c643d2c341393409069761f9707f6a1",
-  "output_sha256": "64203c1eb16352a010a65da109f7174aff6b780ca0c455a699ed8e48ff0d1486",
+  "output_sha256": "56f30e66b71d149a629a57936f6aaf5cfa7374a21c8d4f7ae99a86691fefae7f",
   "source_size": [
     1024,
     1024
@@ -37,5 +37,15 @@
   "opaque_pixels": 15968,
   "semi_pixels": 24509,
   "alpha_coverage": 0.79056640625,
-  "fringe_ratio": 9.540164090822362e-05
+  "fringe_ratio": 9.540164090822362e-05,
+  "optimized": {
+    "before_bytes": 96526,
+    "after_bytes": 76115,
+    "saved_pct": 21.1,
+    "format": "PNG",
+    "jpeg_quality": null,
+    "palette_colors": 256,
+    "mean_error": 1.8,
+    "p995_error": 11.0
+  }
 }

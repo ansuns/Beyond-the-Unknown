@@ -5,9 +5,9 @@
   "generated_at": "2026-10-31T12:19:20+08:00",
   "backend": "workbuddy-image-gen",
   "raw": "build/gen/raw/Isometric_45_degree_game_scene_2026-10-31T04-19-20.png",
-  "output": "client/assets/resources/maps/MAP_MAIN_001/scene/MAP_MAIN_001_SCENE_01.png",
+  "output": "client/assets/resources/maps/MAP_MAIN_001/scene/MAP_MAIN_001_SCENE_01.jpg",
   "raw_sha256": "c8df2ea64890777f0f516dc1bcba8d2c009a0de1e34e73e0fb3c55910d463556",
-  "output_sha256": "7a34175771cd7576ba3a25ba36267536688b7f458a00f1a4be9850d5dbeab53a",
+  "output_sha256": "a6e673230fb5473f0b149fd2a611c83cc191e54b0d0b4d613ddf7c6a82ce7783",
   "source_size": [
     1536,
     1024
@@ -32,5 +32,15 @@
   "opaque_pixels": 0,
   "semi_pixels": 0,
   "alpha_coverage": 1.0,
-  "fringe_ratio": 0.0
+  "fringe_ratio": 0.0,
+  "optimized": {
+    "before_bytes": 1337142,
+    "after_bytes": 187806,
+    "saved_pct": 86.0,
+    "format": "JPEG",
+    "jpeg_quality": 84,
+    "palette_colors": null,
+    "mean_error": 0.0,
+    "p995_error": 0.0
+  }
 }

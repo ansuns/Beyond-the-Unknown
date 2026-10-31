@@ -144,6 +144,98 @@ def post_task(queue: dict, task_id: str, raw: str) -> dict:
     return task
 
 
+
+def optimize_task(
+    queue: dict,
+    task_id: str,
+    jpeg_quality: int = 84,
+    colors: int = 256,
+) -> dict:
+    """Shrink a delivered file and keep its provenance report truthful.
+
+    WeChat allows 4 MB in the main package and the six slice sprites were
+    3.6 MB of mostly lossless PNG. Opaque art becomes JPEG (a painted backdrop
+    stores gradients badly as PNG no matter how few colours it uses); sprites
+    keep PNG because they need alpha, but drop to a palette. The report keeps
+    the before/after numbers and the measured colour error, so the decision is
+    auditable rather than a silent overwrite.
+    """
+    import io
+
+    from PIL import Image
+
+    from asset_pipeline import sha256_of
+    from optimize_png import quantize, mean_and_p995_error
+
+    task = find_task(queue, task_id)
+    output = ROOT / task["output"]
+    report_path = ROOT / task["report"]
+    if not output.exists():
+        raise SystemExit(f"{output} is missing; post the task before optimising it")
+    if not report_path.exists():
+        raise SystemExit(f"{report_path} is missing; post the task first")
+
+    report = json.loads(report_path.read_text(encoding="utf-8"))
+    before_bytes = output.stat().st_size
+    image = Image.open(output)
+    image.load()
+    has_alpha = image.mode in {"RGBA", "LA"} and image.getchannel("A").getextrema()[0] < 255
+
+    if has_alpha:
+        result = quantize(image, colors)
+        mean_error, p995_error = mean_and_p995_error(image, result)
+        buffer = io.BytesIO()
+        result.save(buffer, format="PNG", optimize=True)
+        new_path = output
+    else:
+        result = image.convert("RGB")
+        mean_error, p995_error = 0.0, 0.0
+        buffer = io.BytesIO()
+        result.save(buffer, format="JPEG", quality=jpeg_quality, optimize=True, progressive=True)
+        new_path = output.with_suffix(".jpg")
+
+    after_bytes = buffer.tell()
+    if after_bytes >= before_bytes:
+        print(f"{task_id}: no gain ({before_bytes} -> {after_bytes}), left untouched")
+        return task
+
+    new_path.write_bytes(buffer.getvalue())
+    if new_path != output:
+        output.unlink()
+
+    new_relative = str(new_path.relative_to(ROOT)).replace("\\", "/")
+    report["output"] = new_relative
+    report["output_sha256"] = sha256_of(new_path)
+    report["output_size"] = list(result.size)
+    report["optimized"] = {
+        "before_bytes": before_bytes,
+        "after_bytes": after_bytes,
+        "saved_pct": round(100 * (1 - after_bytes / before_bytes), 1),
+        "format": "JPEG" if new_path != output else "PNG",
+        "jpeg_quality": jpeg_quality if new_path != output else None,
+        "palette_colors": colors if new_path == output else None,
+        "mean_error": round(mean_error, 2),
+        "p995_error": p995_error,
+    }
+    report_path.write_text(json.dumps(report, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
+
+    manifest = load_manifest()
+    for entry in manifest["entries"]:
+        if entry["asset_id"] != task["asset_id"]:
+            continue
+        files = [manifest_path(new_relative) if item in task["output"] else item for item in entry["files"]]
+        entry["files"] = files
+    save_manifest(manifest)
+
+    task["output"] = new_relative
+    save_queue(queue)
+    print(
+        f"{task_id}: {before_bytes // 1024}K -> {after_bytes // 1024}K "
+        f"({report['optimized']['saved_pct']}%) as {report['optimized']['format']}"
+    )
+    return task
+
+
 def manifest_path(output: str) -> str:
     """Manifest paths are relative to client/, queue paths to the repository root."""
     prefix = "client/"
@@ -256,11 +348,17 @@ def main() -> None:
     post.add_argument("--id", required=True)
     post.add_argument("--raw", required=True)
     sub.add_parser("verify")
+    opt = sub.add_parser("optimize")
+    opt.add_argument("--id", required=True)
+    opt.add_argument("--jpeg-quality", type=int, default=84)
+    opt.add_argument("--colors", type=int, default=256)
     args = parser.parse_args()
 
     queue = load_queue()
     if args.command == "status":
         print_status(queue)
+    elif args.command == "optimize":
+        optimize_task(queue, args.id, args.jpeg_quality, args.colors)
     elif args.command == "next":
         tasks = next_tasks(queue, args.n)
         if not tasks:
