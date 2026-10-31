@@ -83,8 +83,8 @@ P0 验收后才能进入 P1 的房间美术批量制作。P0 资源不代表最�
 
 - characters/CHR_###/{model,animation,portrait,preview}/
 - maps/MAP_MAIN_001/{scene,ground,props,collision,areas,spawn,entrances,camera,config}/
-- levels/LV_ROOM_01/ ... levels/LV_ROOM_05/ ... levels/LV_HIDDEN_01/
-- mechanisms/MEC_*/
+- levels/LV-ROOM-01/ ... levels/LV-ROOM-05/ ... levels/LV-HIDDEN-01/
+- mechanisms/{H01-END,H01-GATE,M01-EXIT-01,M01-HIDEABLE-01,M01-LIGHT-01,M02-BRIDGE-01,M03-DOOR-01,M03-ENERGY-01,M04-PLATFORM-01,M04-PLATFORM-02,M05-BRIDGE-01,M05-ENERGY-01,M05-HIDDEN-GATE,M05-REVERSE-01}/
 - effects/FX_*/
 - ui/UI_*/
 - audio/AUD_*/
