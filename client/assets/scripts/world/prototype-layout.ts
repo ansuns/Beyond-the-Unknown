@@ -153,3 +153,15 @@ export function calculatePrototypeRoomScale(
   const projectedSpan = spanX + spanY;
   return Math.min(40, availableWidth / projectedSpan, availableHeight / projectedSpan);
 }
+
+export interface IsometricDepthItem {
+  id: string;
+  screenY: number;
+}
+
+/** Back-to-front painter order for a 2D scene whose screen Y axis points up. */
+export function sortIsometricDepth<T extends IsometricDepthItem>(items: readonly T[]): T[] {
+  return [...items].sort((a, b) =>
+    b.screenY - a.screenY || (a.id < b.id ? -1 : a.id > b.id ? 1 : 0)
+  );
+}
