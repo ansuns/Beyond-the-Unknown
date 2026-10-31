@@ -13,11 +13,13 @@ import {
   Layers,
   Node,
   NodeEventType,
+  profiler,
+  ResolutionPolicy,
   UITransform,
   view
 } from "cc";
 
-import { RestClient } from "../network/rest-client";
+import { ApiError, RestClient } from "../network/rest-client";
 import type { LawRuleId, MapServerEvent, PersonalLevelState } from "../network/types";
 import { createWeChatFetch, createWeChatWebSocketFactory } from "../platform/wechat-network";
 import {
@@ -65,8 +67,18 @@ import {
   type ArtSet
 } from "./art-assets";
 import { assetService } from "./asset-service";
+import {
+  readViewport,
+  resolveDesignResolution,
+  shouldRefit
+} from "./screen-fit";
 
 const { ccclass, property } = _decorator;
+
+// Vertical padding `createLabel` puts around a label's text. Any layout that
+// stacks labels has to reserve exactly this much per label, or the boxes
+// overlap while the text still looks fine.
+const LABEL_BOX_EXTRA = 16;
 
 type Avatar = {
   player_id: string;
@@ -85,7 +97,15 @@ export class BeyondTheUnknownGameEntry extends Component {
   websocketBaseUrl = "ws://127.0.0.1:8000";
 
   private root?: Node;
+  private canvasNode?: Node;
   private worldRoot?: Node;
+  // The design resolution in force, in CSS pixels. Tracked so a resize can tell
+  // a real viewport change from the one-pixel churn that scrollbars cause.
+  private designSize = { width: 0, height: 0 };
+  private viewportHandler?: () => void;
+  // Re-drawn when the viewport changes: the room's geometry is derived from the
+  // viewport size, so it has to be rebuilt rather than nudged.
+  private lastRoomRender?: { levelName: string; completed: boolean };
   private statusLabel?: Label;
   private rulesLabel?: Label;
   private progressLabel?: Label;
@@ -114,7 +134,8 @@ export class BeyondTheUnknownGameEntry extends Component {
   private joystickActive = false;
   private joystickMagnitude = 0;
   private joystickScreenDirection = { x: 0, y: 0 };
-  private readonly joystickRadius = 48;
+  // Set from the shell layout so the visual ring and the input maths agree.
+  private joystickRadius = 48;
   private lastMoveDirection = "S";
   private levelPositionSync?: LatestPositionSyncQueue;
   private readonly roomControlNodes: Node[] = [];
@@ -147,9 +168,42 @@ export class BeyondTheUnknownGameEntry extends Component {
   private readonly moveSpeedPixelsPerSecond = 160;
   private readonly moveSyncIntervalSeconds = 0.12;
 
+  // Art is a subpackage: loaded on first use, memoised, and retried after a
+  // failure instead of leaving the shell permanently undecorated.
+  private artPromise?: Promise<void>;
+  private artStatus: "idle" | "loading" | "ready" | "failed" = "idle";
+
   onLoad(): void {
+    // The engine's stats overlay sits at the top-left and covers the login
+    // button on a phone-sized canvas, which made the HUD look broken in
+    // DevTools. It is off unless someone asks for it explicitly.
+    profiler.hideStats();
+    // Before anything is measured: make one design unit one CSS pixel, so the
+    // shell below is laid out for the screen the player actually has instead of
+    // for a 960x640 preview. Without this the page is cropped on a phone and
+    // padded on a desktop.
+    this.applyScreenFit();
+    this.listenForViewportChanges();
     this.buildShell();
-    void this.prepareArt();
+    // The art bundle is NOT fetched here. It is a WeChat subpackage, and pulling
+    // it at boot would download the whole subpackage before the first tap, which
+    // is the opposite of what a subpackage is for. It loads on first use:
+    // entering the shared world, or entering a room.
+  }
+
+  /**
+   * Load the art bundle once, on demand.
+   *
+   * `ensureBundle` already de-duplicates in-flight downloads; this keeps the
+   * whole art pass (bundle + sprite frames + decoration) from running twice when
+   * the world and a room both ask for it.
+   */
+  private ensureArt(): Promise<void> {
+    if (!this.artPromise) {
+      this.artStatus = "loading";
+      this.artPromise = this.prepareArt();
+    }
+    return this.artPromise;
   }
 
   /** Load the delivered P0 art, then dress whatever the prototype has drawn. */
@@ -162,6 +216,10 @@ export class BeyondTheUnknownGameEntry extends Component {
           this.setStatus(`${note} ${Math.round(percent * 100)}%`)
       });
     } catch (error) {
+      this.artStatus = "failed";
+      // A retry is worth offering: the common cause is a flaky network, and the
+      // service already backs off internally.
+      this.artPromise = undefined;
       this.setStatus(`资源加载失败：${error instanceof Error ? error.message : "未知错误"}`);
       return;
     }
@@ -169,6 +227,7 @@ export class BeyondTheUnknownGameEntry extends Component {
       this.setStatus(`美术资源 ${loaded}/${total}`)
     );
     this.artReady = true;
+    this.artStatus = "ready";
     this.decorateScene();
     const missing = this.art.missing;
     if (missing.length) {
@@ -205,6 +264,13 @@ export class BeyondTheUnknownGameEntry extends Component {
       });
     }
 
+    // Marker sprites are sized in fixed design units while the room itself is
+    // scaled to fit the viewport. On a wide, short screen that combination puts
+    // full-size art on a shrunk room, so two objects a few units apart in level
+    // space end up drawn on top of each other - measured at 20:9 as the hidden
+    // object covering 51% of the player.
+    const artScale = Math.max(0.55, Math.min(1.5, this.levelRoomScale / 18));
+
     if (room) {
       for (const marker of room.children) {
         const isMechanism = marker.name.startsWith("Mechanism-");
@@ -217,7 +283,11 @@ export class BeyondTheUnknownGameEntry extends Component {
         const active = status.includes("ACTIVE") || status.includes("TRIGGERED");
         const frame = active ? frames.mechanismActive : frames.mechanismInactive;
         const markerGraphics = marker.getComponent(Graphics);
-        if (applySprite(marker, "ArtMechanism", frame, { width: 30, height: 30, footAnchored: true })) {
+        if (applySprite(marker, "ArtMechanism", frame, {
+          width: 30 * artScale,
+          height: 30 * artScale,
+          footAnchored: true
+        })) {
           if (markerGraphics) markerGraphics.enabled = false;
         }
       }
@@ -225,7 +295,7 @@ export class BeyondTheUnknownGameEntry extends Component {
 
     if (this.levelAvatar && frames.character) {
       const avatarGraphics = this.levelAvatar.getComponent(Graphics);
-      const box = fitWithin(frames.character, 38, 56);
+      const box = fitWithin(frames.character, 38 * artScale, 56 * artScale);
       if (
         applySprite(this.levelAvatar, "ArtCharacter", frames.character, {
           width: box.width,
@@ -352,9 +422,392 @@ export class BeyondTheUnknownGameEntry extends Component {
     return camera;
   }
 
+  /**
+   * Positions for the shell HUD, derived from the space actually available.
+   *
+   * The previous version used fixed offsets tuned to a 960x640 preview
+   * (`size.height / 2 - 145` and friends). On an 844x390 phone the visible
+   * height is 443 design units, so those offsets stacked on top of each other:
+   * the map was squeezed to 43% of the screen, the rules label sat on the art
+   * and the bottom row overlapped the world viewport. Everything below is a
+   * vertical stack measured from the real edges, with a compact scale for short
+   * screens instead of a fixed one.
+   *
+   * Every label box below reserves LABEL_BOX_EXTRA, the same padding
+   * `createLabel` gives the node it creates. Reserving less (this used to use
+   * +8, +6) is invisible in a screenshot and shows up only as overlap: the
+   * title covers 29% of the status line, the bottom row covers part of the
+   * rules label - measured by tools/verify-landscape.mjs at every ratio.
+   */
+  private computeShellLayout(size: { width: number; height: number }) {
+    const compact = size.height < 560;
+    const pad = compact ? 10 : 16;
+
+    const titleSize = compact ? 21 : 30;
+    const titleBox = titleSize + LABEL_BOX_EXTRA;
+    const statusSize = compact ? 12 : 16;
+    const statusBox = statusSize + LABEL_BOX_EXTRA;
+    const navHeight = compact ? 30 : 44;
+    const navWidth = compact ? 88 : 110;
+    // The side buttons used to sit 6 units from the edge while everything else
+    // kept `pad`; tools/verify-landscape.mjs flags that as a safe-area breach,
+    // and on a phone the rounded corners and WeChat's capsule are right there.
+    const navInset = pad;
+    const progressSize = compact ? 11 : 13;
+    const progressBox = progressSize + LABEL_BOX_EXTRA;
+    const bottomHeight = compact ? 40 : 54;
+    const bottomWidth = compact ? 140 : 190;
+    const bottomSideWidth = compact ? 150 : 210;
+    const rulesSize = compact ? 12 : 14;
+    const rulesBox = rulesSize + LABEL_BOX_EXTRA;
+    const hintSize = 13;
+    const hintBox = hintSize + LABEL_BOX_EXTRA;
+    // A 390 px tall screen cannot afford a footer line that repeats the hint.
+    const showHint = size.height >= 580;
+
+    let top = size.height / 2 - pad;
+    const titleY = top - titleBox / 2;
+    top -= titleBox;
+    const statusY = top - statusBox / 2;
+    top -= statusBox + (compact ? 2 : 6);
+    const navY = top - navHeight / 2;
+    top -= navHeight + 2;
+    const progressY = top - progressBox / 2;
+    top -= progressBox + (compact ? 2 : 6);
+    const topLimit = top;
+
+    let floor = -size.height / 2 + pad;
+    const hintY = showHint ? floor + hintBox / 2 : 0;
+    if (showHint) floor += hintBox + 2;
+    const bottomY = floor + bottomHeight / 2;
+    floor += bottomHeight + 2;
+    const rulesY = floor + rulesBox / 2;
+    floor += rulesBox + (compact ? 2 : 6);
+    const bottomLimit = floor;
+
+    // A few pixels of breathing room on each side: at 390 px tall the rules
+    // label and the progress line were touching the art and read as overlap.
+    const gap = compact ? 8 : 14;
+    const available = Math.max(120, topLimit - bottomLimit);
+    const worldHeight = Math.min(available - gap * 2, compact ? 300 : 420);
+    const worldY = bottomLimit + available / 2;
+
+    return {
+      compact,
+      pad,
+      titleSize,
+      titleY,
+      statusSize,
+      statusY,
+      navHeight,
+      navWidth,
+      navInset,
+      navY,
+      progressSize,
+      progressY,
+      bottomHeight,
+      bottomWidth,
+      bottomSideWidth,
+      bottomY,
+      rulesSize,
+      rulesY,
+      hintSize,
+      hintY,
+      showHint,
+      worldY,
+      worldWidth: Math.min(size.width - pad * 2, 900),
+      worldHeight,
+      joystickY: worldY - worldHeight / 2 + (compact ? 62 : 84),
+      joystickRadius: compact ? 44 : 56,
+      joystickBox: compact ? 116 : 144
+    };
+  }
+
+  /**
+   * Make the design resolution the screen's own size.
+   *
+   * The project used to ship a fixed 960x640 design resolution. With a fixed
+   * design resolution the engine picks one scale factor and the visible area
+   * only lines up with the screen at one aspect ratio; everything else is
+   * cropped or padded. Deriving the design resolution from the viewport and
+   * letting the policy stretch to the frame means the visible size IS the
+   * screen, on a 16:9 phone, a 20:9 phone and a desktop window alike.
+   *
+   * EXACT_FIT rather than SHOW_ALL on purpose: SHOW_ALL keeps the whole design
+   * rectangle visible, which is the definition of a letterbox whenever the
+   * canvas and the design rectangle disagree for even one frame - and they do
+   * disagree for one frame while the canvas catches up to a resize. EXACT_FIT
+   * always covers the frame.
+   */
+  private applyScreenFit(): { width: number; height: number } | undefined {
+    const metrics = readViewport(globalThis as any);
+    if (!metrics) return undefined;
+    const design = resolveDesignResolution(metrics);
+    this.designSize = design;
+    view.setDesignResolutionSize(design.width, design.height, ResolutionPolicy.EXACT_FIT);
+    return design;
+  }
+
+  /**
+   * Refit when the screen really changes.
+   *
+   * Locked landscape on a phone means this mostly serves the browser: resizing
+   * the window used to leave the HUD laid out for the old size, so a window
+   * that shrank simply cropped the controls.
+   */
+  private listenForViewportChanges(): void {
+    if (this.viewportHandler) return;
+    const handler = () => this.handleViewportChange();
+    this.viewportHandler = handler;
+
+    const host = globalThis as any;
+    try {
+      host.wx?.onWindowResize?.(handler);
+    } catch {
+      // Older base libraries without the callback.
+    }
+    host.window?.addEventListener?.("resize", handler);
+    host.window?.addEventListener?.("orientationchange", handler);
+    try {
+      // Covers embeddings that never fire a window resize, such as an iframe
+      // resized by its parent.
+      (view as any).on?.("canvas-resize", handler);
+    } catch {
+      // Not every platform's view is an event target.
+    }
+  }
+
+  private handleViewportChange(): void {
+    const metrics = readViewport(globalThis as any);
+    if (!metrics) return;
+    const next = resolveDesignResolution(metrics);
+    if (!shouldRefit(this.designSize, next)) return;
+    this.designSize = next;
+    view.setDesignResolutionSize(next.width, next.height, ResolutionPolicy.EXACT_FIT);
+    // The new size is passed in rather than read back. Cocos applies a design
+    // resolution change to its frame on the next tick, so view.getVisibleSize()
+    // still returns the old size right here - and a shell laid out for the old
+    // width puts the left button off the left edge of the new screen. Measured:
+    // resizing 1280x720 down to 844x390 put "登录并进入世界" at x=-515.
+    this.relayoutShell(next);
+  }
+
+  private onDestroy(): void {
+    const handler = this.viewportHandler;
+    if (!handler) return;
+    this.viewportHandler = undefined;
+    const host = globalThis as any;
+    try {
+      host.wx?.offWindowResize?.(handler);
+    } catch {
+      // Nothing was registered.
+    }
+    host.window?.removeEventListener?.("resize", handler);
+    host.window?.removeEventListener?.("orientationchange", handler);
+    try {
+      (view as any).off?.("canvas-resize", handler);
+    } catch {
+      // Not every platform's view is an event target.
+    }
+  }
+
+  /**
+   * Re-place the shell for the current viewport.
+   *
+   * Every position comes from computeShellLayout, which reads the visible size,
+   * so re-running it is all a resize needs. The room is the exception: its
+   * geometry is baked into node positions and the room scale, so it is redrawn
+   * from the same state that drew it the first time.
+   */
+  private relayoutShell(sizeOverride?: { width: number; height: number }): void {
+    if (!this.root) return;
+    const size = sizeOverride ?? view.getVisibleSize();
+    const layout = this.computeShellLayout(size);
+    const labelWidth = size.width - layout.pad * 2;
+
+    if (this.canvasNode) {
+      const transform = this.canvasNode.getComponent(UITransform);
+      if (transform) transform.setContentSize(size.width, size.height);
+      const camera = this.canvasNode.getComponent(Canvas)?.cameraComponent;
+      if (camera) camera.orthoHeight = size.height / 2;
+    }
+
+    this.paintBackground(size);
+    this.placeLabel("Title", 0, layout.titleY, layout.titleSize, labelWidth);
+    this.placeLabel("Status", 0, layout.statusY, layout.statusSize, labelWidth);
+    this.placeLabel("ProgressSummary", 0, layout.progressY, layout.progressSize, labelWidth);
+    this.placeLabel("RulesStatus", 0, layout.rulesY, layout.rulesSize, labelWidth);
+
+    const hint = this.root.getChildByName("Hint");
+    if (hint) {
+      hint.active = layout.showHint;
+      if (layout.showHint) this.placeLabel("Hint", 0, layout.hintY, layout.hintSize, labelWidth);
+    }
+
+    if (this.worldRoot) {
+      this.worldRoot.setPosition(0, layout.worldY, 0);
+      this.placeWorldViewport(layout.worldWidth, layout.worldHeight);
+    }
+
+    this.placeButton(
+      "LoginButton",
+      -size.width / 2 + layout.bottomSideWidth / 2 + layout.pad,
+      layout.bottomY,
+      layout.bottomSideWidth,
+      layout.bottomHeight
+    );
+    this.placeButton("EnterLevelButton", 0, layout.bottomY, layout.bottomWidth, layout.bottomHeight);
+    this.placeButton(
+      "ReturnButton",
+      size.width / 2 - layout.bottomSideWidth / 2 - layout.pad,
+      layout.bottomY,
+      layout.bottomSideWidth,
+      layout.bottomHeight
+    );
+    this.placeButton(
+      "ProgressButton",
+      -size.width / 2 + layout.navInset + layout.navWidth / 2,
+      layout.navY,
+      layout.navWidth,
+      layout.navHeight
+    );
+    this.placeButton("CharacterButton", 0, layout.navY, layout.navWidth, layout.navHeight);
+    this.placeButton(
+      "EmoteButton",
+      size.width / 2 - layout.navInset - layout.navWidth / 2,
+      layout.navY,
+      layout.navWidth,
+      layout.navHeight
+    );
+
+    this.relayoutJoystick(size, layout);
+
+    const room = this.lastRoomRender;
+    if (this.currentMode === "PERSONAL_LEVEL" && room && !this.prototypeActionInFlight) {
+      this.drawPersonalRoom(room.levelName, room.completed);
+      this.decorateScene();
+    }
+  }
+
+  private paintBackground(size: { width: number; height: number }): void {
+    const node = this.root?.getChildByName("Background");
+    if (!node) return;
+    const transform = node.getComponent(UITransform);
+    if (transform) transform.setContentSize(size.width, size.height);
+    const graphics = node.getComponent(Graphics);
+    if (!graphics) return;
+    graphics.clear();
+    graphics.fillColor = new Color(10, 18, 32, 255);
+    graphics.rect(-size.width / 2, -size.height / 2, size.width, size.height);
+    graphics.fill();
+  }
+
+  private placeWorldViewport(width: number, height: number): void {
+    if (!this.worldRoot) return;
+    const transform = this.worldRoot.getComponent(UITransform);
+    if (transform) transform.setContentSize(width, height);
+    const graphics = this.worldRoot.getComponent(Graphics);
+    if (!graphics) return;
+    graphics.clear();
+    graphics.lineWidth = 3;
+    graphics.strokeColor = new Color(72, 112, 144, 255);
+    graphics.fillColor = new Color(17, 34, 50, 255);
+    graphics.rect(-width / 2, -height / 2, width, height);
+    graphics.fill();
+    graphics.stroke();
+  }
+
+  private placeLabel(
+    name: string,
+    x: number,
+    y: number,
+    fontSize: number,
+    width: number
+  ): void {
+    const node = this.root?.getChildByName(name);
+    if (!node) return;
+    node.setPosition(x, y, 0);
+    const transform = node.getComponent(UITransform);
+    if (transform) transform.setContentSize(width, fontSize + LABEL_BOX_EXTRA);
+    const label = node.getComponent(Label);
+    if (!label) return;
+    label.fontSize = fontSize;
+    label.lineHeight = fontSize + 8;
+  }
+
+  private placeButton(
+    name: string,
+    x: number,
+    y: number,
+    width: number,
+    height: number
+  ): void {
+    const node = this.root?.getChildByName(name);
+    if (!node) return;
+    node.setPosition(x, y, 0);
+    const transform = node.getComponent(UITransform);
+    if (transform) transform.setContentSize(width, height);
+    const graphics = node.getComponent(Graphics);
+    if (graphics) {
+      graphics.clear();
+      graphics.fillColor = new Color(35, 93, 123, 255);
+      graphics.rect(-width / 2, -height / 2, width, height);
+      graphics.fill();
+    }
+    const labelNode = node.getChildByName(`${name}Label`);
+    const labelTransform = labelNode?.getComponent(UITransform);
+    if (labelTransform) labelTransform.setContentSize(width, height);
+  }
+
+  private relayoutJoystick(
+    size: { width: number; height: number },
+    layout: {
+      joystickY: number;
+      joystickRadius: number;
+      joystickBox: number;
+      pad: number;
+    }
+  ): void {
+    const root = this.joystickRoot;
+    if (!root) return;
+    root.setPosition(
+      -size.width / 2 + layout.joystickBox / 2 + layout.pad,
+      layout.joystickY,
+      0
+    );
+    const transform = root.getComponent(UITransform);
+    if (transform) transform.setContentSize(layout.joystickBox, layout.joystickBox);
+    this.joystickRadius = layout.joystickRadius;
+
+    const ring = root.getComponent(Graphics);
+    if (ring) {
+      ring.clear();
+      ring.lineWidth = 3;
+      ring.strokeColor = new Color(150, 190, 210, 180);
+      ring.circle(0, 0, layout.joystickRadius);
+      ring.stroke();
+    }
+
+    const knob = this.joystickKnob;
+    const knobGraphics = knob?.getComponent(Graphics);
+    if (knobGraphics) {
+      knobGraphics.clear();
+      knobGraphics.fillColor = new Color(75, 145, 180, 230);
+      knobGraphics.strokeColor = new Color(190, 225, 240, 255);
+      knobGraphics.lineWidth = 2;
+      knobGraphics.circle(0, 0, layout.joystickRadius * 0.39);
+      knobGraphics.fill();
+      knobGraphics.stroke();
+    }
+  }
+
   private buildShell(): void {
     const size = view.getVisibleSize();
+    const layout = this.computeShellLayout(size);
+    const labelWidth = size.width - layout.pad * 2;
+
     const canvasNode = this.uiNode("RuntimeCanvas");
+    this.canvasNode = canvasNode;
     this.node.addChild(canvasNode);
     canvasNode.addComponent(UITransform).setContentSize(size.width, size.height);
     const canvas = canvasNode.addComponent(Canvas);
@@ -372,20 +825,28 @@ export class BeyondTheUnknownGameEntry extends Component {
     bg.rect(-size.width / 2, -size.height / 2, size.width, size.height);
     bg.fill();
 
-    this.createLabel("Title", "无界之外 · Beyond the Unknown", 0, size.height / 2 - 48, 30);
+    this.createLabel(
+      "Title",
+      "无界之外 · Beyond the Unknown",
+      0,
+      layout.titleY,
+      layout.titleSize,
+      labelWidth
+    );
     this.statusLabel = this.createLabel(
       "Status",
       "测试原型：点击「登录并进入世界」连接微信沙盒与共享地图",
       0,
-      size.height / 2 - 92,
-      16
+      layout.statusY,
+      layout.statusSize,
+      labelWidth
     );
 
     this.worldRoot = this.uiNode("WorldViewport");
     this.root.addChild(this.worldRoot);
-    this.worldRoot.setPosition(0, -40, 0);
+    this.worldRoot.setPosition(0, layout.worldY, 0);
     const worldTransform = this.worldRoot.addComponent(UITransform);
-    worldTransform.setContentSize(Math.min(size.width - 48, 760), Math.min(size.height - 250, 420));
+    worldTransform.setContentSize(layout.worldWidth, layout.worldHeight);
     const worldGraphics = this.worldRoot.addComponent(Graphics);
     worldGraphics.lineWidth = 3;
     worldGraphics.strokeColor = new Color(72, 112, 144, 255);
@@ -403,87 +864,99 @@ export class BeyondTheUnknownGameEntry extends Component {
     this.createButton(
       "LoginButton",
       "登录并进入世界",
-      -size.width / 2 + 130,
-      -size.height / 2 + 62,
-      210,
-      54,
+      -size.width / 2 + layout.bottomSideWidth / 2 + layout.pad,
+      layout.bottomY,
+      layout.bottomSideWidth,
+      layout.bottomHeight,
       () => this.loginAndEnterWorld()
     );
     this.createButton(
       "EnterLevelButton",
       "进入探索房间",
       0,
-      -size.height / 2 + 62,
-      190,
-      54,
+      layout.bottomY,
+      layout.bottomWidth,
+      layout.bottomHeight,
       () => this.enterFirstRoom()
     );
     this.createButton(
       "ReturnButton",
       "放弃并返回世界",
-      size.width / 2 - 130,
-      -size.height / 2 + 62,
-      210,
-      54,
+      size.width / 2 - layout.bottomSideWidth / 2 - layout.pad,
+      layout.bottomY,
+      layout.bottomSideWidth,
+      layout.bottomHeight,
       () => this.returnToWorld()
     );
     this.createButton(
       "ProgressButton",
       "我的进度",
-      -size.width / 2 + 72,
-      size.height / 2 - 145,
-      110,
-      44,
+      -size.width / 2 + layout.navInset + layout.navWidth / 2,
+      layout.navY,
+      layout.navWidth,
+      layout.navHeight,
       () => this.refreshProgress()
     );
     this.createButton(
       "CharacterButton",
       "切换角色",
       0,
-      size.height / 2 - 145,
-      110,
-      44,
+      layout.navY,
+      layout.navWidth,
+      layout.navHeight,
       () => this.cycleCharacter()
     );
     this.createButton(
       "EmoteButton",
       "招呼",
-      size.width / 2 - 72,
-      size.height / 2 - 145,
-      110,
-      44,
+      size.width / 2 - layout.navInset - layout.navWidth / 2,
+      layout.navY,
+      layout.navWidth,
+      layout.navHeight,
       () => this.mapSession?.action("ACT_001")
     );
     this.progressLabel = this.createLabel(
       "ProgressSummary",
       "进度：登录后可查看",
       0,
-      size.height / 2 - 190,
-      13
+      layout.progressY,
+      layout.progressSize,
+      labelWidth
     );
 
     this.rulesLabel = this.createLabel(
       "RulesStatus",
       "法则：尚未读取",
       0,
-      -size.height / 2 + 126,
-      14
+      layout.rulesY,
+      layout.rulesSize,
+      labelWidth
     );
-    this.createLabel(
-      "Hint",
-      "共享地图：点击地图移动；房间机关与法则数值在完成内容/数值配置后启用",
-      0,
-      -size.height / 2 + 18,
-      13
-    );
-    this.createVirtualJoystick(size);
+    if (layout.showHint) {
+      this.createLabel(
+        "Hint",
+        "共享地图：点击地图移动；房间机关与法则数值在完成内容/数值配置后启用",
+        0,
+        layout.hintY,
+        layout.hintSize,
+        labelWidth
+      );
+    }
+    this.createVirtualJoystick(size, layout);
   }
 
-  private createLabel(name: string, value: string, x: number, y: number, fontSize: number): Label {
+  private createLabel(
+    name: string,
+    value: string,
+    x: number,
+    y: number,
+    fontSize: number,
+    width = 900
+  ): Label {
     const node = this.uiNode(name);
     this.root!.addChild(node);
     node.setPosition(x, y, 0);
-    node.addComponent(UITransform).setContentSize(900, fontSize + 16);
+    node.addComponent(UITransform).setContentSize(width, fontSize + LABEL_BOX_EXTRA);
     const label = node.addComponent(Label);
     label.string = value;
     label.fontSize = fontSize;
@@ -531,16 +1004,24 @@ export class BeyondTheUnknownGameEntry extends Component {
     return node;
   }
 
-  private createVirtualJoystick(size: { width: number; height: number }): void {
+  private createVirtualJoystick(
+    size: { width: number; height: number },
+    layout: { joystickY: number; joystickRadius: number; joystickBox: number; pad: number }
+  ): void {
     const root = this.uiNode("VirtualJoystick");
     this.root!.addChild(root);
-    root.setPosition(-size.width / 2 + 88, -size.height / 2 + 160, 0);
-    root.addComponent(UITransform).setContentSize(144, 144);
+    root.setPosition(
+      -size.width / 2 + layout.joystickBox / 2 + layout.pad,
+      layout.joystickY,
+      0
+    );
+    root.addComponent(UITransform).setContentSize(layout.joystickBox, layout.joystickBox);
+    this.joystickRadius = layout.joystickRadius;
 
     const ring = root.addComponent(Graphics);
     ring.lineWidth = 3;
     ring.strokeColor = new Color(150, 190, 210, 180);
-    ring.circle(0, 0, 56);
+    ring.circle(0, 0, layout.joystickRadius);
     ring.stroke();
 
     const knob = this.uiNode("VirtualJoystickKnob");
@@ -550,7 +1031,7 @@ export class BeyondTheUnknownGameEntry extends Component {
     knobGraphics.fillColor = new Color(75, 145, 180, 230);
     knobGraphics.strokeColor = new Color(190, 225, 240, 255);
     knobGraphics.lineWidth = 2;
-    knobGraphics.circle(0, 0, 22);
+    knobGraphics.circle(0, 0, layout.joystickRadius * 0.39);
     knobGraphics.fill();
     knobGraphics.stroke();
 
@@ -748,6 +1229,7 @@ export class BeyondTheUnknownGameEntry extends Component {
       }
       this.currentMode = "WORLD";
       this.updateJoystickVisibility();
+      void this.ensureArt();
       this.decorateScene();
       this.upsertAvatar({
         player_id: this.localPlayerId!,
@@ -1016,7 +1498,18 @@ export class BeyondTheUnknownGameEntry extends Component {
       }
       this.setStatus(result.effects.length ? "回声扩散：隐藏的符号显现了" : "回声没有回应");
     } catch (error) {
-      this.setStatus(`回声失败：${error instanceof Error ? error.message : "请稍后重试"}`);
+      // A 422 here is not a bug: RULE_ECHO only reveals targets within the rule
+      // radius of the player's authoritative position, so casting from across
+      // the room is refused on purpose. Say that instead of echoing the API text.
+      const outOfRange =
+        error instanceof ApiError &&
+        error.status === 422 &&
+        error.message.includes("target");
+      this.setStatus(
+        outOfRange
+          ? "回声范围外：先走近隐藏的符号再施放"
+          : `回声失败：${error instanceof Error ? error.message : "请稍后重试"}`
+      );
     } finally {
       this.prototypeActionInFlight = false;
     }
@@ -1192,6 +1685,10 @@ export class BeyondTheUnknownGameEntry extends Component {
           this.setStatus("请先登录并进入共享世界");
           return;
         }
+        if (this.artStatus !== "ready") {
+          this.setStatus("正在加载场景资源…");
+          await this.ensureArt();
+        }
         try {
           this.setStatus("正在读取房间目录与个人进度…");
           const [catalog, progress] = await Promise.all([
@@ -1285,6 +1782,52 @@ export class BeyondTheUnknownGameEntry extends Component {
         }
       ])
     );
+  }
+
+  /**
+   * Geometry for the in-room action buttons.
+   *
+   * The world viewport is only ~232 design units tall on an 844x390 phone, so
+   * the old `-height / 2 + 112` offsets pushed the combo buttons into the middle
+   * of the room, on top of the player marker. Rows are stacked from the bottom
+   * edge instead, and shrink on short viewports.
+   */
+  private roomControlLayout(size: { width: number; height: number }) {
+    const compact = size.height < 320;
+    const height = compact ? 32 : 42;
+    const gap = compact ? 6 : 10;
+    const inset = compact ? 6 : 12;
+    const bottom = -size.height / 2 + inset;
+    // Second row from the bottom, where "完成并结算" lives.
+    const primaryY = bottom + height / 2;
+    // First row from the bottom, where the combo / action buttons live.
+    const actionY = bottom + height + gap + height / 2;
+    // Vertical band the rows occupy, plus the title above the art. Reserving it
+    // is what keeps the buttons off the player: the room art was fitted to the
+    // whole viewport, so its bottom rows - where the avatar often stands - ended
+    // up underneath the action row. Measured overlap before this: 25% of the
+    // player hidden behind "回声 · 显形".
+    const rowsBand = inset + height * 2 + gap;
+    const titleSize = compact ? 13 : 16;
+    const titleBand = titleSize + LABEL_BOX_EXTRA;
+    const playfieldHeight = Math.max(60, size.height - rowsBand - titleBand - 8);
+    return {
+      compact,
+      height,
+      gap,
+      rowsBand,
+      titleBand,
+      playfieldHeight,
+      playfieldWidth: Math.max(120, size.width - 24),
+      // Centre of the art band: below the title, above the action rows.
+      playfieldCenterY: size.height / 2 - titleBand - playfieldHeight / 2,
+      hintY: size.height / 2 - (compact ? 12 : 20),
+      titleY: size.height / 2 - (compact ? 16 : 30),
+      titleSize,
+      primaryY,
+      actionY,
+      sideX: size.width / 2 - (compact ? 70 : 88)
+    };
   }
 
   private prototypeRoomDimensions(): { width: number; height: number } {
@@ -1464,15 +2007,23 @@ export class BeyondTheUnknownGameEntry extends Component {
 
   private drawPersonalRoom(levelName: string, completed = false): void {
     if (!this.worldRoot) return;
+    // Remembered so a viewport change can redraw the room at the new size
+    // instead of leaving it fitted to the size it was first built for.
+    this.lastRoomRender = { levelName, completed };
     this.clearRoomControls();
     this.worldRoot.removeAllChildren();
     this.prototypeDepthNodes = [];
     const size = this.worldRoot.getComponent(UITransform).contentSize;
-    this.updatePrototypeRoomScale(size);
+    const roomLayout = this.roomControlLayout(size);
+    // Fit the room to the band that is left after the title and the action rows,
+    // not to the whole viewport: the bottom of the diamond is where the avatar
+    // often stands, and it used to end up underneath the buttons.
+    this.updatePrototypeRoomScale({ width: size.width, height: roomLayout.playfieldHeight });
     const roomSize = this.prototypeRoomDimensions();
     if (this.pendingLevelId !== "LV-ROOM-01") {
       const room = this.uiNode(`RoomPrototype-${this.pendingLevelId}`);
       this.worldRoot.addChild(room);
+      room.setPosition(0, roomLayout.playfieldCenterY, 0);
       room.addComponent(UITransform).setContentSize(roomSize.width, roomSize.height);
       const background = room.addComponent(Graphics);
       background.lineWidth = 3;
@@ -1561,7 +2112,7 @@ export class BeyondTheUnknownGameEntry extends Component {
 
       const hintNode = this.uiNode("RoomPrototypeHint");
       this.worldRoot.addChild(hintNode);
-      hintNode.setPosition(0, -size.height / 2 + 178, 0);
+      hintNode.setPosition(0, roomLayout.hintY, 0);
       hintNode.addComponent(UITransform).setContentSize(size.width - 40, 34);
       const hint = hintNode.addComponent(Label);
       hint.string = completed
@@ -1582,9 +2133,9 @@ export class BeyondTheUnknownGameEntry extends Component {
             `Cast-${definition.comboId}-${index}`,
             definition.displayName,
             x,
-            -size.height / 2 + 112,
+            roomLayout.actionY,
             buttonWidth,
-            42,
+            roomLayout.height,
             () => this.castPrototypeCombo(definition)
           ));
         });
@@ -1594,9 +2145,9 @@ export class BeyondTheUnknownGameEntry extends Component {
             "InteractEndingCore",
             "交互结局核心",
             0,
-            -size.height / 2 + 112,
+            roomLayout.actionY,
             180,
-            42,
+            roomLayout.height,
             () => this.interactHiddenEnding()
           ));
         } else {
@@ -1604,19 +2155,19 @@ export class BeyondTheUnknownGameEntry extends Component {
             "SettlePrototypeRoom",
             "完成并结算",
             0,
-            -size.height / 2 + 60,
+            roomLayout.primaryY,
             150,
-            40,
+            roomLayout.height,
             () => this.settlePrototypeRoom()
           ));
         }
         this.roomControlNodes.push(this.createButton(
           "RoomAbandonButton",
           "放弃并返回",
-          size.width / 2 - 88,
-          size.height / 2 - 145,
+          roomLayout.sideX,
+          roomLayout.actionY,
           150,
-          40,
+          roomLayout.height,
           () => this.returnToWorld()
         ));
       } else {
@@ -1624,9 +2175,9 @@ export class BeyondTheUnknownGameEntry extends Component {
           "BackToWorldButton",
           "返回共享世界",
           0,
-          -size.height / 2 + 70,
+          roomLayout.primaryY,
           170,
-          42,
+          roomLayout.height,
           () => this.loginAndEnterWorld()
         ));
       }
@@ -1635,6 +2186,7 @@ export class BeyondTheUnknownGameEntry extends Component {
 
     const room = this.uiNode("Room01Prototype");
     this.worldRoot.addChild(room);
+    room.setPosition(0, roomLayout.playfieldCenterY, 0);
     room.addComponent(UITransform).setContentSize(roomSize.width, roomSize.height);
     const graphics = room.addComponent(Graphics);
     graphics.lineWidth = 3;
@@ -1736,11 +2288,11 @@ export class BeyondTheUnknownGameEntry extends Component {
 
     const labelNode = this.uiNode("RoomTitle");
     this.worldRoot.addChild(labelNode);
-    labelNode.setPosition(0, size.height / 2 - 30, 0);
-    labelNode.addComponent(UITransform).setContentSize(size.width - 40, 28);
+    labelNode.setPosition(0, roomLayout.titleY, 0);
+    labelNode.addComponent(UITransform).setContentSize(size.width - 40, roomLayout.titleSize + 12);
     const label = labelNode.addComponent(Label);
     label.string = `${levelName} · ROOM-01 原型`;
-    label.fontSize = 16;
+    label.fontSize = roomLayout.titleSize;
     label.color = new Color(226, 237, 246, 255);
     label.horizontalAlign = Label.HorizontalAlign.CENTER;
 
@@ -1750,17 +2302,17 @@ export class BeyondTheUnknownGameEntry extends Component {
           "BackToWorldButton",
           "返回共享世界",
           0,
-          -size.height / 2 + 105,
+          roomLayout.primaryY,
           170,
-          42,
+          roomLayout.height,
           () => this.loginAndEnterWorld()
         )
       );
     } else {
       this.roomControlNodes.push(
-        this.createButton("RoomEchoButton", "回声 · 显形", -95, -size.height / 2 + 155, 150, 42, () => this.castRoomEcho()),
-        this.createButton("RoomExitButton", "靠近出口并交互", 95, -size.height / 2 + 155, 170, 42, () => this.interactRoomExit()),
-        this.createButton("RoomAbandonButton", "放弃返回", size.width / 2 - 82, -size.height / 2 + 105, 130, 38, () => this.returnToWorld())
+        this.createButton("RoomEchoButton", "回声 · 显形", -100, roomLayout.actionY, 150, roomLayout.height, () => this.castRoomEcho()),
+        this.createButton("RoomExitButton", "靠近出口并交互", 80, roomLayout.actionY, 170, roomLayout.height, () => this.interactRoomExit()),
+        this.createButton("RoomAbandonButton", "放弃返回", roomLayout.sideX, roomLayout.primaryY, 130, roomLayout.height, () => this.returnToWorld())
       );
     }
     this.decorateScene();
