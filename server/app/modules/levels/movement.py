@@ -31,7 +31,9 @@ def parse_level_movement_settings(config: dict[str, Any] | None) -> LevelMovemen
         or not math.isfinite(value)
         for value in values
     ):
-        raise ValueError("level prototype movement speed and spawn coordinates must be finite numbers")
+        raise ValueError(
+            "level prototype movement speed and spawn coordinates must be finite numbers"
+        )
 
     movement_speed, spawn_x, spawn_y = (float(value) for value in values)
     if movement_speed <= 0:
@@ -57,5 +59,7 @@ def max_allowed_movement_distance(
         or not math.isfinite(jitter_allowance)
         or jitter_allowance < 0
     ):
-        raise ValueError("movement elapsed time and jitter allowance must be finite and non-negative")
+        raise ValueError(
+            "movement elapsed time and jitter allowance must be finite and non-negative"
+        )
     return settings.movement_speed * max(0.05, float(elapsed_seconds)) + jitter_allowance
