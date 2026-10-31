@@ -862,7 +862,11 @@ export class BeyondTheUnknownGameEntry extends Component {
       background.lineWidth = 3;
       background.strokeColor = new Color(105, 169, 190, 255);
       background.fillColor = new Color(18, 39, 55, 255);
-      background.rect(-roomSize.width / 2, -roomSize.height / 2, roomSize.width, roomSize.height);
+      background.moveTo(0, -roomSize.height / 2);
+      background.lineTo(roomSize.width / 2, 0);
+      background.lineTo(0, roomSize.height / 2);
+      background.lineTo(-roomSize.width / 2, 0);
+      background.close();
       background.fill();
       background.stroke();
 
@@ -1010,7 +1014,11 @@ export class BeyondTheUnknownGameEntry extends Component {
     graphics.lineWidth = 3;
     graphics.strokeColor = new Color(105, 169, 190, 255);
     graphics.fillColor = new Color(18, 39, 55, 255);
-    graphics.rect(-roomSize.width / 2, -roomSize.height / 2, roomSize.width, roomSize.height);
+    graphics.moveTo(0, -roomSize.height / 2);
+    graphics.lineTo(roomSize.width / 2, 0);
+    graphics.lineTo(0, roomSize.height / 2);
+    graphics.lineTo(-roomSize.width / 2, 0);
+    graphics.close();
     graphics.fill();
     graphics.stroke();
 
