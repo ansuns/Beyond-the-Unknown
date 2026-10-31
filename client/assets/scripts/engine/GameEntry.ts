@@ -80,6 +80,7 @@ export class BeyondTheUnknownGameEntry extends Component {
   private pendingLevelId = "";
   private moveTarget?: { x: number; y: number };
   private moveSendElapsed = 0;
+  private lastMoveDirection = "S";
   private levelMoveSendElapsed = 0;
   private levelPosition = { x: 1, y: 4 };
   private levelAvatar?: Node;
@@ -160,6 +161,7 @@ export class BeyondTheUnknownGameEntry extends Component {
       Math.abs(dx) > Math.abs(dy)
         ? (dx >= 0 ? "E" : "W")
         : (dy >= 0 ? "N" : "S");
+    this.lastMoveDirection = direction;
 
     avatar.setPosition(
       nextX * this.worldPixelsPerUnit,
@@ -411,7 +413,34 @@ export class BeyondTheUnknownGameEntry extends Component {
   }
 
   private onJoystickEnd(): void {
+    const wasActive = this.joystickActive;
+    const mode = this.currentMode;
     this.stopJoystickMovement();
+    if (!wasActive) return;
+
+    if (mode === "PERSONAL_LEVEL" && this.levelPositionSync) {
+      void this.levelPositionSync.flush({ ...this.levelPosition }).catch((error) => {
+        this.setStatus(`摇杆位置同步失败：${error instanceof Error ? error.message : "网络错误"}`);
+      });
+      return;
+    }
+
+    if (mode === "WORLD" && this.mapSession && this.localPlayerId) {
+      const avatar = this.avatars.get(this.localPlayerId);
+      if (!avatar) return;
+      this.clientTick += 1;
+      this.moveSendElapsed = 0;
+      try {
+        this.mapSession.move(
+          avatar.position.x / this.worldPixelsPerUnit,
+          avatar.position.y / this.worldPixelsPerUnit,
+          this.lastMoveDirection,
+          this.clientTick
+        );
+      } catch (error) {
+        this.setStatus(`摇杆位置同步失败：${error instanceof Error ? error.message : "连接已断开"}`);
+      }
+    }
   }
 
   private updateJoystickFromEvent(event: any): void {
