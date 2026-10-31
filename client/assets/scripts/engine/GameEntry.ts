@@ -872,7 +872,7 @@ export class BeyondTheUnknownGameEntry extends Component {
   private async settlePrototypeRoom(): Promise<void> {
     if (!this.levelSession || this.prototypeActionInFlight) return;
     this.prototypeActionInFlight = true;
-    this.moveTarget = undefined;
+    this.stopJoystickMovement();
     try {
       await this.flushLevelPosition();
       // Do not stop GAZE before settlement: stop_gaze intentionally resets
@@ -886,7 +886,8 @@ export class BeyondTheUnknownGameEntry extends Component {
       this.prototypeGazeMaintainAt = 0;
       this.prototypeGazeNextMaintainAt = 0;
       this.currentMode = "MENU";
-      this.moveTarget = undefined;
+      this.updateJoystickVisibility();
+      this.stopJoystickMovement();
       this.drawPersonalRoom("探索完成", true);
       const unlockMessage = result.unlocked_hidden_level_id
         ? ` · 隐藏结局已解锁（${result.unlocked_hidden_level_id}），返回后可进入`
