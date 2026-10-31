@@ -8,6 +8,7 @@ import type {
   RulePoint
 } from "../network/types";
 import type { PersonalLevelSession } from "./personal-level-session";
+import { getGazeLeaseRenewalInterval } from "./gaze-lease-timing";
 
 export type LawUnavailableReason =
   | "CATALOG_NOT_LOADED"
