@@ -52,6 +52,24 @@ npm run validate:release-assets
 - `validate:assets` 检查清单结构、角色/关卡/机关 ID 一致性、路径安全和 READY 文件存在性；允许缺失资源被登记，供日常开发持续追踪。
 - `validate:release-assets` 是发布门禁，要求所有 MVP 必需资源均为 READY 且文件真实存在。当前必然失败，直到资源制作与验收完成。
 
+## READY 资源的来源与授权证据
+
+将条目从 `MISSING` / `IN_PROGRESS` 改为 `READY` 时，除真实文件和运行验收外，必须在 manifest 条目中提供 `provenance`：
+
+```json
+{
+  "source_type": "ORIGINAL_INTERNAL",
+  "source_reference": "art-source/CHR_001/portrait-v1",
+  "license": "Owned original work",
+  "license_evidence": "docs/engineering/assets/evidence/CHR_001_PORTRAIT-license.md",
+  "acceptance_evidence": "docs/engineering/assets/evidence/CHR_001_PORTRAIT-acceptance.md"
+}
+```
+
+允许的 `source_type`：`ORIGINAL_INTERNAL`、`COMMISSIONED`、`LICENSED`、`PUBLIC_DOMAIN`、`GENERATED_WITH_REVIEW`。其中 `source_reference` 必须能定位源文件、委托交付记录或授权来源；`license` 与 `license_evidence` 必须说明商业使用、修改、再分发及署名限制；`acceptance_evidence` 必须指向对应的画面/音频质量、Cocos 导入和目标设备验收记录。AI 生成素材不得仅凭“AI生成”标记视为无版权风险，仍须记录生成来源、模型/工具条款核查及人工验收。
+
+校验器对所有 `READY` 条目强制检查上述字段。证据文件应随资源或在受控交付系统中可追溯；不得填入虚构链接、空白占位或未经核实的授权声明。
+
 ## 制作与验收流程
 
 1. 美术/音频按 GDD 18 章及各资产目录制作原创资源。
