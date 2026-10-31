@@ -54,7 +54,7 @@ describe("asset manifest contract", () => {
 
   it("rejects file paths outside the declared asset directory", () => {
     const invalid = structuredClone(manifest);
-    const entry = invalid.entries.find((item) => item.asset_id === "CHR_001_PORTRAIT");
+    const entry = invalid.entries.find((item: { asset_id: string; status: string; files: string[] }) => item.asset_id === "CHR_001_PORTRAIT");
     entry.status = "READY";
     entry.files = ["assets/resources/ui/UI_LOGIN.png"];
     expect(validateAssetManifestStructure(invalid, levels).errors.join("\n")).toContain(
