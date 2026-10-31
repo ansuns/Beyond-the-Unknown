@@ -1,4 +1,6 @@
 import { describe, expect, it } from "vitest";
+import { readFile } from "node:fs/promises";
+import { resolve } from "node:path";
 import {
   getPrototypeMechanismShape,
   getPrototypeMechanismVisualState
@@ -44,4 +46,25 @@ describe("prototype mechanism visual mapping", () => {
   it("keeps unknown statuses neutral instead of falsely showing success", () => {
     expect(getPrototypeMechanismVisualState("UNRECOGNIZED", false)).toBe("IDLE");
   });
+
+  it("provides a dedicated glyph for every mechanism type used by all six room configs", async () => {
+    const config = JSON.parse(await readFile(
+      resolve(process.cwd(), "../docs/engineering/levels/levels.v1.json"),
+      "utf8"
+    ));
+    const configuredTypes = [...new Set<string>(
+      config.levels.flatMap((level: { mechanisms: Array<{ mechanism_type: string }> }) =>
+        level.mechanisms.map((mechanism) => mechanism.mechanism_type)
+      )
+    )].sort();
+
+    expect(configuredTypes.length).toBeGreaterThan(0);
+    for (const mechanismType of configuredTypes) {
+      expect(
+        getPrototypeMechanismShape(mechanismType),
+        `missing prototype glyph mapping for ${mechanismType}`
+      ).not.toBe("GENERIC");
+    }
+  });
+
 });
