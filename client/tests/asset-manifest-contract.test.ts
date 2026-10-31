@@ -118,4 +118,32 @@ describe("asset manifest contract", () => {
     );
   });
 
+  it("rejects READY assets without provenance, license, and acceptance evidence", () => {
+    const invalid = structuredClone(manifest);
+    const entry = invalid.entries.find((item: { asset_id: string }) => item.asset_id === "CHR_001_PORTRAIT");
+    entry.status = "READY";
+    entry.files = ["assets/resources/characters/CHR_001/portrait/portrait.png"];
+    const errors = validateAssetManifestStructure(invalid, levels).errors.join("\\n");
+    expect(errors).toContain("CHR_001_PORTRAIT: READY requires provenance.source_type from the approved source types");
+    expect(errors).toContain("CHR_001_PORTRAIT: READY requires non-empty provenance.source_reference");
+    expect(errors).toContain("CHR_001_PORTRAIT: READY requires non-empty provenance.license");
+    expect(errors).toContain("CHR_001_PORTRAIT: READY requires non-empty provenance.license_evidence");
+    expect(errors).toContain("CHR_001_PORTRAIT: READY requires non-empty provenance.acceptance_evidence");
+  });
+
+  it("accepts READY asset provenance only when source, license, and acceptance evidence are recorded", () => {
+    const valid = structuredClone(manifest);
+    const entry = valid.entries.find((item: { asset_id: string }) => item.asset_id === "CHR_001_PORTRAIT");
+    entry.status = "READY";
+    entry.files = ["assets/resources/characters/CHR_001/portrait/portrait.png"];
+    entry.provenance = {
+      source_type: "ORIGINAL_INTERNAL",
+      source_reference: "art-source/CHR_001/portrait-v1",
+      license: "Owned original work",
+      license_evidence: "docs/engineering/assets/evidence/CHR_001_PORTRAIT-license.md",
+      acceptance_evidence: "docs/engineering/assets/evidence/CHR_001_PORTRAIT-acceptance.md"
+    };
+    expect(validateAssetManifestStructure(valid, levels).errors).toEqual([]);
+  });
+
 });
