@@ -401,6 +401,64 @@ export class BeyondTheUnknownGameEntry extends Component {
     }
   }
 
+  private async refreshProgress(): Promise<void> {
+    if (!this.api || !this.progressLabel) {
+      this.setStatus("请先登录并进入共享世界");
+      return;
+    }
+
+    this.setStatus("正在读取玩家进度…");
+    try {
+      const progress = await this.api.getPlayerProgress();
+      const [discoveries, collections, rewards, archive, leaderboard] = await Promise.all([
+        this.api.listPlayerDiscoveries().catch(() => undefined),
+        this.api.listPlayerCollections().catch(() => undefined),
+        this.api.listRewards().catch(() => undefined),
+        this.api.listWorldArchive().catch(() => undefined),
+        this.api.getLeaderboard("EXPLORE", "WEEKLY", "SELF").catch(() => undefined)
+      ]);
+      this.progressLabel.string = formatProgressSummary({
+        completedLevels: progress.completed_level_ids.length,
+        discoveries: discoveries?.discoveries.length,
+        collections: collections?.collections.length,
+        pendingRewards: rewards?.pending.length,
+        worldArchiveRecords: archive?.records.length,
+        weeklyExploreRank: leaderboard
+          ? (leaderboard.my_rank?.rank ?? null)
+          : undefined
+      });
+      this.setStatus(`进度已刷新 · 版本 ${progress.progress_version}`);
+    } catch (error) {
+      this.setStatus(`进度读取失败：${error instanceof Error ? error.message : "网络错误"}`);
+    }
+  }
+
+  private async cycleCharacter(): Promise<void> {
+    if (this.currentMode !== "WORLD" || !this.characterSession) {
+      this.setStatus("请先进入共享世界，再切换角色");
+      return;
+    }
+
+    try {
+      const character = await this.characterSession.selectNext();
+      this.currentCharacterId = character.character_id;
+      if (this.localPlayerId) {
+        const avatar = this.avatars.get(this.localPlayerId);
+        if (avatar) {
+          this.upsertAvatar({
+            player_id: this.localPlayerId,
+            x: avatar.position.x / this.worldPixelsPerUnit,
+            y: avatar.position.y / this.worldPixelsPerUnit,
+            character_id: character.character_id
+          }, true);
+        }
+      }
+      this.setStatus(`已切换角色：${character.display_name}`);
+    } catch (error) {
+      this.setStatus(`角色切换失败：${error instanceof Error ? error.message : "请稍后重试"}`);
+    }
+  }
+
   private onMapEvent(event: MapServerEvent): void {
     const payload = event.payload as Record<string, any>;
     if (event.cmd === "ENTER") {
