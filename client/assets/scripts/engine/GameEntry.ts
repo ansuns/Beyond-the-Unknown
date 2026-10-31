@@ -889,6 +889,58 @@ export class BeyondTheUnknownGameEntry extends Component {
   private prototypeLocalToLevel(x: number, y: number): { x: number; y: number } {
     return prototypeLocalToLevel({ x, y }, this.prototypeLayout.bounds, this.levelRoomScale);
   }
+  /**
+   * Draws a temporary, data-aligned isometric floor for playtesting.
+   * This is deliberately procedural prototype presentation, not a READY art asset.
+   */
+  private drawPrototypeFloorTiles(graphics: Graphics): void {
+    const bounds = this.prototypeLayout.bounds;
+    const palette: Record<string, [Color, Color, Color]> = {
+      "LV-ROOM-01": [new Color(22, 54, 72, 255), new Color(27, 65, 83, 255), new Color(91, 159, 181, 190)],
+      "LV-ROOM-02": [new Color(20, 58, 61, 255), new Color(25, 70, 70, 255), new Color(93, 183, 166, 190)],
+      "LV-ROOM-03": [new Color(67, 43, 34, 255), new Color(78, 49, 37, 255), new Color(205, 137, 92, 190)],
+      "LV-ROOM-04": [new Color(43, 39, 72, 255), new Color(51, 46, 82, 255), new Color(145, 132, 207, 190)],
+      "LV-ROOM-05": [new Color(64, 55, 32, 255), new Color(76, 64, 36, 255), new Color(207, 177, 103, 190)],
+      "LV-HIDDEN-01": [new Color(38, 35, 65, 255), new Color(47, 40, 79, 255), new Color(169, 145, 221, 210)]
+    };
+    const [tileA, tileB, edge] = palette[this.pendingLevelId ?? ""] ??
+      [new Color(22, 54, 72, 255), new Color(27, 65, 83, 255), new Color(91, 159, 181, 190)];
+
+    graphics.lineWidth = 1;
+    for (let x = Math.floor(bounds.minX); x < bounds.maxX; x += 1) {
+      for (let y = Math.floor(bounds.minY); y < bounds.maxY; y += 1) {
+        const corners = [
+          this.prototypeLevelToLocal(x, y),
+          this.prototypeLevelToLocal(x + 1, y),
+          this.prototypeLevelToLocal(x + 1, y + 1),
+          this.prototypeLevelToLocal(x, y + 1)
+        ];
+        graphics.fillColor = (x + y) % 2 === 0 ? tileA : tileB;
+        graphics.strokeColor = edge;
+        graphics.moveTo(corners[0].x, corners[0].y);
+        for (let index = 1; index < corners.length; index += 1) {
+          graphics.lineTo(corners[index].x, corners[index].y);
+        }
+        graphics.close();
+        graphics.fill();
+        graphics.stroke();
+      }
+    }
+
+    const topLeft = this.prototypeLevelToLocal(bounds.minX, bounds.minY);
+    const topRight = this.prototypeLevelToLocal(bounds.maxX, bounds.minY);
+    const bottomRight = this.prototypeLevelToLocal(bounds.maxX, bounds.maxY);
+    const bottomLeft = this.prototypeLevelToLocal(bounds.minX, bounds.maxY);
+    graphics.lineWidth = 3;
+    graphics.strokeColor = edge;
+    graphics.moveTo(topLeft.x, topLeft.y);
+    graphics.lineTo(topRight.x, topRight.y);
+    graphics.lineTo(bottomRight.x, bottomRight.y);
+    graphics.lineTo(bottomLeft.x, bottomLeft.y);
+    graphics.close();
+    graphics.stroke();
+  }
+
 
   private updatePrototypeRoomScale(size: { width: number; height: number }): void {
     this.levelRoomScale = calculatePrototypeRoomScale(this.prototypeLayout.bounds, size);
@@ -947,6 +999,7 @@ export class BeyondTheUnknownGameEntry extends Component {
       background.close();
       background.fill();
       background.stroke();
+      this.drawPrototypeFloorTiles(background);
 
       for (const [mechanismId, descriptor] of this.roomMechanismCatalog.entries()) {
         if (descriptor.position_x === null || descriptor.position_y === null) continue;
@@ -1107,6 +1160,7 @@ export class BeyondTheUnknownGameEntry extends Component {
     graphics.close();
     graphics.fill();
     graphics.stroke();
+    this.drawPrototypeFloorTiles(graphics);
 
     const drawMarker = (name: string, x: number, y: number, color: Color, radius: number, visible: boolean) => {
       const node = new Node(name);
