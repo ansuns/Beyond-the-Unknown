@@ -8,6 +8,8 @@ from uuid import UUID
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.modules.levels.movement import parse_level_movement_settings
+
 
 class LevelNotFound(Exception):
     pass
@@ -408,9 +410,11 @@ async def update_level_position(
         raise LevelNotFound
     if run["run_status"] != "RUNNING":
         raise InvalidLevelRunState
-    bounds = (run["config"] or {}).get(
+    level_config = run["config"] or {}
+    bounds = level_config.get(
         "prototype_bounds", {"min_x": 0, "max_x": 12, "min_y": 0, "max_y": 8}
     )
+    movement = parse_level_movement_settings(level_config)
     if not (
         bounds["min_x"] <= x <= bounds["max_x"]
         and bounds["min_y"] <= y <= bounds["max_y"]
@@ -429,7 +433,7 @@ async def update_level_position(
     ).mappings().one_or_none()
     now = datetime.now(UTC)
     if previous is None:
-        previous_x, previous_y = 1.0, 4.0
+        previous_x, previous_y = movement.spawn_x, movement.spawn_y
         elapsed_seconds = 0.25
     else:
         previous_x, previous_y = previous["x"], previous["y"]
@@ -437,7 +441,7 @@ async def update_level_position(
             0.05, (now - previous["updated_at"]).total_seconds()
         )
     # Server-authoritative movement cap with a small network-jitter allowance.
-    max_distance = 4.0 * elapsed_seconds + 0.75
+    max_distance = movement.movement_speed * elapsed_seconds + 0.75
     if math.hypot(x - previous_x, y - previous_y) > max_distance:
         raise InvalidLevelPosition
     await session.execute(
