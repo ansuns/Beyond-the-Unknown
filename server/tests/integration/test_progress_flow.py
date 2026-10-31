@@ -726,7 +726,6 @@ def test_score_threshold_condition_grants_once_per_period() -> None:
 
     from sqlalchemy.ext.asyncio import AsyncSession
 
-    from app.core.database import engine
     from app.modules.progress.repository import _write_score_event
 
     app.dependency_overrides[get_wechat_code_provider] = lambda: FakeWeChatProvider()
@@ -771,17 +770,24 @@ def test_score_threshold_condition_grants_once_per_period() -> None:
             )
 
         async def write_events() -> None:
-            async with AsyncSession(engine) as session:
-                for index in range(3):
-                    await _write_score_event(
-                        session,
-                        player_id,
-                        "EXP_DISCOVER",
-                        f"score-condition-{index}",
-                        None,
-                        f"score-condition-{index}",
-                    )
-                await session.commit()
+            # A dedicated engine, not the application's: the app engine was created on
+            # the TestClient event loop and reuse from asyncio.run raises "attached to
+            # a different loop", which also poisons the pool for later tests.
+            local_engine = create_async_engine(get_settings().database_url)
+            try:
+                async with AsyncSession(local_engine) as session:
+                    for index in range(3):
+                        await _write_score_event(
+                            session,
+                            player_id,
+                            "EXP_DISCOVER",
+                            f"score-condition-{index}",
+                            None,
+                            f"score-condition-{index}",
+                        )
+                    await session.commit()
+            finally:
+                await local_engine.dispose()
 
         asyncio.run(write_events())
 
