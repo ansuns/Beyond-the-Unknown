@@ -598,6 +598,7 @@ def test_leaderboard_recompute_rebuilds_snapshot_without_touching_ledger(monkeyp
     from app.core.config import get_settings
 
     season_id = "WEEKLY-19990104"
+    app.dependency_overrides[get_wechat_code_provider] = lambda: FakeWeChatProvider()
     monkeypatch.setattr(get_settings(), "internal_api_key", "test-recompute-key")
     _db_exec([
         ("""
@@ -715,3 +716,4 @@ def test_leaderboard_recompute_rebuilds_snapshot_without_touching_ledger(monkeyp
             ),
             ("DELETE FROM seasons WHERE season_id = :season_id", {"season_id": season_id}),
         ])
+        app.dependency_overrides.clear()
