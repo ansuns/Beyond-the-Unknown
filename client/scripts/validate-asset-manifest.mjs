@@ -12,6 +12,16 @@ const result = validateAssetManifestStructure(manifest, levelConfig, strict);
 const errors = [...result.errors];
 
 for (const entry of manifest.entries ?? []) {
+  if (entry.status === "READY") {
+    for (const field of ["license_evidence", "acceptance_evidence"]) {
+      const evidencePath = entry.provenance?.[field];
+      try {
+        await access(resolve(process.cwd(), "..", evidencePath), constants.R_OK);
+      } catch {
+        errors.push(`${entry.asset_id}: provenance.${field} file does not exist: ${evidencePath ?? ""}`);
+      }
+    }
+  }
   for (const file of entry.files ?? []) {
     try {
       await access(resolve(process.cwd(), file), constants.R_OK);
