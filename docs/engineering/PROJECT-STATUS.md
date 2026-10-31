@@ -57,6 +57,7 @@
 | 奖励条件 COMPOSITE 组合 | `_composite_satisfied` | 集成 1（CI 通过） | **已验证**（GDD 11.7） |
 | 重登数据保留 | 事务 + 幂等键 | 集成 1（CI 通过） | **已验证**（GDD 11.3 验收 1） |
 | 落库失败重试队列 | 无 | — | **未实现**（GDD 11.3 规则 3） |
+| 个人任务创建与读取 | `progress/tasks.py` + `/player/tasks` | 集成 1（CI 通过） | **部分实现**：创建/读取已验证，事件累加未做（GDD 11.1） |
 | 三榜排行 | `GET /leaderboard` | 集成 2（CI 通过） | **已验证**（含 `season_id` 历史赛季查询） |
 | 赛季与周榜 | `season_service` + `seasons` 表 | 集成 2（CI 通过） | **已验证** |
 | 排行重算 | `POST /internal/leaderboard/{season_id}/recompute` | 集成 1（CI 通过） | **已验证**（GDD 13.6，流水只读、差异入审计日志） |

@@ -1146,3 +1146,72 @@ def test_score_survives_relogin_for_the_same_player() -> None:
                 ),
             ])
         app.dependency_overrides.clear()
+
+
+def test_tasks_are_created_per_player_and_not_duplicated_on_repeat_reads() -> None:
+    """GDD 11.1 acceptance 1 and 2: server creates tasks, per player and isolated."""
+    from uuid import UUID
+
+    app.dependency_overrides[get_wechat_code_provider] = lambda: FakeWeChatProvider()
+    players: list[UUID] = []
+    try:
+        with TestClient(app) as client:
+            headers_by_player = []
+            for suffix in ("a", "b"):
+                login = client.post(
+                    "/api/v1/auth/login",
+                    json={"wx_code": str(uuid4()), "request_id": f"task-login-{suffix}"},
+                )
+                assert login.status_code == 200
+                headers = {"Authorization": f"Bearer {login.json()['data']['access_token']}"}
+                headers_by_player.append(headers)
+                players.append(
+                    UUID(
+                        client.get("/api/v1/player/me", headers=headers)
+                        .json()["data"]["player_id"]
+                    )
+                )
+
+            first = client.get("/api/v1/player/tasks", headers=headers_by_player[0])
+            assert first.status_code == 200
+            tasks = first.json()["data"]["tasks"]
+            assert [task["task_id"] for task in tasks] == ["TASK-TUTORIAL-01"]
+            tutorial = tasks[0]
+            assert tutorial["task_type"] == "TASK_TUTORIAL"
+            assert tutorial["status"] == "ACTIVE"
+            assert [objective["objective_type"] for objective in tutorial["objectives"]] == [
+                "LOGIN",
+                "MOVE",
+                "RULE_CAST",
+                "SETTLEMENT",
+            ]
+            assert all(objective["current_value"] == 0 for objective in tutorial["objectives"])
+
+            # Repeating the read must not create a second row for the same player.
+            again = client.get("/api/v1/player/tasks", headers=headers_by_player[0])
+            assert [task["task_id"] for task in again.json()["data"]["tasks"]] == [
+                "TASK-TUTORIAL-01"
+            ]
+
+            other = client.get("/api/v1/player/tasks", headers=headers_by_player[1])
+            assert other.status_code == 200
+            assert [task["task_id"] for task in other.json()["data"]["tasks"]] == [
+                "TASK-TUTORIAL-01"
+            ]
+
+        rows = _db_fetch(
+            "SELECT player_id, COUNT(*) AS total FROM player_tasks"
+            " WHERE task_id = 'TASK-TUTORIAL-01' AND player_id IN (:a, :b)"
+            " GROUP BY player_id",
+            {"a": players[0], "b": players[1]},
+        )
+        assert len(rows) == 2
+        assert all(row["total"] == 1 for row in rows)
+    finally:
+        _db_exec([
+            (
+                "DELETE FROM player_tasks WHERE player_id IN (:a, :b)",
+                {"a": players[0], "b": players[1]},
+            )
+        ] if players else [])
+        app.dependency_overrides.clear()
