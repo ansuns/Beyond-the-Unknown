@@ -73,6 +73,48 @@ describe("LatestPositionSyncQueue", () => {
     );
     await expect(queue.flush({ x: 4, y: 4 })).rejects.toThrow("server unavailable");
   });
+  it("keeps the newest target when multiple interactions flush during one request", async () => {
+    const first = deferred<void>();
+    const send = vi.fn()
+      .mockImplementationOnce(() => first.promise)
+      .mockResolvedValue(undefined);
+    const queue = new LatestPositionSyncQueue(send, vi.fn());
+
+    queue.enqueue({ x: 1, y: 1 });
+    const firstFlush = queue.flush({ x: 8, y: 8 });
+    const secondFlush = queue.flush({ x: 12, y: 5 });
+    first.resolve();
+
+    await Promise.all([firstFlush, secondFlush]);
+
+    expect(send.mock.calls.map(([point]) => point)).toEqual([
+      { x: 1, y: 1 },
+      { x: 12, y: 5 }
+    ]);
+  });
+
+  it("retries a queued interaction position if a background drain fails during flush", async () => {
+    const first = deferred<void>();
+    const onError = vi.fn();
+    const send = vi.fn()
+      .mockImplementationOnce(() => first.promise)
+      .mockRejectedValueOnce(new Error("temporary disconnect"))
+      .mockResolvedValue(undefined);
+    const queue = new LatestPositionSyncQueue(send, onError);
+
+    queue.enqueue({ x: 1, y: 1 });
+    const flush = queue.flush({ x: 9, y: 4 });
+    first.resolve();
+    await flush;
+
+    expect(send.mock.calls.map(([point]) => point)).toEqual([
+      { x: 1, y: 1 },
+      { x: 9, y: 4 },
+      { x: 9, y: 4 }
+    ]);
+    expect(onError).toHaveBeenCalledOnce();
+  });
+
 });
 
   it("allows room teardown to wait for a failed background request without throwing", async () => {
