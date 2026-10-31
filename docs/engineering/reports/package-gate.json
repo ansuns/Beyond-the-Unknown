@@ -1,0 +1,151 @@
+{
+  "report": {
+    "build_root": "D:\\workbuddy\\byu\\client\\build\\wechatgame-slim",
+    "total_bytes": 2986257,
+    "total_human": "2.85 MB",
+    "main_limit_bytes": 4194304,
+    "target_bytes": 3670016,
+    "over_limit": false,
+    "over_target": false,
+    "headroom_bytes": 683759,
+    "by_category": {
+      "code": 307341,
+      "config": 268684,
+      "engine": 1612081,
+      "image": 792396,
+      "other": 5755
+    },
+    "by_directory": {
+      "cocos-js": 1612081,
+      "subpackages": 779119,
+      "assets": 388012,
+      "(root files)": 177524,
+      "src": 29521
+    },
+    "bundles": {
+      "internal": 295789,
+      "main": 92223
+    },
+    "largest": [
+      {
+        "path": "cocos-js/cc.f4447.js",
+        "bytes": 1612081,
+        "category": "engine"
+      },
+      {
+        "path": "assets/internal/import/0c/0cbe0b5a3.ee46a.json",
+        "bytes": 248494,
+        "category": "config"
+      },
+      {
+        "path": "subpackages/resources/native/a7/a75b862b-f618-4ed2-998f-c41237d3b1c2.e5650.jpg",
+        "bytes": 187806,
+        "category": "image"
+      },
+      {
+        "path": "subpackages/resources/native/20/20de2096-e99a-4174-b4c1-51d24b764e47.80d51.png",
+        "bytes": 152565,
+        "category": "image"
+      },
+      {
+        "path": "subpackages/resources/native/96/96af4b29-616c-419b-948b-8b6f6b0a2916.deffe.png",
+        "bytes": 140398,
+        "category": "image"
+      },
+      {
+        "path": "web-adapter.js",
+        "bytes": 102097,
+        "category": "code"
+      },
+      {
+        "path": "assets/main/index.db140.js",
+        "bytes": 89131,
+        "category": "code"
+      },
+      {
+        "path": "subpackages/resources/native/c7/c78b8496-8f04-4ef8-b07e-0a3f9a147f54.c028d.png",
+        "bytes": 76115,
+        "category": "image"
+      },
+      {
+        "path": "subpackages/resources/native/d8/d834d4a6-87e7-43f5-af7b-3dc056447d7b.26dc5.png",
+        "bytes": 75214,
+        "category": "image"
+      },
+      {
+        "path": "subpackages/resources/native/9d/9da0393c-30b9-4ab0-9ad7-d9a2ae02ff0c.dda35.png",
+        "bytes": 71708,
+        "category": "image"
+      },
+      {
+        "path": "subpackages/resources/native/71/714e558e-1974-4123-aa17-040f872579a9.2feed.png",
+        "bytes": 62612,
+        "category": "image"
+      },
+      {
+        "path": "assets/internal/index.e92ff.js",
+        "bytes": 45110,
+        "category": "code"
+      },
+      {
+        "path": "engine-adapter.js",
+        "bytes": 23825,
+        "category": "code"
+      },
+      {
+        "path": "first-screen.js",
+        "bytes": 18878,
+        "category": "code"
+      },
+      {
+        "path": "logo.png",
+        "bytes": 14496,
+        "category": "image"
+      },
+      {
+        "path": "slogan.png",
+        "bytes": 11482,
+        "category": "image"
+      },
+      {
+        "path": "subpackages/resources/import/e3/e372b166-1bfc-4db9-86ba-6e2020304c50.0723e.json",
+        "bytes": 9280,
+        "category": "config"
+      },
+      {
+        "path": "src/polyfills.bundle.43263.js",
+        "bytes": 8394,
+        "category": "code"
+      },
+      {
+        "path": "src/system.bundle.f45da.js",
+        "bytes": 8319,
+        "category": "code"
+      },
+      {
+        "path": "src/effect.bin",
+        "bytes": 5755,
+        "category": "other"
+      }
+    ],
+    "duplicates": [],
+    "duplicate_waste_bytes": 0,
+    "file_count": 43,
+    "main_bytes": 2207138,
+    "main_human": "2.10 MB",
+    "subpackage_bytes": {
+      "resources": 779119
+    },
+    "stray_subpackage_bytes": 0,
+    "source": {
+      "assets_bytes": 956047,
+      "scripts_bytes": 158851,
+      "resources_bytes": 789634,
+      "scenes_bytes": 6909,
+      "meta_bytes": 16191,
+      "content_bytes": 939856
+    }
+  },
+  "failures": [],
+  "warnings": []
+}

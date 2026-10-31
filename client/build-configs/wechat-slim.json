@@ -7,13 +7,11 @@
   "packages": {
     "wechatgame": {
       "appid": "wx79cbf35bf4aa11f3",
-      "orientation": "portrait"
+      "orientation": "landscape"
     }
   },
   "overwriteProjectSettings": {
     "includeModules": {
-      "physics": "off",
-      "physics-2d": "off",
       "spine-3.8": "off",
       "dragon-bones": "off",
       "terrain": "off",
@@ -28,7 +26,20 @@
       "primitive": "off",
       "intersection-2d": "off",
       "mask": "off",
-      "rich-text": "off"
+      "rich-text": "off",
+      "physics-ammo": "off",
+      "physics-2d-box2d": "off"
     }
-  }
+  },
+  "bundles": [
+    {
+      "name": "resources",
+      "root": "db://assets/resources",
+      "isSubpackage": true,
+      "isRemote": false,
+      "compressionType": "merge_dep",
+      "priority": 8,
+      "output": true
+    }
+  ]
 }

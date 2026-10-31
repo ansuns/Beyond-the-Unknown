@@ -17,9 +17,10 @@ import {
   tween,
   UIOpacity,
   UITransform,
-  Vec3,
-  resources
+  Vec3
 } from "cc";
+
+import { assetService } from "./asset-service";
 
 // Paths are relative to assets/resources and end in /spriteFrame, which is how
 // Cocos addresses the sub-asset that a .png produces after import.
@@ -56,13 +57,11 @@ function loadFrame(path: string): Promise<SpriteFrame | null> {
   const imagePath = path.endsWith("/spriteFrame")
     ? path.slice(0, -"/spriteFrame".length)
     : path;
-  return new Promise((resolve) => {
-    resources.load(imagePath, ImageAsset, (error, image) => {
-      if (error || !image) {
+  return assetService.loadImage("resources", imagePath).then((image) => {
+      if (!image) {
         // A missing image is not fatal: the prototype keeps its Graphics
         // placeholder, and the caller reports which keys never arrived.
-        resolve(null);
-        return;
+        return null;
       }
       try {
         const texture = new Texture2D();
@@ -73,17 +72,26 @@ function loadFrame(path: string): Promise<SpriteFrame | null> {
         const frame = new SpriteFrame();
         frame.texture = texture;
         frame.packable = false;
-        resolve(frame);
+        return frame;
       } catch {
-        resolve(null);
+        return null;
       }
-    });
   });
 }
 
-export async function loadArtSet(): Promise<ArtSet> {
+export async function loadArtSet(
+  onProgress?: (loaded: number, total: number) => void
+): Promise<ArtSet> {
   const keys = Object.keys(ART_PATHS) as ArtKey[];
-  const results = await Promise.all(keys.map((key) => loadFrame(ART_PATHS[key])));
+  let finished = 0;
+  const results = await Promise.all(
+    keys.map(async (key) => {
+      const frame = await loadFrame(ART_PATHS[key]);
+      finished += 1;
+      onProgress?.(finished, keys.length);
+      return frame;
+    })
+  );
   const frames: Partial<Record<ArtKey, SpriteFrame>> = {};
   const loaded: ArtKey[] = [];
   const missing: ArtKey[] = [];
