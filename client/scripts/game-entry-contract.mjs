@@ -29,7 +29,7 @@ function memberName(member) {
   return undefined;
 }
 
-export function findUndefinedThisCalls(sourceText, className = "GameEntry") {
+export function findUndefinedThisCalls(sourceText, className = "BeyondTheUnknownGameEntry") {
   const source = ts.createSourceFile(
     "GameEntry.ts",
     sourceText,
