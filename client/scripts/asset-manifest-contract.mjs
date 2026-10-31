@@ -308,7 +308,13 @@ export function validateAssetManifestStructure(manifest, levelConfig, strict = f
           add(`${id}: READY requires non-empty provenance.${field}`);
         }
       }
-      for (const field of ["license_evidence", "acceptance_evidence"]) {\n        if (!isSafeEvidencePath(provenance?.[field])) {\n          add(`${id}: provenance.${field} must be a safe Markdown path under docs/engineering/assets/evidence/`);\n        }\n      }\n    }\n    for (const file of entry.files ?? []) {
+      for (const field of ["license_evidence", "acceptance_evidence"]) {
+        if (!isSafeEvidencePath(provenance?.[field])) {
+          add(`${id}: provenance.${field} must be a safe Markdown path under docs/engineering/assets/evidence/`);
+        }
+      }
+    }
+    for (const file of entry.files ?? []) {
       if (typeof file !== "string" || file.startsWith("/") ||
           file.split("/").includes("..") ||
           !file.startsWith(`${entry.expected_directory}/`)) {
