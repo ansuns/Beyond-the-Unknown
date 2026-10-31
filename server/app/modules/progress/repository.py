@@ -203,6 +203,7 @@ async def _write_score_event(
             await _grant_score_conditions(
                 session, player_id, config["board_type"], period["season_id"]
             )
+            await _grant_composite_conditions(session, player_id)
             written_periods.append(period["season_id"])
     return {
         "written": bool(written_periods),
@@ -259,6 +260,8 @@ async def _grant_rewards_for_trigger(
         )
         if inserted:
             granted.append(row["reward_id"])
+    if granted:
+        granted.extend(await _grant_composite_conditions(session, player_id))
     return granted
 
 
@@ -323,6 +326,136 @@ async def _grant_score_conditions(
             row["reward_id"],
             row["grant_mode"],
             "SCORE",
+            row["condition_id"],
+        ):
+            granted.append(row["reward_id"])
+    return granted
+
+
+async def _clause_satisfied(
+    session: AsyncSession, player_id: UUID, clause: Any
+) -> bool:
+    """Evaluate one leaf of a COMPOSITE rule against stored player facts."""
+    if not isinstance(clause, dict):
+        return False
+    kind = clause.get("type")
+
+    if kind == "DISCOVERY":
+        target = clause.get("discovery_id")
+        if not isinstance(target, str) or not target:
+            return False
+        found = (
+            await session.execute(
+                text("""
+                    SELECT 1 FROM player_discoveries
+                    WHERE player_id = :player_id AND discovery_id = :target
+                """),
+                {"player_id": player_id, "target": target},
+            )
+        ).scalar_one_or_none()
+        return found is not None
+
+    if kind == "COLLECTION":
+        target = clause.get("collection_id")
+        if not isinstance(target, str) or not target:
+            return False
+        found = (
+            await session.execute(
+                text("""
+                    SELECT 1 FROM player_collections
+                    WHERE player_id = :player_id AND collection_id = :target
+                """),
+                {"player_id": player_id, "target": target},
+            )
+        ).scalar_one_or_none()
+        return found is not None
+
+    if kind == "SETTLEMENT":
+        target = clause.get("level_id")
+        if not isinstance(target, str) or not target:
+            return False
+        found = (
+            await session.execute(
+                text("""
+                    SELECT 1 FROM settlements
+                    WHERE player_id = :player_id AND level_id = :target
+                      AND result_status = 'COMPLETED'
+                """),
+                {"player_id": player_id, "target": target},
+            )
+        ).scalar_one_or_none()
+        return found is not None
+
+    if kind == "SCORE":
+        board_type = clause.get("board_type")
+        threshold = clause.get("threshold")
+        if not isinstance(board_type, str) or not isinstance(threshold, int):
+            return False
+        if isinstance(threshold, bool):
+            return False
+        total = (
+            await session.execute(
+                text("""
+                    SELECT COALESCE(SUM(delta), 0)::bigint AS total
+                    FROM score_events
+                    WHERE player_id = :player_id AND board_type = :board_type
+                """),
+                {"player_id": player_id, "board_type": board_type},
+            )
+        ).scalar_one()
+        return total >= threshold
+
+    # Unknown clause kinds never satisfy a rule: a typo must not pay out.
+    return False
+
+
+async def _composite_satisfied(
+    session: AsyncSession, player_id: UUID, rule: Any
+) -> bool:
+    if not isinstance(rule, dict):
+        return False
+    clauses = rule.get("all")
+    if not isinstance(clauses, list) or not clauses:
+        return False
+    for clause in clauses:
+        if not await _clause_satisfied(session, player_id, clause):
+            return False
+    return True
+
+
+async def _grant_composite_conditions(
+    session: AsyncSession, player_id: UUID
+) -> list[str]:
+    """GDD 11.7 COMPOSITE conditions: every clause must already hold.
+
+    The rule is a declarative {"all": [...]} object rather than an expression
+    string, because parsing arbitrary expressions safely is more risk than the
+    MVP needs. Clauses are ANDed; an unknown clause type makes the rule false.
+    """
+    rows = (
+        await session.execute(
+            text("""
+                SELECT c.condition_id, c.condition_config, r.reward_id,
+                       r.grant_mode::text AS grant_mode
+                FROM reward_conditions AS c
+                JOIN rewards AS r ON r.reward_id = c.reward_id
+                WHERE c.trigger_type = 'COMPOSITE'
+                  AND c.is_enabled = true AND c.config_status = 'READY'
+                  AND r.is_enabled = true AND r.is_paid = false
+            """)
+        )
+    ).mappings().all()
+    granted = []
+    for row in rows:
+        config = row["condition_config"] or {}
+        if not await _composite_satisfied(session, player_id, config.get("composite_rule")):
+            continue
+        if await _insert_player_reward(
+            session,
+            player_id,
+            row["reward_id"],
+            row["grant_mode"],
+            "COMPOSITE",
             row["condition_id"],
         ):
             granted.append(row["reward_id"])

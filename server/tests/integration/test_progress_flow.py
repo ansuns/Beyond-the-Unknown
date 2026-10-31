@@ -820,3 +820,112 @@ def test_score_threshold_condition_grants_once_per_period() -> None:
         )] if player_id else []))
         _set_test_content(False)
         app.dependency_overrides.clear()
+
+
+def test_composite_condition_requires_every_clause_then_grants_once() -> None:
+    """GDD 11.7 COMPOSITE: all clauses must hold, and an unknown clause pays nothing."""
+    import json
+    from uuid import UUID
+
+    from sqlalchemy.ext.asyncio import AsyncSession
+
+    from app.modules.progress.repository import _write_score_event
+
+    app.dependency_overrides[get_wechat_code_provider] = lambda: FakeWeChatProvider()
+    player_id: UUID | None = None
+    try:
+        _set_test_content(True)
+
+        def point_composite_at(rule: dict) -> None:
+            _db_exec([
+                ("""
+                    INSERT INTO rewards
+                        (reward_id, reward_type, reward_name, condition_ref,
+                         grant_mode, payload, is_paid, is_enabled)
+                    VALUES
+                        ('TEST-COMPOSITE-REWARD', 'RT_BADGE', '组合条件徽章',
+                         'TEST-COMPOSITE-CONDITION', 'AUTO', '{}'::jsonb, false, true)
+                    ON CONFLICT (reward_id) DO NOTHING
+                """, None),
+                ("""
+                    INSERT INTO reward_conditions
+                        (condition_id, trigger_type, condition_config,
+                         reward_id, is_enabled, config_status)
+                    VALUES
+                        ('TEST-COMPOSITE-CONDITION', 'COMPOSITE', CAST(:config AS jsonb),
+                         'TEST-COMPOSITE-REWARD', true, 'READY')
+                    ON CONFLICT (condition_id) DO UPDATE
+                    SET trigger_type = 'COMPOSITE',
+                        condition_config = CAST(:config AS jsonb),
+                        is_enabled = true, config_status = 'READY'
+                """, {"config": json.dumps({"composite_rule": rule})}),
+            ])
+
+        # A discovery clause that can never be true keeps the whole rule false.
+        point_composite_at({
+            "all": [
+                {"type": "SCORE", "board_type": "EXPLORE", "threshold": 5},
+                {"type": "DISCOVERY", "discovery_id": "DISC-NEVER-OBTAINED"},
+            ]
+        })
+
+        with TestClient(app) as client:
+            login = client.post(
+                "/api/v1/auth/login",
+                json={"wx_code": str(uuid4()), "request_id": "composite-login"},
+            )
+            assert login.status_code == 200
+            headers = {"Authorization": f"Bearer {login.json()['data']['access_token']}"}
+            player_id = UUID(
+                client.get("/api/v1/player/me", headers=headers).json()["data"]["player_id"]
+            )
+
+        async def write_events(count: int) -> None:
+            local_engine = create_async_engine(get_settings().database_url)
+            try:
+                async with AsyncSession(local_engine) as session:
+                    for index in range(count):
+                        await _write_score_event(
+                            session,
+                            player_id,
+                            "EXP_DISCOVER",
+                            f"composite-{index}",
+                            None,
+                            f"composite-{index}",
+                        )
+                    await session.commit()
+            finally:
+                await local_engine.dispose()
+
+        asyncio.run(write_events(2))
+        blocked = _db_fetch(
+            "SELECT COUNT(*) AS total FROM player_rewards"
+            " WHERE player_id = :player_id AND reward_id = 'TEST-COMPOSITE-REWARD'",
+            {"player_id": player_id},
+        )
+        assert blocked[0]["total"] == 0
+
+        # Drop the unsatisfiable clause: the score part alone is now enough.
+        point_composite_at({"all": [{"type": "SCORE", "board_type": "EXPLORE", "threshold": 5}]})
+        asyncio.run(write_events(3))
+        asyncio.run(write_events(4))
+        granted = _db_fetch(
+            "SELECT COUNT(*) AS total FROM player_rewards"
+            " WHERE player_id = :player_id AND reward_id = 'TEST-COMPOSITE-REWARD'",
+            {"player_id": player_id},
+        )
+        assert granted[0]["total"] == 1
+    finally:
+        _db_exec([
+            ("DELETE FROM player_rewards WHERE reward_id = 'TEST-COMPOSITE-REWARD'", None),
+            (
+                "DELETE FROM reward_conditions WHERE condition_id = 'TEST-COMPOSITE-CONDITION'",
+                None,
+            ),
+            ("DELETE FROM rewards WHERE reward_id = 'TEST-COMPOSITE-REWARD'", None),
+        ] + ([(
+            "DELETE FROM score_events WHERE player_id = :player_id",
+            {"player_id": player_id},
+        )] if player_id else []))
+        _set_test_content(False)
+        app.dependency_overrides.clear()
