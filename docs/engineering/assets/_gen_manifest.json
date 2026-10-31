@@ -23,15 +23,19 @@
     "server_logical_coordinates_are_authoritative": true
   },
   "image_generation": {
-    "tool_calls": 1,
-    "outputs": 1,
-    "kind": "composite concept board",
+    "tool_calls": 2,
+    "outputs": 2,
+    "kind": "two composite concept boards",
     "local_path": "/mnt/data/a_wide_high_resolution_game_asset_showcase_colla.png",
     "repo_path": null,
     "individual_asset_files": 0,
     "transparent_asset_validation": "NOT_DONE",
     "usable_as_runtime_assets": false,
-    "decision": "REFERENCE_ONLY"
+    "decision": "REFERENCE_ONLY; image generation repeatedly returned composite boards rather than individual assets",
+    "local_paths": [
+      "/mnt/data/a_wide_high_resolution_game_asset_showcase_colla.png",
+      "/mnt/data/a_bright_colorful_clean_game_asset_sheet_ui_mo.png"
+    ]
   },
   "assets": [
     {
