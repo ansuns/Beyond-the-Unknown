@@ -1,6 +1,9 @@
 export interface AssetManifestValidationResult {
   errors: string[];
-  counts: Record<"MISSING" | "IN_PROGRESS" | "READY" | "BLOCKED", number>;
+  counts: Record<
+    "MISSING" | "PROCESSING" | "IN_PROGRESS" | "GENERATED" | "REVIEW" | "READY" | "BLOCKED",
+    number
+  >;
   total: number;
   expectedCount: number;
 }

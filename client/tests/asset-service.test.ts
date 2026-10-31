@@ -102,7 +102,7 @@ describe("asset service", () => {
 
   it("retries a failed download and succeeds", async () => {
     state.behaviours = [
-      (cb) => cb(new Error("network down")),
+      (cb) => cb(new Error("network down"), null),
       (cb) => cb(null, undefined)
     ];
     await assetService.ensureBundle("resources", { retries: 1 });
@@ -111,9 +111,9 @@ describe("asset service", () => {
 
   it("gives up after the configured number of retries", async () => {
     state.behaviours = [
-      (cb) => cb(new Error("down")),
-      (cb) => cb(new Error("down")),
-      (cb) => cb(new Error("down"))
+      (cb) => cb(new Error("down"), null),
+      (cb) => cb(new Error("down"), null),
+      (cb) => cb(new Error("down"), null)
     ];
     await expect(assetService.ensureBundle("resources", { retries: 2 })).rejects.toBeInstanceOf(
       AssetLoadError
