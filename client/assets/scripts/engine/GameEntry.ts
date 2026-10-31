@@ -37,6 +37,7 @@ import {
   parsePrototypeLayoutConfig,
   prototypeLevelToLocal,
   prototypeLocalToLevel,
+  screenDirectionToLogicalDirection,
   sortIsometricDepth,
   type PrototypeLayoutConfig
 } from "../world/prototype-layout";
@@ -89,6 +90,13 @@ export class BeyondTheUnknownGameEntry extends Component {
   private levelPosition = { x: 1, y: 4 };
   private levelAvatar?: Node;
   private prototypeDepthNodes: Node[] = [];
+  private joystickRoot?: Node;
+  private joystickKnob?: Node;
+  private joystickActive = false;
+  private joystickMagnitude = 0;
+  private joystickScreenDirection = { x: 0, y: 0 };
+  private readonly joystickRadius = 48;
+  private lastMoveDirection = "S";
   private levelPositionSync?: LatestPositionSyncQueue;
   private readonly roomControlNodes: Node[] = [];
   private roomMechanismStates = new Map<string, Record<string, unknown>>();
@@ -123,16 +131,19 @@ export class BeyondTheUnknownGameEntry extends Component {
   }
 
   onDestroy(): void {
+    this.stopJoystickMovement();
     this.mapSession?.dispose();
     this.mapSession = undefined;
   }
 
   update(deltaTime: number): void {
     if (this.currentMode === "PERSONAL_LEVEL") {
+      this.updateJoystickMoveTarget();
       this.updatePrototypeGazeMaintain();
       this.updatePersonalLevelMovement(deltaTime);
       return;
     }
+    if (this.currentMode === "WORLD") this.updateJoystickMoveTarget();
     if (
       this.currentMode !== "WORLD" ||
       !this.moveTarget ||
@@ -149,7 +160,7 @@ export class BeyondTheUnknownGameEntry extends Component {
     const dy = this.moveTarget.y - currentY;
     const distance = Math.hypot(dx, dy);
     const speedUnits = this.moveSpeedPixelsPerSecond / this.worldPixelsPerUnit;
-    const step = speedUnits * Math.max(0, deltaTime);
+    const step = speedUnits * Math.max(0, deltaTime) * (this.joystickActive ? this.joystickMagnitude : 1);
     const reached = distance <= step || distance < 0.001;
     const nextX = reached ? this.moveTarget.x : currentX + (dx / distance) * step;
     const nextY = reached ? this.moveTarget.y : currentY + (dy / distance) * step;
@@ -157,6 +168,7 @@ export class BeyondTheUnknownGameEntry extends Component {
       Math.abs(dx) > Math.abs(dy)
         ? (dx >= 0 ? "E" : "W")
         : (dy >= 0 ? "N" : "S");
+    this.lastMoveDirection = direction;
 
     avatar.setPosition(
       nextX * this.worldPixelsPerUnit,
@@ -300,6 +312,7 @@ export class BeyondTheUnknownGameEntry extends Component {
       -size.height / 2 + 18,
       13
     );
+    this.createVirtualJoystick(size);
   }
 
   private createLabel(name: string, value: string, x: number, y: number, fontSize: number): Label {
@@ -347,6 +360,160 @@ export class BeyondTheUnknownGameEntry extends Component {
     return node;
   }
 
+  private createVirtualJoystick(size: { width: number; height: number }): void {
+    const root = new Node("VirtualJoystick");
+    this.root!.addChild(root);
+    root.setPosition(-size.width / 2 + 88, -size.height / 2 + 160, 0);
+    root.addComponent(UITransform).setContentSize(144, 144);
+
+    const ring = root.addComponent(Graphics);
+    ring.lineWidth = 3;
+    ring.strokeColor = new Color(150, 190, 210, 180);
+    ring.circle(0, 0, 56);
+    ring.stroke();
+
+    const knob = new Node("VirtualJoystickKnob");
+    root.addChild(knob);
+    knob.addComponent(UITransform).setContentSize(48, 48);
+    const knobGraphics = knob.addComponent(Graphics);
+    knobGraphics.fillColor = new Color(75, 145, 180, 230);
+    knobGraphics.strokeColor = new Color(190, 225, 240, 255);
+    knobGraphics.lineWidth = 2;
+    knobGraphics.circle(0, 0, 22);
+    knobGraphics.fill();
+    knobGraphics.stroke();
+
+    this.joystickRoot = root;
+    this.joystickKnob = knob;
+    root.active = false;
+    root.on(NodeEventType.TOUCH_START, this.onJoystickStart, this);
+    root.on(NodeEventType.TOUCH_MOVE, this.onJoystickMove, this);
+    root.on(NodeEventType.TOUCH_END, this.onJoystickEnd, this);
+    root.on(NodeEventType.TOUCH_CANCEL, this.onJoystickEnd, this);
+  }
+
+  private updateJoystickVisibility(): void {
+    const visible = this.currentMode === "WORLD" || this.currentMode === "PERSONAL_LEVEL";
+    if (this.joystickRoot) this.joystickRoot.active = visible;
+    if (!visible) this.stopJoystickMovement();
+  }
+
+  private stopJoystickMovement(): void {
+    this.joystickActive = false;
+    this.joystickMagnitude = 0;
+    this.joystickScreenDirection = { x: 0, y: 0 };
+    this.moveTarget = undefined;
+    this.joystickKnob?.setPosition(0, 0, 0);
+  }
+
+  private onJoystickStart(event: any): void {
+    if (this.prototypeActionInFlight ||
+        (this.currentMode !== "WORLD" && this.currentMode !== "PERSONAL_LEVEL")) return;
+    this.joystickActive = true;
+    this.moveTarget = undefined;
+    this.updateJoystickFromEvent(event);
+  }
+
+  private onJoystickMove(event: any): void {
+    if (!this.joystickActive) return;
+    this.updateJoystickFromEvent(event);
+  }
+
+  private onJoystickEnd(): void {
+    const wasActive = this.joystickActive;
+    const mode = this.currentMode;
+    this.stopJoystickMovement();
+    if (!wasActive) return;
+
+    if (mode === "PERSONAL_LEVEL" && this.levelPositionSync) {
+      void this.levelPositionSync.flush({ ...this.levelPosition }).catch((error) => {
+        this.setStatus(`摇杆位置同步失败：${error instanceof Error ? error.message : "网络错误"}`);
+      });
+      return;
+    }
+
+    if (mode === "WORLD" && this.mapSession && this.localPlayerId) {
+      const avatar = this.avatars.get(this.localPlayerId);
+      if (!avatar) return;
+      this.clientTick += 1;
+      this.moveSendElapsed = 0;
+      try {
+        this.mapSession.move(
+          avatar.position.x / this.worldPixelsPerUnit,
+          avatar.position.y / this.worldPixelsPerUnit,
+          this.lastMoveDirection,
+          this.clientTick
+        );
+      } catch (error) {
+        this.setStatus(`摇杆位置同步失败：${error instanceof Error ? error.message : "连接已断开"}`);
+      }
+    }
+  }
+
+  private updateJoystickFromEvent(event: any): void {
+    if (!this.joystickRoot) return;
+    const location = event.getUILocation();
+    const visible = view.getVisibleSize();
+    const localX = location.x - visible.width / 2 - this.joystickRoot.position.x;
+    const localY = location.y - visible.height / 2 - this.joystickRoot.position.y;
+    const distance = Math.hypot(localX, localY);
+    if (distance < 8) {
+      this.joystickMagnitude = 0;
+      this.joystickScreenDirection = { x: 0, y: 0 };
+      this.joystickKnob?.setPosition(0, 0, 0);
+      return;
+    }
+
+    const magnitude = Math.min(1, distance / this.joystickRadius);
+    const direction = { x: localX / distance, y: localY / distance };
+    const knobDistance = magnitude * this.joystickRadius;
+    this.joystickMagnitude = magnitude;
+    this.joystickScreenDirection = direction;
+    this.joystickKnob?.setPosition(
+      direction.x * knobDistance,
+      direction.y * knobDistance,
+      0
+    );
+  }
+
+  private updateJoystickMoveTarget(): void {
+    if (!this.joystickActive || this.prototypeActionInFlight) return;
+    if (this.joystickMagnitude < 0.12) {
+      this.moveTarget = undefined;
+      return;
+    }
+
+    const direction = this.currentMode === "PERSONAL_LEVEL"
+      ? screenDirectionToLogicalDirection(this.joystickScreenDirection)
+      : this.joystickScreenDirection;
+    const lookAhead = 10;
+
+    if (this.currentMode === "PERSONAL_LEVEL") {
+      const bounds = this.prototypeLayout.bounds;
+      this.moveTarget = {
+        x: Math.max(bounds.minX, Math.min(bounds.maxX, this.levelPosition.x + direction.x * lookAhead)),
+        y: Math.max(bounds.minY, Math.min(bounds.maxY, this.levelPosition.y + direction.y * lookAhead))
+      };
+      return;
+    }
+
+    const avatar = this.localPlayerId ? this.avatars.get(this.localPlayerId) : undefined;
+    const transform = this.worldRoot?.getComponent(UITransform);
+    if (!avatar || !transform) return;
+    const currentX = avatar.position.x / this.worldPixelsPerUnit;
+    const currentY = avatar.position.y / this.worldPixelsPerUnit;
+    const margin = 20;
+    const minX = (-transform.width / 2 + margin) / this.worldPixelsPerUnit;
+    const maxX = (transform.width / 2 - margin) / this.worldPixelsPerUnit;
+    const minY = (-transform.height / 2 + margin) / this.worldPixelsPerUnit;
+    const maxY = (transform.height / 2 - margin) / this.worldPixelsPerUnit;
+    this.moveTarget = {
+      x: Math.max(minX, Math.min(maxX, currentX + direction.x * lookAhead)),
+      y: Math.max(minY, Math.min(maxY, currentY + direction.y * lookAhead))
+    };
+  }
+
+
   private setStatus(message: string): void {
     if (this.statusLabel) this.statusLabel.string = message;
   }
@@ -369,6 +536,7 @@ export class BeyondTheUnknownGameEntry extends Component {
   }
 
   private async loginAndEnterWorld(): Promise<void> {
+    this.stopJoystickMovement();
     try {
       this.clearRoomControls();
       this.worldRoot?.removeAllChildren();
@@ -393,6 +561,7 @@ export class BeyondTheUnknownGameEntry extends Component {
         this.currentCharacterId = undefined;
       }
       this.currentMode = "WORLD";
+      this.updateJoystickVisibility();
       this.upsertAvatar({
         player_id: this.localPlayerId!,
         x: map.spawn_position.x,
@@ -602,7 +771,7 @@ export class BeyondTheUnknownGameEntry extends Component {
     const dx = this.moveTarget.x - this.levelPosition.x;
     const dy = this.moveTarget.y - this.levelPosition.y;
     const distance = Math.hypot(dx, dy);
-    const step = this.prototypeLayout.movementSpeed * Math.max(0, deltaTime);
+    const step = this.prototypeLayout.movementSpeed * Math.max(0, deltaTime) * (this.joystickActive ? this.joystickMagnitude : 1);
     const reached = distance <= step || distance < 0.001;
     this.levelPosition = reached
       ? { ...this.moveTarget }
@@ -622,8 +791,9 @@ export class BeyondTheUnknownGameEntry extends Component {
   }
 
   private async castRoomEcho(): Promise<void> {
-    if (!this.levelSession) return;
-    this.moveTarget = undefined;
+    if (!this.levelSession || this.prototypeActionInFlight) return;
+    this.prototypeActionInFlight = true;
+    this.stopJoystickMovement();
     try {
       await this.flushLevelPosition();
       const hiddenTarget = this.roomMechanismCatalog.get("M01-HIDEABLE-01");
@@ -641,6 +811,8 @@ export class BeyondTheUnknownGameEntry extends Component {
       this.setStatus(result.effects.length ? "回声扩散：隐藏的符号显现了" : "回声没有回应");
     } catch (error) {
       this.setStatus(`回声失败：${error instanceof Error ? error.message : "请稍后重试"}`);
+    } finally {
+      this.prototypeActionInFlight = false;
     }
   }
 
@@ -650,7 +822,7 @@ export class BeyondTheUnknownGameEntry extends Component {
     if (!this.levelSession || this.prototypeActionInFlight) return;
     const { comboId, targetId, ruleIds } = definition;
     this.prototypeActionInFlight = true;
-    this.moveTarget = undefined;
+    this.stopJoystickMovement();
     try {
       await this.flushLevelPosition();
       let matched = false;
@@ -705,7 +877,7 @@ export class BeyondTheUnknownGameEntry extends Component {
   private async settlePrototypeRoom(): Promise<void> {
     if (!this.levelSession || this.prototypeActionInFlight) return;
     this.prototypeActionInFlight = true;
-    this.moveTarget = undefined;
+    this.stopJoystickMovement();
     try {
       await this.flushLevelPosition();
       // Do not stop GAZE before settlement: stop_gaze intentionally resets
@@ -719,7 +891,8 @@ export class BeyondTheUnknownGameEntry extends Component {
       this.prototypeGazeMaintainAt = 0;
       this.prototypeGazeNextMaintainAt = 0;
       this.currentMode = "MENU";
-      this.moveTarget = undefined;
+      this.updateJoystickVisibility();
+      this.stopJoystickMovement();
       this.drawPersonalRoom("探索完成", true);
       const unlockMessage = result.unlocked_hidden_level_id
         ? ` · 隐藏结局已解锁（${result.unlocked_hidden_level_id}），返回后可进入`
@@ -737,8 +910,9 @@ export class BeyondTheUnknownGameEntry extends Component {
   }
 
   private async interactHiddenEnding(): Promise<void> {
-    if (!this.levelSession) return;
-    this.moveTarget = undefined;
+    if (!this.levelSession || this.prototypeActionInFlight) return;
+    this.prototypeActionInFlight = true;
+    this.stopJoystickMovement();
     try {
       await this.flushLevelPosition();
       const result = await this.levelSession.interact(
@@ -748,6 +922,7 @@ export class BeyondTheUnknownGameEntry extends Component {
       this.roomMechanismStates.set(result.mechanism_id, result.state);
       this.applyRoomMechanismStates(await this.levelSession.refreshState());
       if (result.state.status === "TRIGGERED") {
+        this.prototypeActionInFlight = false;
         await this.settlePrototypeRoom();
       } else {
         this.drawPersonalRoom(this.pendingLevelName);
@@ -755,12 +930,15 @@ export class BeyondTheUnknownGameEntry extends Component {
       }
     } catch (error) {
       this.setStatus(`结局核心交互失败：${error instanceof Error ? error.message : "请靠近机关后重试"}`);
+    } finally {
+      this.prototypeActionInFlight = false;
     }
   }
 
   private async interactRoomExit(): Promise<void> {
-    if (!this.levelSession) return;
-    this.moveTarget = undefined;
+    if (!this.levelSession || this.prototypeActionInFlight) return;
+    this.prototypeActionInFlight = true;
+    this.stopJoystickMovement();
     try {
       await this.flushLevelPosition();
       const result = await this.levelSession.interact(
@@ -771,6 +949,7 @@ export class BeyondTheUnknownGameEntry extends Component {
       if (result.state.status === "TRIGGERED") {
         const settled = await this.levelSession.settle(this.makeIdempotencyKey("room01-settle"));
         this.currentMode = "MENU";
+        this.updateJoystickVisibility();
         this.levelSession = undefined;
         this.levelPositionSync = undefined;
         this.drawPersonalRoom("探索完成", true);
@@ -778,60 +957,70 @@ export class BeyondTheUnknownGameEntry extends Component {
       }
     } catch (error) {
       this.setStatus(`出口尚未开启或距离不足：${error instanceof Error ? error.message : "请继续探索"}`);
+    } finally {
+      this.prototypeActionInFlight = false;
     }
   }
 
   private async enterFirstRoom(): Promise<void> {
-    if (this.currentMode === "PERSONAL_LEVEL" && this.levelSession?.activeRun()) {
-      try {
-        const run = await this.levelSession.start();
-        await this.finishPersonalLevel(this.pendingLevelName, run.run_id);
-      } catch (error) {
-        this.setStatus(`关卡启动重试失败：${error instanceof Error ? error.message : "未知错误"}`);
-      }
-      return;
-    }
-    if (this.currentMode !== "WORLD" || !this.api || !this.mapSession) {
-      this.setStatus("请先登录并进入共享世界");
-      return;
-    }
+    if (this.prototypeActionInFlight) return;
+    this.prototypeActionInFlight = true;
+    this.stopJoystickMovement();
     try {
-      this.setStatus("正在读取房间目录与个人进度…");
-      const [catalog, progress] = await Promise.all([
-        this.api.listLevels(),
-        this.api.getPlayerProgress()
-      ]);
-      const level = selectNextPlayableLevel(catalog.levels, progress.completed_level_ids);
-      if (!level) {
-        this.setStatus("当前没有已解锁的可进入关卡");
-        return;
-      }
-      const personal = new PersonalLevelSession(this.api);
-      const entry = await personal.enter(
-        level.level_id,
-        level.entrance_id,
-        this.makeIdempotencyKey("level-enter")
-      );
-      this.levelSession = personal;
-      this.pendingLevelName = entry.level.level_name;
-      this.pendingLevelId = entry.level.level_id;
-      this.prototypeComboDefinitions = parsePrototypeComboDefinitions(level.config);
-      this.prototypeLayout = parsePrototypeLayoutConfig(level.config);
-      this.prototypeGazeTargetId = undefined;
-      this.prototypeGazeMaintainAt = 0;
-      this.prototypeGazeNextMaintainAt = 0;
-      this.currentMode = "PERSONAL_LEVEL";
-      this.moveTarget = undefined;
-      this.mapSession.leave();
-      this.clearAvatars();
-      const run = await personal.start();
-      await this.finishPersonalLevel(this.pendingLevelName, run.run_id);
-    } catch (error) {
-      this.setStatus(
-        this.levelSession?.activeRun()
-          ? `个人关卡已创建，启动失败；可再次点击「进入探索房间」重试：${error instanceof Error ? error.message : "未知错误"}`
-          : `进入关卡失败：${error instanceof Error ? error.message : "未知错误"}`
-      );
+        if (this.currentMode === "PERSONAL_LEVEL" && this.levelSession?.activeRun()) {
+          try {
+            const run = await this.levelSession.start();
+            await this.finishPersonalLevel(this.pendingLevelName, run.run_id);
+          } catch (error) {
+            this.setStatus(`关卡启动重试失败：${error instanceof Error ? error.message : "未知错误"}`);
+          }
+          return;
+        }
+        if (this.currentMode !== "WORLD" || !this.api || !this.mapSession) {
+          this.setStatus("请先登录并进入共享世界");
+          return;
+        }
+        try {
+          this.setStatus("正在读取房间目录与个人进度…");
+          const [catalog, progress] = await Promise.all([
+            this.api.listLevels(),
+            this.api.getPlayerProgress()
+          ]);
+          const level = selectNextPlayableLevel(catalog.levels, progress.completed_level_ids);
+          if (!level) {
+            this.setStatus("当前没有已解锁的可进入关卡");
+            return;
+          }
+          const personal = new PersonalLevelSession(this.api);
+          const entry = await personal.enter(
+            level.level_id,
+            level.entrance_id,
+            this.makeIdempotencyKey("level-enter")
+          );
+          this.levelSession = personal;
+          this.pendingLevelName = entry.level.level_name;
+          this.pendingLevelId = entry.level.level_id;
+          this.prototypeComboDefinitions = parsePrototypeComboDefinitions(level.config);
+          this.prototypeLayout = parsePrototypeLayoutConfig(level.config);
+          this.prototypeGazeTargetId = undefined;
+          this.prototypeGazeMaintainAt = 0;
+          this.prototypeGazeNextMaintainAt = 0;
+          this.currentMode = "PERSONAL_LEVEL";
+          this.updateJoystickVisibility();
+          this.stopJoystickMovement();
+          this.mapSession.leave();
+          this.clearAvatars();
+          const run = await personal.start();
+          await this.finishPersonalLevel(this.pendingLevelName, run.run_id);
+        } catch (error) {
+          this.setStatus(
+            this.levelSession?.activeRun()
+              ? `个人关卡已创建，启动失败；可再次点击「进入探索房间」重试：${error instanceof Error ? error.message : "未知错误"}`
+              : `进入关卡失败：${error instanceof Error ? error.message : "未知错误"}`
+          );
+        }
+    } finally {
+      this.prototypeActionInFlight = false;
     }
   }
 
@@ -1347,7 +1536,7 @@ export class BeyondTheUnknownGameEntry extends Component {
       return;
     }
     this.prototypeActionInFlight = true;
-    this.moveTarget = undefined;
+    this.stopJoystickMovement();
     try {
       this.setStatus("正在保存并放弃当前关卡…");
       // Abandon is allowed to proceed even if a best-effort position sync fails.
@@ -1372,6 +1561,7 @@ export class BeyondTheUnknownGameEntry extends Component {
       this.moveTarget = undefined;
       this.mapSession = undefined;
       this.currentMode = "MENU";
+      this.updateJoystickVisibility();
       this.clearAvatars();
       await this.loginAndEnterWorld();
     } catch (error) {
