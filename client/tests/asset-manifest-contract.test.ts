@@ -28,10 +28,14 @@ describe("asset manifest contract", () => {
     );
   });
 
-  it("rejects a manifest that points at an outdated GDD version", () => {
-    const invalid = { ...manifest, gdd_version: "0.2" };
+  it("keeps the whole-GDD version separate from the Chapter 18 revision", () => {
+    const invalid = { ...manifest, gdd_version: "0.1" };
     expect(validateAssetManifestStructure(invalid, levels).errors.join("\n")).toContain(
-      "asset manifest GDD baseline must be 0.3"
+      "asset manifest GDD baseline must be 0.2"
+    );
+    const staleChapter = { ...manifest, gdd_chapter_versions: { "18": "0.2" } };
+    expect(validateAssetManifestStructure(staleChapter, levels).errors.join("\n")).toContain(
+      "asset manifest Chapter 18 baseline must be 0.3"
     );
   });
 
