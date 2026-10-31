@@ -32,6 +32,10 @@ class SettlementIdempotencyConflict(Exception):
     pass
 
 
+class LeaderboardSeasonNotFound(Exception):
+    pass
+
+
 class RewardNotFound(Exception):
     pass
 
@@ -1170,20 +1174,47 @@ async def get_leaderboard(
     period_type: str,
     scope: str = "TOP",
     limit: int = 20,
+    season_id: str | None = None,
 ) -> dict[str, Any]:
     now = datetime.now(UTC)
-    period = next(
-        item for item in _periods(now) if item["season_type"] == period_type
-    )
+    if season_id is None:
+        period = next(
+            item for item in _periods(now) if item["season_type"] == period_type
+        )
+        resolved_season_id = period["season_id"]
+        fallback_start_at = period["start_at_utc"]
+        fallback_end_at = period["end_at_utc"]
+    else:
+        resolved_season_id = season_id
+        fallback_start_at = None
+        fallback_end_at = None
+
     season = (
         await session.execute(
             text("""
-                SELECT season_id, start_at_utc, end_at_utc, status::text AS status
+                SELECT season_id, season_type::text AS season_type,
+                       start_at_utc, end_at_utc, status::text AS status
                 FROM seasons WHERE season_id = :season_id
             """),
-            {"season_id": period["season_id"]},
+            {"season_id": resolved_season_id},
         )
     ).mappings().one_or_none()
+    if season_id is not None:
+        # An explicit season is answered from its archived snapshot, or from the current
+        # period when the row has not been materialised yet. Anything else is rejected:
+        # silently falling back to the current period would mislabel another season's ranks.
+        if season is not None:
+            period_type = season["season_type"]
+        else:
+            current_period = next(
+                (item for item in _periods(now) if item["season_id"] == season_id), None
+            )
+            if current_period is None:
+                raise LeaderboardSeasonNotFound(season_id)
+            period_type = current_period["season_type"]
+            fallback_start_at = current_period["start_at_utc"]
+            fallback_end_at = current_period["end_at_utc"]
+
     my_rank = (
         await session.execute(
             text("""
@@ -1193,7 +1224,7 @@ async def get_leaderboard(
                   AND player_id = :player_id
             """),
             {
-                "season_id": period["season_id"],
+                "season_id": resolved_season_id,
                 "board_type": board_type,
                 "player_id": player_id,
             },
@@ -1212,7 +1243,7 @@ async def get_leaderboard(
                           AND player_id = :player_id
                     """),
                     {
-                        "season_id": period["season_id"],
+                        "season_id": resolved_season_id,
                         "board_type": board_type,
                         "player_id": player_id,
                     },
@@ -1229,7 +1260,7 @@ async def get_leaderboard(
                     ORDER BY rank, player_id
                 """),
                 {
-                    "season_id": period["season_id"],
+                    "season_id": resolved_season_id,
                     "board_type": board_type,
                     "rank_start": max(1, my_rank["rank"] - 3),
                     "rank_end": my_rank["rank"] + 3,
@@ -1247,24 +1278,24 @@ async def get_leaderboard(
                     LIMIT :limit
                 """),
                 {
-                    "season_id": period["season_id"],
+                    "season_id": resolved_season_id,
                     "board_type": board_type,
                     "limit": min(max(limit, 1), 50),
                 },
             )
         ).mappings().all()
     return {
-        "season_id": period["season_id"],
+        "season_id": resolved_season_id,
         "period_type": period_type,
         "start_at_utc": (
             season["start_at_utc"].isoformat()
             if season is not None
-            else period["start_at_utc"].isoformat()
+            else fallback_start_at.isoformat()
         ),
         "end_at_utc": (
             season["end_at_utc"].isoformat()
             if season is not None
-            else period["end_at_utc"].isoformat()
+            else fallback_end_at.isoformat()
         ),
         "board_type": board_type,
         "scope": scope,
