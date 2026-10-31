@@ -17,9 +17,9 @@ describe("asset manifest contract", () => {
     expect(result.errors).toEqual([]);
     expect(result.expectedCount).toBe(112);
     expect(result.counts.MISSING).toBe(112);
-    expect(manifest.entries.filter((entry: any) => entry.priority === "P0")).toHaveLength(34);
-    expect(manifest.entries.filter((entry: any) => entry.priority === "P1")).toHaveLength(32);
-    expect(manifest.entries.filter((entry: any) => entry.priority === "P2")).toHaveLength(46);
+    expect(manifest.entries.filter((entry: any) => entry.priority === "P0")).toHaveLength(37);
+    expect(manifest.entries.filter((entry: any) => entry.priority === "P1")).toHaveLength(24);
+    expect(manifest.entries.filter((entry: any) => entry.priority === "P2")).toHaveLength(51);
   });
 
   it("rejects an asset directory that does not match its canonical asset ID", () => {
@@ -94,7 +94,7 @@ describe("asset manifest contract", () => {
   it("rejects a delivery phase that does not match the asset priority", () => {
     const invalid = structuredClone(manifest);
     invalid.entries[0].delivery_phase = "CONTENT_EXPANSION";
-    expect(validateAssetManifestStructure(invalid, levels).errors.join("\\n")).toContain(
+    expect(validateAssetManifestStructure(invalid, levels).errors.join("\n")).toContain(
       "CHR_001_PORTRAIT: delivery_phase must be VERTICAL_SLICE for priority P0"
     );
   });
@@ -102,7 +102,7 @@ describe("asset manifest contract", () => {
   it("rejects an asset without a valid delivery priority", () => {
     const invalid = structuredClone(manifest);
     invalid.entries[0].priority = "P3";
-    expect(validateAssetManifestStructure(invalid, levels).errors.join("\\n")).toContain(
+    expect(validateAssetManifestStructure(invalid, levels).errors.join("\n")).toContain(
       "CHR_001_PORTRAIT: priority must be P0, P1, or P2"
     );
   });
