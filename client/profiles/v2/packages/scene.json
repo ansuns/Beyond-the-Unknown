@@ -1,0 +1,29 @@
+{
+  "current-scene": "d09b082c-0b82-4dbb-8018-6e0e4c443f4a",
+  "gizmos-infos": {
+    "iconGizmoSize": 1,
+    "isGridVisible": true,
+    "isIconGizmo3D": false
+  },
+  "camera-infos": {
+    "c9DMICJLFO5IeO07EPon7U": {
+      "position": {
+        "x": 0,
+        "y": 0,
+        "z": 1000
+      },
+      "rotation": {
+        "w": 1,
+        "x": 0,
+        "y": 0,
+        "z": 0
+      },
+      "viewCenter": {
+        "x": 0,
+        "y": 0,
+        "z": 0
+      }
+    }
+  },
+  "__version__": "1.0.3"
+}
