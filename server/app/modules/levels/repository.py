@@ -8,7 +8,10 @@ from uuid import UUID
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.modules.levels.movement import parse_level_movement_settings
+from app.modules.levels.movement import (
+    max_allowed_movement_distance,
+    parse_level_movement_settings,
+)
 
 
 class LevelNotFound(Exception):
@@ -441,7 +444,7 @@ async def update_level_position(
             0.05, (now - previous["updated_at"]).total_seconds()
         )
     # Server-authoritative movement cap with a small network-jitter allowance.
-    max_distance = movement.movement_speed * elapsed_seconds + 0.75
+    max_distance = max_allowed_movement_distance(movement, elapsed_seconds)
     if math.hypot(x - previous_x, y - previous_y) > max_distance:
         raise InvalidLevelPosition
     await session.execute(
