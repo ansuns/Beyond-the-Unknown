@@ -933,3 +933,61 @@ def test_mechanism_catalog_and_references_match_canonical_gdd_ids() -> None:
         "M04-PLATFORM-01",
     ]
     assert contract["hidden_discovery"] == "M01-HIDEABLE-01"
+
+def test_disabled_mechanism_target_is_rejected_without_state_change() -> None:
+    app.dependency_overrides[get_wechat_code_provider] = lambda: FakeWeChatProvider()
+    try:
+        with TestClient(app) as client:
+            identity = _login_and_enter_map(client)
+            run_id = _enter_level(
+                client, identity["headers"], "LV-ROOM-02", "ENT-ROOM-02"
+            )
+            _set_rule_tuning(True)
+            _set_run_position(run_id, 5.0, 4.0)
+            _db_update(
+                """
+                UPDATE level_mechanism_catalog
+                SET is_enabled = false
+                WHERE level_id = 'LV-ROOM-02'
+                  AND mechanism_config_id = 'M02-BRIDGE-01'
+                """
+            )
+            try:
+                rejected = client.post(
+                    "/api/v1/level/rule/cast",
+                    headers={
+                        **identity["headers"],
+                        "Idempotency-Key": "disabled-mechanism-rule-cast",
+                    },
+                    json={
+                        "run_id": run_id,
+                        "rule_id": "RULE_ECHO",
+                        "target_id": "M02-BRIDGE-01",
+                        "target_point": {"x": 6.0, "y": 4.0},
+                    },
+                )
+                assert rejected.status_code == 422, rejected.text
+            finally:
+                _db_update(
+                    """
+                    UPDATE level_mechanism_catalog
+                    SET is_enabled = true
+                    WHERE level_id = 'LV-ROOM-02'
+                      AND mechanism_config_id = 'M02-BRIDGE-01'
+                    """
+                )
+
+            state = client.get(
+                f"/api/v1/level/state/{run_id}", headers=identity["headers"]
+            )
+            assert state.status_code == 200, state.text
+            bridge = next(
+                item for item in state.json()["data"]["mechanisms"]
+                if item["mechanism_id"] == "M02-BRIDGE-01"
+            )
+            assert bridge["state"]["status"] == "INACTIVE"
+            assert bridge["state"]["visible"] is False
+            assert "combo_applied" not in bridge["state"]
+    finally:
+        _set_rule_tuning(False)
+        app.dependency_overrides.clear()
