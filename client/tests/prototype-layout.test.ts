@@ -46,26 +46,35 @@ describe("parsePrototypeLayoutConfig", () => {
 describe("prototype layout coordinate contract", () => {
   const bounds = { minX: 10, maxX: 22, minY: -4, maxY: 4 };
 
-  it("round-trips all room corners with non-zero coordinate origins", () => {
+  it("projects all four logical corners to a diamond and round-trips them", () => {
     const scale = 20;
-    const min = prototypeLevelToLocal({ x: 10, y: -4 }, bounds, scale);
-    const max = prototypeLevelToLocal({ x: 22, y: 4 }, bounds, scale);
-    expect(min).toEqual({ x: -120, y: -80 });
-    expect(max).toEqual({ x: 120, y: 80 });
-    expect(prototypeLocalToLevel(min, bounds, scale)).toEqual({ x: 10, y: -4 });
-    expect(prototypeLocalToLevel(max, bounds, scale)).toEqual({ x: 22, y: 4 });
+    const corners = [
+      [{ x: 10, y: -4 }, { x: -40, y: -200 }],
+      [{ x: 22, y: -4 }, { x: 200, y: 40 }],
+      [{ x: 22, y: 4 }, { x: 40, y: 200 }],
+      [{ x: 10, y: 4 }, { x: -200, y: -40 }]
+    ] as const;
+
+    for (const [logical, projected] of corners) {
+      expect(prototypeLevelToLocal(logical, bounds, scale)).toEqual(projected);
+      expect(prototypeLocalToLevel(projected, bounds, scale)).toEqual(logical);
+    }
   });
 
-  it("clamps touch coordinates outside the room back to configured bounds", () => {
+  it("clamps inverse-projected touch coordinates outside the diamond to logical bounds", () => {
     expect(prototypeLocalToLevel({ x: -999, y: 999 }, bounds, 20)).toEqual({
-      x: 10,
+      x: 16,
       y: 4
+    });
+    expect(prototypeLocalToLevel({ x: -999, y: -999 }, bounds, 20)).toEqual({
+      x: 10,
+      y: 0
     });
   });
 
-  it("fits the room to viewport while respecting the maximum scale", () => {
-    expect(calculatePrototypeRoomScale(bounds, { width: 640, height: 600 })).toBe(40);
-    expect(calculatePrototypeRoomScale(bounds, { width: 320, height: 400 })).toBeCloseTo(20);
+  it("fits the projected diamond to viewport while respecting the maximum scale", () => {
+    expect(calculatePrototypeRoomScale(bounds, { width: 640, height: 600 })).toBe(18);
+    expect(calculatePrototypeRoomScale(bounds, { width: 320, height: 400 })).toBe(8);
   });
 
   it("rejects invalid room scale and viewport geometry", () => {
