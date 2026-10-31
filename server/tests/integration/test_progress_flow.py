@@ -717,3 +717,100 @@ def test_leaderboard_recompute_rebuilds_snapshot_without_touching_ledger(monkeyp
             ("DELETE FROM seasons WHERE season_id = :season_id", {"season_id": season_id}),
         ])
         app.dependency_overrides.clear()
+
+
+def test_score_threshold_condition_grants_once_per_period() -> None:
+    """GDD 11.7: SCORE conditions are evaluated against the running total."""
+    from uuid import UUID
+
+    from sqlalchemy.ext.asyncio import AsyncSession
+
+    from app.core.database import engine
+    from app.modules.progress.repository import _write_score_event
+
+    app.dependency_overrides[get_wechat_code_provider] = lambda: FakeWeChatProvider()
+    _set_test_content(True)
+    _db_exec([
+        ("""
+            INSERT INTO rewards
+                (reward_id, reward_type, reward_name, condition_ref,
+                 grant_mode, payload, is_paid, is_enabled)
+            VALUES
+                ('TEST-SCORE-REWARD', 'RT_BADGE', '积分阈值徽章',
+                 'TEST-SCORE-CONDITION', 'AUTO', '{}'::jsonb, false, true)
+            ON CONFLICT (reward_id) DO NOTHING
+        """, None),
+        ("""
+            INSERT INTO reward_conditions
+                (condition_id, trigger_type, condition_config,
+                 reward_id, is_enabled, config_status)
+            VALUES
+                ('TEST-SCORE-CONDITION', 'SCORE',
+                 '{"board_type":"EXPLORE","score_threshold":8}'::jsonb,
+                 'TEST-SCORE-REWARD', true, 'READY')
+            ON CONFLICT (condition_id) DO UPDATE
+            SET trigger_type = 'SCORE',
+                condition_config = '{"board_type":"EXPLORE","score_threshold":8}'::jsonb,
+                is_enabled = true, config_status = 'READY'
+        """, None),
+    ])
+    player_id: UUID | None = None
+    try:
+        with TestClient(app) as client:
+            login = client.post(
+                "/api/v1/auth/login",
+                json={"wx_code": str(uuid4()), "request_id": "score-condition-login"},
+            )
+            assert login.status_code == 200
+            headers = {"Authorization": f"Bearer {login.json()['data']['access_token']}"}
+            player_id = UUID(
+                client.get("/api/v1/player/me", headers=headers).json()["data"]["player_id"]
+            )
+
+        async def write_events() -> None:
+            async with AsyncSession(engine) as session:
+                for index in range(3):
+                    await _write_score_event(
+                        session,
+                        player_id,
+                        "EXP_DISCOVER",
+                        f"score-condition-{index}",
+                        None,
+                        f"score-condition-{index}",
+                    )
+                await session.commit()
+
+        asyncio.run(write_events())
+
+        grants = _db_fetch(
+            "SELECT COUNT(*) AS total FROM player_rewards"
+            " WHERE player_id = :player_id AND reward_id = 'TEST-SCORE-REWARD'",
+            {"player_id": player_id},
+        )
+        # 3 x 5 points crosses the threshold of 8 on the second event; the third must
+        # not pay out again. One grant in total also proves the weekly and monthly
+        # periods do not each pay for the same crossing.
+        assert grants[0]["total"] == 1
+        totals = _db_fetch(
+            "SELECT COALESCE(SUM(delta), 0) AS total FROM score_events"
+            " WHERE player_id = :player_id AND board_type = 'EXPLORE'",
+            {"player_id": player_id},
+        )
+        assert totals[0]["total"] >= 8
+    finally:
+        _set_test_content(False)
+        _db_exec([
+            (
+                "DELETE FROM player_rewards WHERE reward_id = 'TEST-SCORE-REWARD'",
+                None,
+            ),
+            (
+                "DELETE FROM reward_conditions WHERE condition_id = 'TEST-SCORE-CONDITION'",
+                None,
+            ),
+            ("DELETE FROM rewards WHERE reward_id = 'TEST-SCORE-REWARD'", None),
+        ] + ([(
+            "DELETE FROM score_events WHERE player_id = :player_id",
+            {"player_id": player_id},
+        )] if player_id else []))
+        app.dependency_overrides.clear()
