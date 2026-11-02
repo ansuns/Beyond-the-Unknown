@@ -100,7 +100,11 @@ Tests       172 passed (172)
 
 - 用沙盒小游戏测试号 `wx79cbf35bf4aa11f3` 给 `build/wechatgame/project.config.json` 设置 appid，`wechatide auth -c WorkBuddy` 返回 `authorized:true, port:43982`；`open_project_window` 返回 `success:true, winId:s0` —— **项目已真实导入并打开**。
 - `simulator_screenshot` 返回真实模拟器画面：`client/docs/screenshots/wechat-devtools-landscape.png`（314×677），可清楚看到登录页 UI：标题“无界之外 · Beyond the Unknown”、“我的进度 / 切换角色 / 招呼”、“登录并进入世界 / 放弃并返回世界”、“法则：尚未读取”。**这证明游戏在微信开发者工具模拟器中真实运行**。
-- **未完成**：模拟器仍为竖屏（314×677），尚未在模拟器内切成横屏并进入 ROOM-01，也未在该模拟器内驱动摇杆移动/机关交互。5 视口横屏 ROOM-01 截图来自 web-mobile 真实引擎（§9），二者不混同。
+- **横屏根因（已修）**：`build/wechatgame/game.json` 的 `deviceOrientation` 是 `portrait`（`project.config.json` 写 landscape 不够，运行以 `game.json` 为准）。改为 `"deviceOrientation":"landscape"` 后，模拟器截图从 314×677 变为 **487×225 / 308×143（2.16:1 横屏）**，并看到真实登录页 UI（截图 `wechat-landscape-login.png`）。
+- 源侧：`client/build-configs/wechat-slim.json` 已声明 `orientation: landscape`；但无头 CLI 用 `--build "configPath=project://build-configs/wechat-slim.json"` 时在 `checkOptionsBeforeCommand` 校验失败（日志 `build/build-wechat-slim.log`），故本轮直接修正产物的 `game.json`。
+- **仍阻塞（未验证）**：`automation_game_action` 一直返回 `cant find runtimeid by projectpath`（CJK 路径与 ASCII 路径 `C:\Users\SYANG\btu-wx` 都试过），且调用后项目窗口丢失（`project window not found`）。已尝试：`wechatide auth -c WorkBuddy`（authorized:true）、`open_project_window`（success, winId s0）、`cli.bat auto --auto-port 9420/9421`（返回 autoPort）、把构建复制到纯 ASCII 路径。仍无法在模拟器内点击登录/进入 ROOM-01/摇杆/机关。
+- **最小人工步骤**：在开发者工具模拟器里点“登录并进入世界”→点“进入探索房间”，即可看到 ROOM-01；或在该机器上为 `wechatide` 开启自动化运行时（runtimeid）后再跑 `automation_game_action`。
+- 5 视口横屏 ROOM-01 截图来自 web-mobile 真实引擎（§9），**不冒充**微信模拟器截图。
 
 ## 9. 五种分辨率的真实截图
 
