@@ -1,7 +1,7 @@
 # 项目状态
 
-- 更新：2026-10-31
-- 基线提交：`da9e151`（main）
+- 更新：2026-11-02
+- 基线提交：`3413b95`（main，合并横屏 PR #146 后）
 - 计算方式：只统计能在当前环境复现的成果。凡“代码存在但未在本机跑通”的，一律记为**已实现未验证**，不计入完成率。
 
 ## 1. 仓库事实
@@ -9,17 +9,18 @@
 | 项 | 值 | 如何确认 |
 |---|---:|---|
 | 已合并 PR（本轮） | #126 #127 #128 #129 #130 #131 | 均先通过 CI 再合并 |
+| 收敛阶段新增合并 | #143 #144 #145 #146 #147 | 均通过 CI 后合并；main：`da9e151` → `3413b95` |
 | 已合并 PR（此前） | #117 #118 #119 #120 #121 #122 #123 #124 #125 | `git log --merges` |
-| 未合并 PR | 无 | 只读+写 PAT 查询 GitHub API |
-| 服务端 Python 文件 | 80 | `find server -name "*.py"` |
+| 未合并 PR | 2（#148 本文档、#149 横屏铺满） | 只读+写 PAT 查询 GitHub API（2026-11-02 复核：2 个开放 PR；此前“0 个”为过时描述，已更正） |
+| 服务端 Python 文件 | 92 | `find server -name "*.py"`（2026-11-02 复核） |
 | 服务端路由 | 27（26 条 HTTP + 1 条 WebSocket） | `app.openapi()` 与路由装饰器核对 |
 | Alembic 迁移 | 16 | `server/migrations/versions` |
 | 数据库表 | 25 | `docs/engineering/database/0001_initial_schema.sql` |
 | OpenAPI 路径 | 26，与 HTTP 路由 1:1 | `test_openapi_route_parity.py` |
-| 客户端 TypeScript 文件 | 21 | `client/assets/scripts` |
+| 客户端 TypeScript 文件 | 26 | `client/assets/scripts`（2026-11-02 复核） |
 | 客户端场景 | 1（`Boot.scene`） | `client/assets/scenes` |
-| 客户端单测 | 144，22 文件 | `npm test` |
-| 服务端测试 | 85 通过（含集成） | `pytest tests -q`，接真实 PostgreSQL/Redis/RabbitMQ |
+| 客户端单测 | 24 测试文件（本机 `find` 计数；用例总数待 `npm test` 重跑确认；CI 已跑） | `npm test` / GitHub Actions `client` 作业 |
+| 服务端测试 | 25 测试文件（本机 `find` 计数；通过数待接 PG/Redis/RabbitMQ 重跑） | `pytest tests -q`，CI 的 `compose-smoke` 已覆盖同等流程 |
 | 服务端集成测试 | 全程真实容器，0 跳过 | `TEST_DATABASE_URL`/`TEST_REDIS_URL`/`TEST_RABBITMQ_URL` |
 | GDD 章节 | 18 章 + 总览 + 2 份审核报告 | `docs/gdd` |
 
@@ -82,20 +83,21 @@
 | 等距投影与深度排序 | `prototype-layout` | 已验证 |
 | 机关视觉状态 | `prototype-mechanism-visual` | 已验证 |
 | 进程序列化 | `GameEntry`、`Boot.scene` | 已验证（静态结构，非编辑器导入） |
+| 横屏自适应与 HUD 重排 | `screen-fit.ts`、`GameEntry.applyScreenFit` | 已验证（Web 构建；16:9/18:9/19.5:9/20:9/844×390 控件零越界 + 端到端进房截图；微信开发者工具/真机未验证，见 §3.3） |
 
 ### 3.3 交付
 
 | 能力 | 状态 |
 |---|---|
-| Cocos Creator 3.8.8 编辑器导入 | **未验证**（环境无 Cocos Creator） |
-| 微信开发者工具导入 | **未验证**（环境无该工具） |
+| Cocos Creator 3.8.8 编辑器导入 + 构建 | **已验证**（2026-11-02：`wechatgame` 1m44s、`web-mobile` 2m12s，均 exit 0；产物在 `client/build/`） |
+| 微信开发者工具导入（模拟器运行） | **未完成**（工具已装；尚未导入 `build/wechatgame/`；本轮用 web 版真实引擎产出 5 视口截图） |
 | Android / iOS 微信真机测试 | **未验证**（无设备与账号） |
 | 正式美术资源入库 | **0 项** |
 | 包体积与首屏优化 | 未开始（依赖构建结果） |
 
 ## 4. CI 状态
 
-通过只读 PAT 读取 GitHub Actions 实际结果（2026-10-31 10:22 GMT+8）。
+通过只读 PAT 读取 GitHub Actions 实际结果（2026-11-02 复核：PR #146 的 `client` / `python` / `tools` / `budget` / `compose-smoke` 五个作业均 success；当前 main HEAD = `3413b95`）。
 
 | 分支 / 提交 | 工作流 | 结果 |
 |---|---|---|
@@ -131,9 +133,10 @@ PR #127 与 #128 的 `compose-smoke` 在 GitHub 托管 runner 上通过，包含
 | 编号 | 阻塞 | 影响 | 解除条件 |
 |---|---|---|---|
 | B-1 | ~~无 GitHub 凭据~~ | 已解除：PAT 已具备 `Contents` / `Pull requests` 写权限，实测建 ref 201、push 与合并成功 | — |
-| B-2 | 无 Cocos Creator 3.8.8 | 无法验证导入与构建 | 安装编辑器 |
-| B-3 | 无微信开发者工具 / 小程序 AppID | 无法验证小游戏导入与真机。工具已装于 `C:\Program Files (x86)\Tencent\微信web开发者工具`，但仍需登录与 AppID | 提供 AppID 并登录工具 |
-| B-4 | 本机未安装 Docker / PostgreSQL / Redis | 19 项集成测试与迁移无法**本地**验证；CI 的 compose-smoke 已覆盖同等流程 | 安装 Docker Desktop，或提供数据库连接串 |
+| B-2 | ~~无 Cocos Creator 3.8.8~~ | 已解除：编辑器装于 `C:\ProgramData\cocos\editors\Creator\3.8.8`。注意 shell 默认 `ELECTRON_RUN_AS_NODE=1`，须 `env -u ELECTRON_RUN_AS_NODE` 才能以 Electron 模式构建 | — |
+| B-3 | 微信开发者工具模拟器尚未导入构建产物 | 无法给出微信模拟器截图；本轮以 web 版真实引擎截图替代 | 导入 `client/build/wechatgame/`（AppID 可选测试号） |
+| B-4 | ~~Docker 已装但本机无 PG/Redis/RabbitMQ 与服务端依赖~~ | 已解除：2026-11-02 用 Postgres 18 + Redis + RabbitMQ 容器（5432/6380/5673）跑通 Alembic 0001→0016 与本地登录 | — |
+| B-9 | 本机 `npm install` 在 npm 10.9.7 下持续报 `edgesOut` 工具链 bug（非项目问题），客户端 typecheck/Vitest 未能本地复跑 | 客户端验证以 GitHub Actions `client` 作业为准；若要本地复跑可升级 npm 后重试 | 升级 npm 至 12.x 或换用 pnpm |
 | B-5 | ~~生图后端带烘焙水印~~ | 已解除：`tools/strip_overlay.py` 按模式清角/裁边，23 项测试覆盖 | — |
 | B-8 | AI 生成资源的授权与标识未核实 | 生成资源不得标 READY；若要求保留标识，现有 3 件需回退重制 | 见 `assets/AI-content-compliance.md` 的 C-1～C-4 |
 | B-6 | 独立生图角色形象漂移 | 角色资源无法成套 | 确定 CHR_001 基准图后改图生图 |
@@ -157,5 +160,5 @@ PR #127 与 #128 的 `compose-smoke` 在 GitHub 托管 runner 上通过，包含
 1. **服务端 MVP 缺口**：`player_tasks` 个人任务（GDD 11.1，有表无代码）；进度落库失败无重试队列（GDD 11.3 规则 3，目前依赖客户端幂等重试）。两项都需要 PostgreSQL，可继续走 CI 验证。
 2. **积分数值定档**（B-7）：需策划给出 13.2 的 `delta`，否则三榜恒为 0。
 3. **资源**：水印处置决策 + CHR_001 基准图，然后按 `P0-production-handoff.md` §10 推进。
-4. **客户端**：补齐 `UI_SETTLEMENT`、`UI_LAW_BAR` 状态机测试；场景与组件挂接需 Cocos Creator（B-2）。
+4. **客户端**：补齐 `UI_SETTLEMENT`、`UI_LAW_BAR` 状态机测试；Cocos Creator 已装（B-2 解除），场景与组件挂接与构建可继续（真实构建已验证）。
 5. **交付**：`wechat-mini-game-build.md` 的可执行构建步骤与包体积预算脚本。
