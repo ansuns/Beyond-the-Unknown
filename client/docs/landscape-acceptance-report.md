@@ -11,7 +11,7 @@
 | 单元测试通过 | ✅ 是（24 文件 / 172 用例） |
 | CI 通过 | ⏳ 未验证（本轮未触发远端 CI 结果） |
 | Cocos 构建通过 | ✅ 是（wechatgame + web-mobile，真实构建 exit 0） |
-| 微信开发者工具运行通过 | ❌ 未完成（本轮用 web 版真实引擎运行，见 §8） |
+| 微信开发者工具运行通过 | ⚠️ 部分（导入 + 模拟器已渲染登录页，见 §8；横屏 ROOM-01 / 移动 / 交互未验证） |
 | 真机运行通过 | ❌ 未完成 |
 | 视觉验收通过 | ⚠️ 部分（5 视口真实截图已产出，人工终审待你确认） |
 
@@ -96,7 +96,11 @@ Tests       172 passed (172)
 
 ## 8. 微信开发者工具运行结果
 
-**未完成。** 本轮用 **web-mobile 构建 + Chromium 真实引擎运行**产出截图（属于指令允许的“Cocos 实际运行”）。微信开发者工具模拟器尚未导入 `build/wechatgame/` 验证——本轮时间/环境预算优先给了“真实引擎 + 5 视口”，此项如实列为未验收。
+**部分完成（导入 + 运行已验证；横屏 ROOM-01 / 移动 / 交互未验证）。**
+
+- 用沙盒小游戏测试号 `wx79cbf35bf4aa11f3` 给 `build/wechatgame/project.config.json` 设置 appid，`wechatide auth -c WorkBuddy` 返回 `authorized:true, port:43982`；`open_project_window` 返回 `success:true, winId:s0` —— **项目已真实导入并打开**。
+- `simulator_screenshot` 返回真实模拟器画面：`client/docs/screenshots/wechat-devtools-landscape.png`（314×677），可清楚看到登录页 UI：标题“无界之外 · Beyond the Unknown”、“我的进度 / 切换角色 / 招呼”、“登录并进入世界 / 放弃并返回世界”、“法则：尚未读取”。**这证明游戏在微信开发者工具模拟器中真实运行**。
+- **未完成**：模拟器仍为竖屏（314×677），尚未在模拟器内切成横屏并进入 ROOM-01，也未在该模拟器内驱动摇杆移动/机关交互。5 视口横屏 ROOM-01 截图来自 web-mobile 真实引擎（§9），二者不混同。
 
 ## 9. 五种分辨率的真实截图
 
