@@ -134,6 +134,19 @@ export function prototypeLocalToLevel(
   };
 }
 
+/**
+ * How far past the viewport the room bounding square is allowed to overscan when
+ * it covers the screen. 1.06 leaves ~3% bleed on every edge so a resize or a
+ * safe-area inset never exposes a bare corner of the backdrop.
+ */
+export const ROOM_COVER_MARGIN = 1.06;
+
+/**
+ * Hard ceiling on the room scale. Phones land well under this; it only stops a
+ * 4K desktop from building a room thousands of pixels across.
+ */
+export const ROOM_MAX_SCALE = 220;
+
 export function calculatePrototypeRoomScale(
   bounds: PrototypeLayoutConfig["bounds"],
   size: { width: number; height: number }
@@ -148,14 +161,22 @@ export function calculatePrototypeRoomScale(
   ) {
     throw new Error("Prototype room bounds and viewport size must be positive and finite");
   }
-  // `size` is the world viewport, not the window: the shell already reserved
-  // room for the title, the action rows and the footer. Subtracting another 240
-  // (as this did when it measured the whole window) double-counted that space
-  // and shrank an 844x390 phone's room to a fifth of the viewport.
+  // COVER, not FIT. The room's bounding square must be at least as large as the
+  // viewport on BOTH axes so the floor reaches the screen edges; we crop the
+  // (non-critical) floor edges on the longer axis instead of leaving flat voids
+  // around a small centred diamond. This is the NO_BORDER camera-framing idea
+  // applied to this 2D-UI scene: the world is zoomed/cropped to fill, while the
+  // character, mechanism and UI draw sizes stay constant because they are drawn
+  // at fixed pixel sizes, not scaled with this value.
+  //
+  // `size` is the world viewport, not the window: the shell has already reserved
+  // space for the title, the action rows and the footer, so the only margin left
+  // is the 24/48 px around the art.
   const availableWidth = Math.max(160, size.width - 48);
   const availableHeight = Math.max(80, size.height - 24);
   const projectedSpan = spanX + spanY;
-  return Math.min(40, availableWidth / projectedSpan, availableHeight / projectedSpan);
+  const coverScale = Math.max(availableWidth, availableHeight) / projectedSpan;
+  return Math.min(ROOM_MAX_SCALE, coverScale * ROOM_COVER_MARGIN);
 }
 
 export interface IsometricDepthItem {

@@ -74,19 +74,43 @@ describe("prototype layout coordinate contract", () => {
     });
   });
 
-  it("fits the projected diamond to viewport while respecting the maximum scale", () => {
+  it("covers the projected diamond to the viewport rather than fitting it", () => {
     // `size` is the world viewport, not the whole window: the shell has already
     // reserved space for the title, the action rows and the footer, so the only
-    // margin left to subtract is the 24 px around the art. The old numbers (18
-    // and 8) came from subtracting another 240 px and shrank a phone's room to a
-    // fifth of the space it actually had.
+    // margin left to subtract is the 24/48 px around the art. The room now
+    // COVERS the viewport (reaches every edge, crops the longer axis) instead of
+    // being fitted as a small centred square.
     const span = 12 + 8;
+    const cover = (w: number, h: number) =>
+      Math.min(220, (Math.max(Math.max(160, w - 48), Math.max(80, h - 24)) / span) * 1.06);
+
     expect(calculatePrototypeRoomScale(bounds, { width: 640, height: 600 }))
-      .toBe(Math.min(40, (640 - 48) / span, (600 - 24) / span));
+      .toBeCloseTo(cover(640, 600), 5);
     expect(calculatePrototypeRoomScale(bounds, { width: 320, height: 400 }))
-      .toBe(Math.min(40, (320 - 48) / span, (400 - 24) / span));
-    // The cap still applies on a large screen.
-    expect(calculatePrototypeRoomScale(bounds, { width: 4000, height: 3000 })).toBe(40);
+      .toBeCloseTo(cover(320, 400), 5);
+    // A wide phone is width-limited: the room square reaches both edges.
+    const wide = calculatePrototypeRoomScale(bounds, { width: 1560, height: 720 });
+    expect(wide * span).toBeGreaterThanOrEqual(1560 - 48);
+    expect(wide * span).toBeGreaterThanOrEqual(720 - 24);
+    // The hard ceiling still applies on a very large screen (4K+ width pushes
+    // the cover value past 220, so the cap must clamp it back to 220).
+    expect(calculatePrototypeRoomScale(bounds, { width: 6000, height: 3000 })).toBe(220);
+  });
+
+  it("the covered room never leaves a flat void: its square meets or exceeds both axes", () => {
+    const span = 12 + 8;
+    for (const vp of [
+      { width: 1280, height: 720 },
+      { width: 1560, height: 720 },
+      { width: 844, height: 390 },
+      { width: 926, height: 428 },
+      { width: 932, height: 430 }
+    ]) {
+      const scale = calculatePrototypeRoomScale(bounds, vp);
+      const side = scale * span; // square bounding box of the diamond
+      expect(side).toBeGreaterThanOrEqual(vp.width - 48);
+      expect(side).toBeGreaterThanOrEqual(vp.height - 24);
+    }
   });
 
   it("rejects invalid room scale and viewport geometry", () => {
