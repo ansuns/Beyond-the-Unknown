@@ -4,7 +4,8 @@
 const { spawn } = require('child_process');
 
 const CLI = 'C:\\Program Files (x86)\\Tencent\\微信web开发者工具\\wechatide.cmd';
-const TOKEN = process.env.WECHATIDE_TOKEN || 'OpY7VoOEKr2C6nDZRgdTYUQU_FU9YNg-';
+const TOKEN = process.env.WECHATIDE_TOKEN;
+if (!TOKEN) { console.error('set WECHATIDE_TOKEN in the environment (never commit it)'); process.exit(2); }
 const tool = process.argv[2];
 const args = process.argv[3] ? JSON.parse(process.argv[3]) : {};
 if (!tool) { console.error('usage: node wechatide-mcp.cjs <toolName> <jsonArgs>'); process.exit(2); }
