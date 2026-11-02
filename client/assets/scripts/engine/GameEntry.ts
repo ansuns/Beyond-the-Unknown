@@ -1986,7 +1986,29 @@ export class BeyondTheUnknownGameEntry extends Component {
 
 
   private updatePrototypeRoomScale(size: { width: number; height: number }): void {
-    this.levelRoomScale = calculatePrototypeRoomScale(this.prototypeLayout.bounds, size);
+    // Cover-scale alone can push the spawn or a mechanism past the screen edge
+    // (ROOM-01 spawns at x=1, which projects to (-5,-5) * scale). Collect every
+    // point that must stay visible and pass the real visible half-extents so the
+    // scale is clamped to keep them on screen. The floor then fills most of the
+    // band and the full-screen environment covers the rest.
+    const mustSee: { x: number; y: number }[] = [{ ...this.prototypeLayout.spawn }];
+    for (const descriptor of this.roomMechanismCatalog.values()) {
+      if (descriptor.position_x !== null && descriptor.position_y !== null) {
+        mustSee.push({ x: descriptor.position_x, y: descriptor.position_y });
+      }
+    }
+    const windowWidth = this.designSize.width || size.width;
+    const windowHeight = this.designSize.height || size.height;
+    const worldY = this.worldRoot ? this.worldRoot.position.y : 0;
+    this.levelRoomScale = calculatePrototypeRoomScale(this.prototypeLayout.bounds, size, {
+      mustSee,
+      // The room is centred in worldRoot, which is centred horizontally, so the
+      // visible half-width is the window half-width. Vertically worldRoot sits
+      // at worldY, so the tighter half-extent is windowHeight/2 - |worldY|.
+      safeHalfWidth: windowWidth / 2,
+      safeHalfHeight: windowHeight / 2 - Math.abs(worldY),
+      contentMargin: 24
+    });
     // Keep the avatar/movement scale in lock-step with the room: the room is now
     // cover-scaled to fill the screen, and the local player's avatar position is
     // expressed in the same world units, so it must use the same scale or it

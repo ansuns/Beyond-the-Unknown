@@ -1,7 +1,8 @@
 # 项目状态
 
-- 更新：2026-10-31
-- 基线提交：`da9e151`（main）
+- 更新：2026-11-02
+- 基线提交：`3413b95`（main，含 PR #146）
+- 本轮新增（横屏铺满，PR #149）：真实 Cocos 构建通过（wechatgame + web-mobile），5 个验收视口（1280×720 / 1560×720 / 844×390 / 926×428 / 932×430）用 web 版真实引擎跑出 ROOM-01 截图；详见 `client/docs/landscape-acceptance-report.md`。
 - 计算方式：只统计能在当前环境复现的成果。凡“代码存在但未在本机跑通”的，一律记为**已实现未验证**，不计入完成率。
 
 ## 1. 仓库事实
@@ -87,8 +88,8 @@
 
 | 能力 | 状态 |
 |---|---|
-| Cocos Creator 3.8.8 编辑器导入 | **未验证**（环境无 Cocos Creator） |
-| 微信开发者工具导入 | **未验证**（环境无该工具） |
+| Cocos Creator 3.8.8 编辑器导入 + 构建 | **已验证**（2026-11-02：`wechatgame` 1m44s、`web-mobile` 2m12s，均 exit 0；产物在 `client/build/`） |
+| 微信开发者工具导入（模拟器运行） | **未完成**（本轮用 web 版真实引擎产出 5 视口截图，微信模拟器未导入 `build/wechatgame/`） |
 | Android / iOS 微信真机测试 | **未验证**（无设备与账号） |
 | 正式美术资源入库 | **0 项** |
 | 包体积与首屏优化 | 未开始（依赖构建结果） |
@@ -131,9 +132,9 @@ PR #127 与 #128 的 `compose-smoke` 在 GitHub 托管 runner 上通过，包含
 | 编号 | 阻塞 | 影响 | 解除条件 |
 |---|---|---|---|
 | B-1 | ~~无 GitHub 凭据~~ | 已解除：PAT 已具备 `Contents` / `Pull requests` 写权限，实测建 ref 201、push 与合并成功 | — |
-| B-2 | 无 Cocos Creator 3.8.8 | 无法验证导入与构建 | 安装编辑器 |
-| B-3 | 无微信开发者工具 / 小程序 AppID | 无法验证小游戏导入与真机。工具已装于 `C:\Program Files (x86)\Tencent\微信web开发者工具`，但仍需登录与 AppID | 提供 AppID 并登录工具 |
-| B-4 | 本机未安装 Docker / PostgreSQL / Redis | 19 项集成测试与迁移无法**本地**验证；CI 的 compose-smoke 已覆盖同等流程 | 安装 Docker Desktop，或提供数据库连接串 |
+| B-2 | ~~无 Cocos Creator 3.8.8~~ | 已解除：编辑器装于 `C:\ProgramData\cocos\editors\Creator\3.8.8`。注意 shell 默认 `ELECTRON_RUN_AS_NODE=1`，须 `env -u ELECTRON_RUN_AS_NODE` 才能以 Electron 模式构建 | — |
+| B-3 | 微信开发者工具模拟器尚未导入构建产物 | 无法给出微信模拟器截图；本轮以 web 版真实引擎截图替代 | 导入 `client/build/wechatgame/`（AppID 可选测试号） |
+| B-4 | ~~本机未安装 Docker / PostgreSQL / Redis~~ | 已解除：2026-11-02 用 Postgres 18 + Redis + RabbitMQ 容器（映射 5432/6380/5673）跑通 Alembic 0001→0016 与本地登录（`LOCAL_LOGIN_ENABLED`） | — |
 | B-5 | ~~生图后端带烘焙水印~~ | 已解除：`tools/strip_overlay.py` 按模式清角/裁边，23 项测试覆盖 | — |
 | B-8 | AI 生成资源的授权与标识未核实 | 生成资源不得标 READY；若要求保留标识，现有 3 件需回退重制 | 见 `assets/AI-content-compliance.md` 的 C-1～C-4 |
 | B-6 | 独立生图角色形象漂移 | 角色资源无法成套 | 确定 CHR_001 基准图后改图生图 |

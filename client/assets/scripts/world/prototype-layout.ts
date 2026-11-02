@@ -147,9 +147,28 @@ export const ROOM_COVER_MARGIN = 1.06;
  */
 export const ROOM_MAX_SCALE = 220;
 
+export interface RoomScaleContentOptions {
+  /**
+   * Level-space points that must stay inside the visible area (the spawn and
+   * every mechanism / interaction target). Cover-scaling alone would zoom the
+   * diamond until these project past the screen edge, which is exactly the
+   * "character or mechanism cropped" failure the acceptance forbids.
+   */
+  mustSee?: readonly PrototypePoint[];
+  /**
+   * Half extents (in screen px, around the room centre) that are guaranteed to
+   * be on screen and unobstructed. The clamp uses the smaller of the two axes.
+   */
+  safeHalfWidth?: number;
+  safeHalfHeight?: number;
+  /** Extra clearance kept around a must-see point, in screen px. */
+  contentMargin?: number;
+}
+
 export function calculatePrototypeRoomScale(
   bounds: PrototypeLayoutConfig["bounds"],
-  size: { width: number; height: number }
+  size: { width: number; height: number },
+  content: RoomScaleContentOptions = {}
 ): number {
   const spanX = bounds.maxX - bounds.minX;
   const spanY = bounds.maxY - bounds.minY;
@@ -176,7 +195,39 @@ export function calculatePrototypeRoomScale(
   const availableHeight = Math.max(80, size.height - 24);
   const projectedSpan = spanX + spanY;
   const coverScale = Math.max(availableWidth, availableHeight) / projectedSpan;
-  return Math.min(ROOM_MAX_SCALE, coverScale * ROOM_COVER_MARGIN);
+  let scale = Math.min(ROOM_MAX_SCALE, coverScale * ROOM_COVER_MARGIN);
+
+  // Clamp the cover zoom so no must-see point is pushed off screen. The
+  // projection is screenX = ((x-cx) - (y-cy)) * S and screenY = ((x-cx) +
+  // (y-cy)) * S, so a point's unit-scale offset is fixed and the maximum safe
+  // scale can be solved directly. We keep the cover scale whenever it is safe,
+  // and only shrink as far as the content requires: the floor still fills most
+  // of the band (69%-101% of its width for the acceptance viewports) and the
+  // full-screen environment covers the remainder, so there is no flat void.
+  const mustSee = content.mustSee ?? [];
+  const halfWidth = content.safeHalfWidth;
+  const halfHeight = content.safeHalfHeight;
+  const margin = content.contentMargin ?? 0;
+  if (
+    mustSee.length > 0 &&
+    Number.isFinite(halfWidth) && (halfWidth as number) > 0 &&
+    Number.isFinite(halfHeight) && (halfHeight as number) > 0
+  ) {
+    const centerX = (bounds.minX + bounds.maxX) / 2;
+    const centerY = (bounds.minY + bounds.maxY) / 2;
+    const maxW = (halfWidth as number) - margin;
+    const maxH = (halfHeight as number) - margin;
+    for (const point of mustSee) {
+      const logicalX = point.x - centerX;
+      const logicalY = point.y - centerY;
+      const unitX = logicalX - logicalY;
+      const unitY = logicalX + logicalY;
+      if (Math.abs(unitX) > 1e-6) scale = Math.min(scale, maxW / Math.abs(unitX));
+      if (Math.abs(unitY) > 1e-6) scale = Math.min(scale, maxH / Math.abs(unitY));
+    }
+  }
+  // Never collapse the room to nothing if a caller passes a hostile safe area.
+  return Math.max(1, Math.min(ROOM_MAX_SCALE, scale));
 }
 
 export interface IsometricDepthItem {
