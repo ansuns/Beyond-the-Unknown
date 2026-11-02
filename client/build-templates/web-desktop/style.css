@@ -1,0 +1,105 @@
+/*
+ * The browser shell.
+ *
+ * The stock web-desktop template frames the game in a fixed 1280x960 box with
+ * a black border, a drop shadow, an <h1> above it and a "Created with Cocos
+ * Creator" line below it, on a white page. On an 844x390 phone window that box
+ * is three times the size of the window, so the player sees the top-left corner
+ * of the HUD and nothing else - which is what "the page does not fill the
+ * screen" looked like.
+ *
+ * This file overrides the template's own style.css (Cocos copies
+ * build-templates/<platform> over the build output), so the fix survives every
+ * rebuild instead of living in a hand-edited artifact.
+ */
+
+body {
+  cursor: default;
+  padding: 0;
+  border: 0;
+  margin: 0;
+  text-align: center;
+  /* Matches the game's own clear colour: a white page behind a dark game shows
+   * up as a flash on load and as a bright band wherever the canvas is rounded. */
+  background-color: #0a1220;
+  font-family: Helvetica, Verdana, Arial, sans-serif;
+  /* No scrolling: the page is exactly one screen. */
+  overflow: hidden;
+}
+
+html,
+body {
+  width: 100%;
+  height: 100%;
+}
+
+body,
+canvas,
+div {
+  outline: none;
+  -moz-user-select: none;
+  -webkit-user-select: none;
+  -ms-user-select: none;
+  -khtml-user-select: none;
+  -webkit-tap-highlight-color: rgba(0, 0, 0, 0);
+}
+
+/* Remove spin of input type number */
+input::-webkit-outer-spin-button,
+input::-webkit-inner-spin-button {
+  /* display: none; <- Crashes Chrome on hover */
+  -webkit-appearance: none;
+  margin: 0; /* <-- Apparently some margin are still there even though it's hidden */
+}
+
+canvas {
+  background-color: rgba(0, 0, 0, 0);
+}
+
+/*
+ * The template writes the frame size as an inline style (width: 1280px;
+ * height: 960px), which only !important in a stylesheet can override. Every
+ * property that put a border or a gap between the canvas and the edge of the
+ * window is reset here.
+ */
+#GameDiv {
+  position: fixed !important;
+  inset: 0 !important;
+  width: 100% !important;
+  height: 100% !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  border: 0 !important;
+  border-radius: 0 !important;
+  box-shadow: none !important;
+  overflow: hidden !important;
+}
+
+#Cocos3dGameContainer,
+#GameCanvas {
+  width: 100% !important;
+  height: 100% !important;
+  display: block;
+}
+
+/*
+ * The template's title and credit line are part of the page flow. Leaving them
+ * visible pushes the canvas down by 85 px - measured - and costs the game that
+ * much vertical space on a 390 px tall screen.
+ */
+.header,
+.footer {
+  display: none !important;
+}
+
+/*
+ * Safe areas for phones with a notch or a rounded display. The engine lays the
+ * HUD out in design units, so the insets are only exposed here for anything
+ * that wants to read them from CSS.
+ */
+:root {
+  --safe-top: env(safe-area-inset-top);
+  --safe-right: env(safe-area-inset-right);
+  --safe-bottom: env(safe-area-inset-bottom);
+  --safe-left: env(safe-area-inset-left);
+}

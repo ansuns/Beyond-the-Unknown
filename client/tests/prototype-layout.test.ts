@@ -75,8 +75,18 @@ describe("prototype layout coordinate contract", () => {
   });
 
   it("fits the projected diamond to viewport while respecting the maximum scale", () => {
-    expect(calculatePrototypeRoomScale(bounds, { width: 640, height: 600 })).toBe(18);
-    expect(calculatePrototypeRoomScale(bounds, { width: 320, height: 400 })).toBe(8);
+    // `size` is the world viewport, not the whole window: the shell has already
+    // reserved space for the title, the action rows and the footer, so the only
+    // margin left to subtract is the 24 px around the art. The old numbers (18
+    // and 8) came from subtracting another 240 px and shrank a phone's room to a
+    // fifth of the space it actually had.
+    const span = 12 + 8;
+    expect(calculatePrototypeRoomScale(bounds, { width: 640, height: 600 }))
+      .toBe(Math.min(40, (640 - 48) / span, (600 - 24) / span));
+    expect(calculatePrototypeRoomScale(bounds, { width: 320, height: 400 }))
+      .toBe(Math.min(40, (320 - 48) / span, (400 - 24) / span));
+    // The cap still applies on a large screen.
+    expect(calculatePrototypeRoomScale(bounds, { width: 4000, height: 3000 })).toBe(40);
   });
 
   it("rejects invalid room scale and viewport geometry", () => {
