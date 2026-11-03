@@ -182,8 +182,20 @@ PASS: 包体门禁通过
 
 ## 6. CI
 
-- 本地等价检查：`vitest` 26 文件 / **180 用例全绿**；`tsc --noEmit` 通过；`validate:project` 通过；`validate:assets` 通过（112 条目，0 READY，与既有状态一致）。
-- 远端 Actions：仓库设置 `enabled: true, allowed_actions: all`，但提交 `a0a855f` 上 **workflow run 数为 0**，四个 workflow（client-ci / server-ci / package-budget / art-tools-ci）均未产生记录。原因未查明，不把本地结果当作 CI 结果。
+远端 Actions 在 `a0a855f` 与 `17969b1` 上都跑完了，四个 workflow 全部通过：
+
+| workflow | a0a855f | 17969b1 |
+|---|---|---|
+| client-ci | ✅ success | ✅ success |
+| server-ci | ✅ success | ✅ success |
+| package-budget | ✅ success | ✅ success |
+| art-tools-ci | ✅ success | ✅ success |
+
+> 记录一次自己的误判：第一次查 CI 时用了 `?head_sha=a0a855f`，返回 `total_count: 0`，差点写成"CI 未运行"。实际上 workflow 已经跑过，是查询方式/时机的问题。上面这份是不带 `head_sha` 过滤、按仓库最近 runs 取的结果。
+
+本地等价检查同样全绿：`vitest` 26 文件 / **180 用例**；`tsc --noEmit` 通过；`validate:project` 通过；`validate:assets` 通过（112 条目，0 READY，与既有状态一致）。
+
+**CI 通过不等于微信运行时验收通过** —— 这一点在本文档里始终成立。
 
 ---
 
@@ -204,6 +216,6 @@ PASS: 包体门禁通过
 2. `wx.loadSubpackage` 调用观测。
 3. 真机运行（二维码已生成，需人工扫码）。
 4. 微信模拟器内的横屏适配回归。
-5. CI 未在该提交上运行。
 
 **在这些项真实通过之前，PR #149 不应以"微信运行时验收通过"为由合并。**
+四个 CI workflow 通过（§6）不改变这个结论。
