@@ -1,0 +1,135 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 586 824" font-family="sans-serif">
+<rect width="586" height="824" fill="#0a0f18"/>
+<text x="24" y="24" fill="#e6eef6" font-size="15" font-weight="bold">横屏铺满修复：旧逻辑(FIT 居中小房间) vs 新逻辑(COVER 铺满)</text>
+<clipPath id="clip24_56"><rect x="24" y="56" width="213" height="120"/></clipPath><clipPath id="clip255_56"><rect x="255" y="56" width="213" height="120"/></clipPath><text x="24" y="51" fill="#9fb4c8" font-size="11" font-family="sans-serif">1280×720 (16:9) · 旧(FIT)</text><text x="255" y="51" fill="#9fb4c8" font-size="11" font-family="sans-serif">1280×720 (16:9) · 新(COVER)</text><rect x="24" y="56" width="213" height="120" fill="#0a121f"/>
+    <g clip-path="url(#clip24_56)">
+      <polygon points="118.9,58.0 188.5,127.6 142.1,174.0 72.5,104.4" fill="#122737" stroke="#69a9be" stroke-width="2.5"/>
+      
+    </g>
+    <rect x="24" y="56" width="213" height="8.4" fill="#0c1422" opacity="0.85"/>
+    <rect x="24" y="162.8" width="213" height="13.2" fill="#0c1422" opacity="0.85"/>
+    <rect x="24" y="56" width="25.56" height="120" fill="#0c1422" opacity="0.55"/>
+    <rect x="211.44" y="56" width="25.56" height="120" fill="#0c1422" opacity="0.55"/>
+    <circle cx="130.5" cy="126" r="5" fill="#ffd27f" stroke="#7a5a1f" stroke-width="1"/>
+    <rect x="164.5" y="112" width="11" height="11" rx="2" fill="#7fd0ff" stroke="#2a6f8f" stroke-width="1"/><rect x="24" y="56" width="213" height="120" fill="none" stroke="#3a5a78" stroke-width="1.5"/><defs><linearGradient id="env255_56" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#0f182e"/><stop offset="0.42" stop-color="#12263e"/>
+      <stop offset="1" stop-color="#070e1b"/></linearGradient></defs>
+      <rect x="255" y="56" width="213" height="120" fill="url(#env255_56)"/>
+      <circle cx="361.5" cy="116" r="106.5" fill="#306488" opacity="0.18"/>
+      <g stroke="#2c4c68" stroke-width="1" opacity="0.5">
+        <line x1="255" y1="56" x2="255" y2="176"/><line x1="271" y1="56" x2="271" y2="176"/><line x1="287" y1="56" x2="287" y2="176"/><line x1="303" y1="56" x2="303" y2="176"/><line x1="319" y1="56" x2="319" y2="176"/><line x1="335" y1="56" x2="335" y2="176"/><line x1="351" y1="56" x2="351" y2="176"/><line x1="367" y1="56" x2="367" y2="176"/><line x1="383" y1="56" x2="383" y2="176"/><line x1="399" y1="56" x2="399" y2="176"/><line x1="415" y1="56" x2="415" y2="176"/><line x1="431" y1="56" x2="431" y2="176"/><line x1="447" y1="56" x2="447" y2="176"/><line x1="463" y1="56" x2="463" y2="176"/><line x1="255" y1="56" x2="468" y2="56"/><line x1="255" y1="72" x2="468" y2="72"/><line x1="255" y1="88" x2="468" y2="88"/><line x1="255" y1="104" x2="468" y2="104"/><line x1="255" y1="120" x2="468" y2="120"/><line x1="255" y1="136" x2="468" y2="136"/><line x1="255" y1="152" x2="468" y2="152"/><line x1="255" y1="168" x2="468" y2="168"/></g>
+    <g clip-path="url(#clip255_56)">
+      <polygon points="339.7,7.2 470.3,137.8 383.3,224.8 252.7,94.2" fill="#122737" stroke="#69a9be" stroke-width="2.5"/>
+      <rect x="252.67333333333335" y="7.173333333333332" width="217.65333333333334" height="217.65333333333334" fill="none" stroke="#23425c" stroke-width="1" stroke-dasharray="4 4" opacity="0.6"/>
+    </g>
+    <rect x="255" y="56" width="213" height="8.4" fill="#0c1422" opacity="0.85"/>
+    <rect x="255" y="162.8" width="213" height="13.2" fill="#0c1422" opacity="0.85"/>
+    <rect x="255" y="56" width="25.56" height="120" fill="#0c1422" opacity="0.55"/>
+    <rect x="442.44" y="56" width="25.56" height="120" fill="#0c1422" opacity="0.55"/>
+    <circle cx="361.5" cy="126" r="5" fill="#ffd27f" stroke="#7a5a1f" stroke-width="1"/>
+    <rect x="395.5" y="112" width="11" height="11" rx="2" fill="#7fd0ff" stroke="#2a6f8f" stroke-width="1"/><rect x="255" y="56" width="213" height="120" fill="none" stroke="#3a5a78" stroke-width="1.5"/><clipPath id="clip24_208"><rect x="24" y="208" width="260" height="120"/></clipPath><clipPath id="clip302_208"><rect x="302" y="208" width="260" height="120"/></clipPath><text x="24" y="203" fill="#9fb4c8" font-size="11" font-family="sans-serif">1560×720 (20:9) · 旧(FIT)</text><text x="302" y="203" fill="#9fb4c8" font-size="11" font-family="sans-serif">1560×720 (20:9) · 新(COVER)</text><rect x="24" y="208" width="260" height="120" fill="#0a121f"/>
+    <g clip-path="url(#clip24_208)">
+      <polygon points="142.4,210.0 212.0,279.6 165.6,326.0 96.0,256.4" fill="#122737" stroke="#69a9be" stroke-width="2.5"/>
+      
+    </g>
+    <rect x="24" y="208" width="260" height="8.4" fill="#0c1422" opacity="0.85"/>
+    <rect x="24" y="314.8" width="260" height="13.2" fill="#0c1422" opacity="0.85"/>
+    <rect x="24" y="208" width="31.2" height="120" fill="#0c1422" opacity="0.55"/>
+    <rect x="252.8" y="208" width="31.2" height="120" fill="#0c1422" opacity="0.55"/>
+    <circle cx="154" cy="278" r="5" fill="#ffd27f" stroke="#7a5a1f" stroke-width="1"/>
+    <rect x="188" y="264" width="11" height="11" rx="2" fill="#7fd0ff" stroke="#2a6f8f" stroke-width="1"/><rect x="24" y="208" width="260" height="120" fill="none" stroke="#3a5a78" stroke-width="1.5"/><defs><linearGradient id="env302_208" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#0f182e"/><stop offset="0.42" stop-color="#12263e"/>
+      <stop offset="1" stop-color="#070e1b"/></linearGradient></defs>
+      <rect x="302" y="208" width="260" height="120" fill="url(#env302_208)"/>
+      <circle cx="432" cy="268" r="130" fill="#306488" opacity="0.18"/>
+      <g stroke="#2c4c68" stroke-width="1" opacity="0.5">
+        <line x1="302" y1="208" x2="302" y2="328"/><line x1="318" y1="208" x2="318" y2="328"/><line x1="334" y1="208" x2="334" y2="328"/><line x1="350" y1="208" x2="350" y2="328"/><line x1="366" y1="208" x2="366" y2="328"/><line x1="382" y1="208" x2="382" y2="328"/><line x1="398" y1="208" x2="398" y2="328"/><line x1="414" y1="208" x2="414" y2="328"/><line x1="430" y1="208" x2="430" y2="328"/><line x1="446" y1="208" x2="446" y2="328"/><line x1="462" y1="208" x2="462" y2="328"/><line x1="478" y1="208" x2="478" y2="328"/><line x1="494" y1="208" x2="494" y2="328"/><line x1="510" y1="208" x2="510" y2="328"/><line x1="526" y1="208" x2="526" y2="328"/><line x1="542" y1="208" x2="542" y2="328"/><line x1="558" y1="208" x2="558" y2="328"/><line x1="302" y1="208" x2="562" y2="208"/><line x1="302" y1="224" x2="562" y2="224"/><line x1="302" y1="240" x2="562" y2="240"/><line x1="302" y1="256" x2="562" y2="256"/><line x1="302" y1="272" x2="562" y2="272"/><line x1="302" y1="288" x2="562" y2="288"/><line x1="302" y1="304" x2="562" y2="304"/><line x1="302" y1="320" x2="562" y2="320"/></g>
+    <g clip-path="url(#clip302_208)">
+      <polygon points="405.3,134.4 565.6,294.7 458.7,401.6 298.4,241.3" fill="#122737" stroke="#69a9be" stroke-width="2.5"/>
+      <rect x="298.44000000000005" y="134.44000000000003" width="267.11999999999995" height="267.11999999999995" fill="none" stroke="#23425c" stroke-width="1" stroke-dasharray="4 4" opacity="0.6"/>
+    </g>
+    <rect x="302" y="208" width="260" height="8.4" fill="#0c1422" opacity="0.85"/>
+    <rect x="302" y="314.8" width="260" height="13.2" fill="#0c1422" opacity="0.85"/>
+    <rect x="302" y="208" width="31.2" height="120" fill="#0c1422" opacity="0.55"/>
+    <rect x="530.8" y="208" width="31.2" height="120" fill="#0c1422" opacity="0.55"/>
+    <circle cx="432" cy="278" r="5" fill="#ffd27f" stroke="#7a5a1f" stroke-width="1"/>
+    <rect x="466" y="264" width="11" height="11" rx="2" fill="#7fd0ff" stroke="#2a6f8f" stroke-width="1"/><rect x="302" y="208" width="260" height="120" fill="none" stroke="#3a5a78" stroke-width="1.5"/><clipPath id="clip24_360"><rect x="24" y="360" width="260" height="120"/></clipPath><clipPath id="clip302_360"><rect x="302" y="360" width="260" height="120"/></clipPath><text x="24" y="355" fill="#9fb4c8" font-size="11" font-family="sans-serif">844×390 · 旧(FIT)</text><text x="302" y="355" fill="#9fb4c8" font-size="11" font-family="sans-serif">844×390 · 新(COVER)</text><rect x="24" y="360" width="260" height="120" fill="#0a121f"/>
+    <g clip-path="url(#clip24_360)">
+      <polygon points="142.7,363.7 210.3,431.3 165.3,476.3 97.7,408.7" fill="#122737" stroke="#69a9be" stroke-width="2.5"/>
+      
+    </g>
+    <rect x="24" y="360" width="260" height="8.4" fill="#0c1422" opacity="0.85"/>
+    <rect x="24" y="466.8" width="260" height="13.2" fill="#0c1422" opacity="0.85"/>
+    <rect x="24" y="360" width="31.2" height="120" fill="#0c1422" opacity="0.55"/>
+    <rect x="252.8" y="360" width="31.2" height="120" fill="#0c1422" opacity="0.55"/>
+    <circle cx="154" cy="430" r="5" fill="#ffd27f" stroke="#7a5a1f" stroke-width="1"/>
+    <rect x="188" y="416" width="11" height="11" rx="2" fill="#7fd0ff" stroke="#2a6f8f" stroke-width="1"/><rect x="24" y="360" width="260" height="120" fill="none" stroke="#3a5a78" stroke-width="1.5"/><defs><linearGradient id="env302_360" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#0f182e"/><stop offset="0.42" stop-color="#12263e"/>
+      <stop offset="1" stop-color="#070e1b"/></linearGradient></defs>
+      <rect x="302" y="360" width="260" height="120" fill="url(#env302_360)"/>
+      <circle cx="432" cy="420" r="130" fill="#306488" opacity="0.18"/>
+      <g stroke="#2c4c68" stroke-width="1" opacity="0.5">
+        <line x1="302" y1="360" x2="302" y2="480"/><line x1="318" y1="360" x2="318" y2="480"/><line x1="334" y1="360" x2="334" y2="480"/><line x1="350" y1="360" x2="350" y2="480"/><line x1="366" y1="360" x2="366" y2="480"/><line x1="382" y1="360" x2="382" y2="480"/><line x1="398" y1="360" x2="398" y2="480"/><line x1="414" y1="360" x2="414" y2="480"/><line x1="430" y1="360" x2="430" y2="480"/><line x1="446" y1="360" x2="446" y2="480"/><line x1="462" y1="360" x2="462" y2="480"/><line x1="478" y1="360" x2="478" y2="480"/><line x1="494" y1="360" x2="494" y2="480"/><line x1="510" y1="360" x2="510" y2="480"/><line x1="526" y1="360" x2="526" y2="480"/><line x1="542" y1="360" x2="542" y2="480"/><line x1="558" y1="360" x2="558" y2="480"/><line x1="302" y1="360" x2="562" y2="360"/><line x1="302" y1="376" x2="562" y2="376"/><line x1="302" y1="392" x2="562" y2="392"/><line x1="302" y1="408" x2="562" y2="408"/><line x1="302" y1="424" x2="562" y2="424"/><line x1="302" y1="440" x2="562" y2="440"/><line x1="302" y1="456" x2="562" y2="456"/><line x1="302" y1="472" x2="562" y2="472"/></g>
+    <g clip-path="url(#clip302_360)">
+      <polygon points="406.0,290.2 561.8,446.0 458.0,549.8 302.2,394.0" fill="#122737" stroke="#69a9be" stroke-width="2.5"/>
+      <rect x="302.1907692307692" y="290.1907692307692" width="259.61846153846153" height="259.61846153846153" fill="none" stroke="#23425c" stroke-width="1" stroke-dasharray="4 4" opacity="0.6"/>
+    </g>
+    <rect x="302" y="360" width="260" height="8.4" fill="#0c1422" opacity="0.85"/>
+    <rect x="302" y="466.8" width="260" height="13.2" fill="#0c1422" opacity="0.85"/>
+    <rect x="302" y="360" width="31.2" height="120" fill="#0c1422" opacity="0.55"/>
+    <rect x="530.8" y="360" width="31.2" height="120" fill="#0c1422" opacity="0.55"/>
+    <circle cx="432" cy="430" r="5" fill="#ffd27f" stroke="#7a5a1f" stroke-width="1"/>
+    <rect x="466" y="416" width="11" height="11" rx="2" fill="#7fd0ff" stroke="#2a6f8f" stroke-width="1"/><rect x="302" y="360" width="260" height="120" fill="none" stroke="#3a5a78" stroke-width="1.5"/><clipPath id="clip24_512"><rect x="24" y="512" width="260" height="120"/></clipPath><clipPath id="clip302_512"><rect x="302" y="512" width="260" height="120"/></clipPath><text x="24" y="507" fill="#9fb4c8" font-size="11" font-family="sans-serif">926×428 · 旧(FIT)</text><text x="302" y="507" fill="#9fb4c8" font-size="11" font-family="sans-serif">926×428 · 新(COVER)</text><rect x="24" y="512" width="260" height="120" fill="#0a121f"/>
+    <g clip-path="url(#clip24_512)">
+      <polygon points="142.7,515.4 210.6,583.3 165.3,628.6 97.4,560.7" fill="#122737" stroke="#69a9be" stroke-width="2.5"/>
+      
+    </g>
+    <rect x="24" y="512" width="260" height="8.4" fill="#0c1422" opacity="0.85"/>
+    <rect x="24" y="618.8" width="260" height="13.2" fill="#0c1422" opacity="0.85"/>
+    <rect x="24" y="512" width="31.2" height="120" fill="#0c1422" opacity="0.55"/>
+    <rect x="252.8" y="512" width="31.2" height="120" fill="#0c1422" opacity="0.55"/>
+    <circle cx="154" cy="582" r="5" fill="#ffd27f" stroke="#7a5a1f" stroke-width="1"/>
+    <rect x="188" y="568" width="11" height="11" rx="2" fill="#7fd0ff" stroke="#2a6f8f" stroke-width="1"/><rect x="24" y="512" width="260" height="120" fill="none" stroke="#3a5a78" stroke-width="1.5"/><defs><linearGradient id="env302_512" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#0f182e"/><stop offset="0.42" stop-color="#12263e"/>
+      <stop offset="1" stop-color="#070e1b"/></linearGradient></defs>
+      <rect x="302" y="512" width="260" height="120" fill="url(#env302_512)"/>
+      <circle cx="432" cy="572" r="130" fill="#306488" opacity="0.18"/>
+      <g stroke="#2c4c68" stroke-width="1" opacity="0.5">
+        <line x1="302" y1="512" x2="302" y2="632"/><line x1="318" y1="512" x2="318" y2="632"/><line x1="334" y1="512" x2="334" y2="632"/><line x1="350" y1="512" x2="350" y2="632"/><line x1="366" y1="512" x2="366" y2="632"/><line x1="382" y1="512" x2="382" y2="632"/><line x1="398" y1="512" x2="398" y2="632"/><line x1="414" y1="512" x2="414" y2="632"/><line x1="430" y1="512" x2="430" y2="632"/><line x1="446" y1="512" x2="446" y2="632"/><line x1="462" y1="512" x2="462" y2="632"/><line x1="478" y1="512" x2="478" y2="632"/><line x1="494" y1="512" x2="494" y2="632"/><line x1="510" y1="512" x2="510" y2="632"/><line x1="526" y1="512" x2="526" y2="632"/><line x1="542" y1="512" x2="542" y2="632"/><line x1="558" y1="512" x2="558" y2="632"/><line x1="302" y1="512" x2="562" y2="512"/><line x1="302" y1="528" x2="562" y2="528"/><line x1="302" y1="544" x2="562" y2="544"/><line x1="302" y1="560" x2="562" y2="560"/><line x1="302" y1="576" x2="562" y2="576"/><line x1="302" y1="592" x2="562" y2="592"/><line x1="302" y1="608" x2="562" y2="608"/><line x1="302" y1="624" x2="562" y2="624"/></g>
+    <g clip-path="url(#clip302_512)">
+      <polygon points="405.9,441.5 562.5,598.1 458.1,702.5 301.5,545.9" fill="#122737" stroke="#69a9be" stroke-width="2.5"/>
+      <rect x="301.5308411214953" y="441.5308411214953" width="260.9383177570093" height="260.9383177570093" fill="none" stroke="#23425c" stroke-width="1" stroke-dasharray="4 4" opacity="0.6"/>
+    </g>
+    <rect x="302" y="512" width="260" height="8.4" fill="#0c1422" opacity="0.85"/>
+    <rect x="302" y="618.8" width="260" height="13.2" fill="#0c1422" opacity="0.85"/>
+    <rect x="302" y="512" width="31.2" height="120" fill="#0c1422" opacity="0.55"/>
+    <rect x="530.8" y="512" width="31.2" height="120" fill="#0c1422" opacity="0.55"/>
+    <circle cx="432" cy="582" r="5" fill="#ffd27f" stroke="#7a5a1f" stroke-width="1"/>
+    <rect x="466" y="568" width="11" height="11" rx="2" fill="#7fd0ff" stroke="#2a6f8f" stroke-width="1"/><rect x="302" y="512" width="260" height="120" fill="none" stroke="#3a5a78" stroke-width="1.5"/><clipPath id="clip24_664"><rect x="24" y="664" width="260" height="120"/></clipPath><clipPath id="clip302_664"><rect x="302" y="664" width="260" height="120"/></clipPath><text x="24" y="659" fill="#9fb4c8" font-size="11" font-family="sans-serif">932×430 · 旧(FIT)</text><text x="302" y="659" fill="#9fb4c8" font-size="11" font-family="sans-serif">932×430 · 新(COVER)</text><rect x="24" y="664" width="260" height="120" fill="#0a121f"/>
+    <g clip-path="url(#clip24_664)">
+      <polygon points="142.7,667.3 210.7,735.3 165.3,780.7 97.3,712.7" fill="#122737" stroke="#69a9be" stroke-width="2.5"/>
+      
+    </g>
+    <rect x="24" y="664" width="260" height="8.4" fill="#0c1422" opacity="0.85"/>
+    <rect x="24" y="770.8" width="260" height="13.2" fill="#0c1422" opacity="0.85"/>
+    <rect x="24" y="664" width="31.2" height="120" fill="#0c1422" opacity="0.55"/>
+    <rect x="252.8" y="664" width="31.2" height="120" fill="#0c1422" opacity="0.55"/>
+    <circle cx="154" cy="734" r="5" fill="#ffd27f" stroke="#7a5a1f" stroke-width="1"/>
+    <rect x="188" y="720" width="11" height="11" rx="2" fill="#7fd0ff" stroke="#2a6f8f" stroke-width="1"/><rect x="24" y="664" width="260" height="120" fill="none" stroke="#3a5a78" stroke-width="1.5"/><defs><linearGradient id="env302_664" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#0f182e"/><stop offset="0.42" stop-color="#12263e"/>
+      <stop offset="1" stop-color="#070e1b"/></linearGradient></defs>
+      <rect x="302" y="664" width="260" height="120" fill="url(#env302_664)"/>
+      <circle cx="432" cy="724" r="130" fill="#306488" opacity="0.18"/>
+      <g stroke="#2c4c68" stroke-width="1" opacity="0.5">
+        <line x1="302" y1="664" x2="302" y2="784"/><line x1="318" y1="664" x2="318" y2="784"/><line x1="334" y1="664" x2="334" y2="784"/><line x1="350" y1="664" x2="350" y2="784"/><line x1="366" y1="664" x2="366" y2="784"/><line x1="382" y1="664" x2="382" y2="784"/><line x1="398" y1="664" x2="398" y2="784"/><line x1="414" y1="664" x2="414" y2="784"/><line x1="430" y1="664" x2="430" y2="784"/><line x1="446" y1="664" x2="446" y2="784"/><line x1="462" y1="664" x2="462" y2="784"/><line x1="478" y1="664" x2="478" y2="784"/><line x1="494" y1="664" x2="494" y2="784"/><line x1="510" y1="664" x2="510" y2="784"/><line x1="526" y1="664" x2="526" y2="784"/><line x1="542" y1="664" x2="542" y2="784"/><line x1="558" y1="664" x2="558" y2="784"/><line x1="302" y1="664" x2="562" y2="664"/><line x1="302" y1="680" x2="562" y2="680"/><line x1="302" y1="696" x2="562" y2="696"/><line x1="302" y1="712" x2="562" y2="712"/><line x1="302" y1="728" x2="562" y2="728"/><line x1="302" y1="744" x2="562" y2="744"/><line x1="302" y1="760" x2="562" y2="760"/><line x1="302" y1="776" x2="562" y2="776"/></g>
+    <g clip-path="url(#clip302_664)">
+      <polygon points="405.9,593.3 562.7,750.1 458.1,854.7 301.3,697.9" fill="#122737" stroke="#69a9be" stroke-width="2.5"/>
+      <rect x="301.2502325581395" y="593.2502325581395" width="261.49953488372097" height="261.49953488372097" fill="none" stroke="#23425c" stroke-width="1" stroke-dasharray="4 4" opacity="0.6"/>
+    </g>
+    <rect x="302" y="664" width="260" height="8.4" fill="#0c1422" opacity="0.85"/>
+    <rect x="302" y="770.8" width="260" height="13.2" fill="#0c1422" opacity="0.85"/>
+    <rect x="302" y="664" width="31.2" height="120" fill="#0c1422" opacity="0.55"/>
+    <rect x="530.8" y="664" width="31.2" height="120" fill="#0c1422" opacity="0.55"/>
+    <circle cx="432" cy="734" r="5" fill="#ffd27f" stroke="#7a5a1f" stroke-width="1"/>
+    <rect x="466" y="720" width="11" height="11" rx="2" fill="#7fd0ff" stroke="#2a6f8f" stroke-width="1"/><rect x="302" y="664" width="260" height="120" fill="none" stroke="#3a5a78" stroke-width="1.5"/>
+</svg>

@@ -21,9 +21,14 @@ import {
 } from "cc";
 
 import { assetService } from "./asset-service";
+import type { BundleName } from "./asset-config";
 
-// Paths are relative to assets/resources and end in /spriteFrame, which is how
-// Cocos addresses the sub-asset that a .png produces after import.
+/** The bundle that owns every piece of gameplay art. See asset-config.ts. */
+export const GAMEPLAY_BUNDLE: BundleName = "gameplay";
+
+// Paths are relative to the `gameplay` bundle root (assets/gameplay) and end in
+// /spriteFrame, which is how Cocos addresses the sub-asset that a .png produces
+// after import.
 export const ART_PATHS = {
   background: "maps/MAP_MAIN_001/scene/MAP_MAIN_001_SCENE_01/spriteFrame",
   character: "characters/CHR_001/model/CHR_001_MODEL_IDLE_S_01/spriteFrame",
@@ -57,7 +62,7 @@ function loadFrame(path: string): Promise<SpriteFrame | null> {
   const imagePath = path.endsWith("/spriteFrame")
     ? path.slice(0, -"/spriteFrame".length)
     : path;
-  return assetService.loadImage("resources", imagePath).then((image) => {
+  return assetService.loadImage(GAMEPLAY_BUNDLE, imagePath).then((image) => {
       if (!image) {
         // A missing image is not fatal: the prototype keeps its Graphics
         // placeholder, and the caller reports which keys never arrived.

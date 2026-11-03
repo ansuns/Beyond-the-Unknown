@@ -7,7 +7,13 @@
   "packages": {
     "wechatgame": {
       "appid": "wx79cbf35bf4aa11f3",
-      "orientation": "landscape"
+      "orientation": "landscape",
+      "subpackages": [
+        {
+          "name": "gameplay",
+          "root": "subpackages/gameplay"
+        }
+      ]
     }
   },
   "overwriteProjectSettings": {
@@ -30,16 +36,5 @@
       "physics-ammo": "off",
       "physics-2d-box2d": "off"
     }
-  },
-  "bundles": [
-    {
-      "name": "resources",
-      "root": "db://assets/resources",
-      "isSubpackage": true,
-      "isRemote": false,
-      "compressionType": "merge_dep",
-      "priority": 8,
-      "output": true
-    }
-  ]
+  }
 }

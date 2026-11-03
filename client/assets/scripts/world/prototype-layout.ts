@@ -134,9 +134,41 @@ export function prototypeLocalToLevel(
   };
 }
 
+/**
+ * How far past the viewport the room bounding square is allowed to overscan when
+ * it covers the screen. 1.06 leaves ~3% bleed on every edge so a resize or a
+ * safe-area inset never exposes a bare corner of the backdrop.
+ */
+export const ROOM_COVER_MARGIN = 1.06;
+
+/**
+ * Hard ceiling on the room scale. Phones land well under this; it only stops a
+ * 4K desktop from building a room thousands of pixels across.
+ */
+export const ROOM_MAX_SCALE = 220;
+
+export interface RoomScaleContentOptions {
+  /**
+   * Level-space points that must stay inside the visible area (the spawn and
+   * every mechanism / interaction target). Cover-scaling alone would zoom the
+   * diamond until these project past the screen edge, which is exactly the
+   * "character or mechanism cropped" failure the acceptance forbids.
+   */
+  mustSee?: readonly PrototypePoint[];
+  /**
+   * Half extents (in screen px, around the room centre) that are guaranteed to
+   * be on screen and unobstructed. The clamp uses the smaller of the two axes.
+   */
+  safeHalfWidth?: number;
+  safeHalfHeight?: number;
+  /** Extra clearance kept around a must-see point, in screen px. */
+  contentMargin?: number;
+}
+
 export function calculatePrototypeRoomScale(
   bounds: PrototypeLayoutConfig["bounds"],
-  size: { width: number; height: number }
+  size: { width: number; height: number },
+  content: RoomScaleContentOptions = {}
 ): number {
   const spanX = bounds.maxX - bounds.minX;
   const spanY = bounds.maxY - bounds.minY;
@@ -148,14 +180,54 @@ export function calculatePrototypeRoomScale(
   ) {
     throw new Error("Prototype room bounds and viewport size must be positive and finite");
   }
-  // `size` is the world viewport, not the window: the shell already reserved
-  // room for the title, the action rows and the footer. Subtracting another 240
-  // (as this did when it measured the whole window) double-counted that space
-  // and shrank an 844x390 phone's room to a fifth of the viewport.
+  // COVER, not FIT. The room's bounding square must be at least as large as the
+  // viewport on BOTH axes so the floor reaches the screen edges; we crop the
+  // (non-critical) floor edges on the longer axis instead of leaving flat voids
+  // around a small centred diamond. This is the NO_BORDER camera-framing idea
+  // applied to this 2D-UI scene: the world is zoomed/cropped to fill, while the
+  // character, mechanism and UI draw sizes stay constant because they are drawn
+  // at fixed pixel sizes, not scaled with this value.
+  //
+  // `size` is the world viewport, not the window: the shell has already reserved
+  // space for the title, the action rows and the footer, so the only margin left
+  // is the 24/48 px around the art.
   const availableWidth = Math.max(160, size.width - 48);
   const availableHeight = Math.max(80, size.height - 24);
   const projectedSpan = spanX + spanY;
-  return Math.min(40, availableWidth / projectedSpan, availableHeight / projectedSpan);
+  const coverScale = Math.max(availableWidth, availableHeight) / projectedSpan;
+  let scale = Math.min(ROOM_MAX_SCALE, coverScale * ROOM_COVER_MARGIN);
+
+  // Clamp the cover zoom so no must-see point is pushed off screen. The
+  // projection is screenX = ((x-cx) - (y-cy)) * S and screenY = ((x-cx) +
+  // (y-cy)) * S, so a point's unit-scale offset is fixed and the maximum safe
+  // scale can be solved directly. We keep the cover scale whenever it is safe,
+  // and only shrink as far as the content requires: the floor still fills most
+  // of the band (69%-101% of its width for the acceptance viewports) and the
+  // full-screen environment covers the remainder, so there is no flat void.
+  const mustSee = content.mustSee ?? [];
+  const halfWidth = content.safeHalfWidth;
+  const halfHeight = content.safeHalfHeight;
+  const margin = content.contentMargin ?? 0;
+  if (
+    mustSee.length > 0 &&
+    Number.isFinite(halfWidth) && (halfWidth as number) > 0 &&
+    Number.isFinite(halfHeight) && (halfHeight as number) > 0
+  ) {
+    const centerX = (bounds.minX + bounds.maxX) / 2;
+    const centerY = (bounds.minY + bounds.maxY) / 2;
+    const maxW = (halfWidth as number) - margin;
+    const maxH = (halfHeight as number) - margin;
+    for (const point of mustSee) {
+      const logicalX = point.x - centerX;
+      const logicalY = point.y - centerY;
+      const unitX = logicalX - logicalY;
+      const unitY = logicalX + logicalY;
+      if (Math.abs(unitX) > 1e-6) scale = Math.min(scale, maxW / Math.abs(unitX));
+      if (Math.abs(unitY) > 1e-6) scale = Math.min(scale, maxH / Math.abs(unitY));
+    }
+  }
+  // Never collapse the room to nothing if a caller passes a hostile safe area.
+  return Math.max(1, Math.min(ROOM_MAX_SCALE, scale));
 }
 
 export interface IsometricDepthItem {

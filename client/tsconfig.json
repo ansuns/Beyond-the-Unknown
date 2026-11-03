@@ -18,6 +18,7 @@
   },
   "include": [
     "assets/scripts/**/*.ts",
-    "tests/**/*.ts"
+    "tests/**/*.ts",
+    "types/**/*.d.ts"
   ]
 }

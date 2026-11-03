@@ -1,5 +1,13 @@
 """Move Cocos bundles into real WeChat subpackages.
 
+NOTE (2026-11-03): the build now does this itself. `client/scripts/build-wechat.mjs`
+moves the directory, writes `game.js`, declares the subpackage in `game.json`,
+registers it in `settings.assets.subpackages` and asserts every one of those
+steps. This script is kept as the standalone inspector / repair tool: `--check`
+is still useful against an artifact produced by someone else's pipeline, and
+`--bundle` can fix one by hand. Do not wire it back into the build - two
+implementations of the same rule drift apart, and only one of them asserts.
+
 Cocos 3.8.8 has a subpackage option in the build panel, but the CLI task
 accepts `bundles[].isSubpackage` and then ignores it: the artifact still has
 `assets/<bundle>/` and `settings.assets.subpackages` stays empty. The engine

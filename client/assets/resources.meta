@@ -9,7 +9,6 @@
     "isBundle": true,
     "bundleConfigID": "default",
     "bundleName": "resources",
-    "priority": 8,
-    "isSubpackage": true
+    "priority": 8
   }
 }

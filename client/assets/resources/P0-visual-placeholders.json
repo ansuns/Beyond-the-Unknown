@@ -14,7 +14,7 @@
     {
       "asset_id": "CHR_001_PORTRAIT",
       "category": "character_portrait",
-      "expected_directory": "assets/resources/characters/CHR_001/portrait",
+      "expected_directory": "assets/gameplay/characters/CHR_001/portrait",
       "placeholder_state": "PLACEHOLDER_ONLY",
       "runtime_loadable": false,
       "visual_asset_delivered": false,
@@ -28,7 +28,7 @@
     {
       "asset_id": "CHR_001_MODEL",
       "category": "character_model",
-      "expected_directory": "assets/resources/characters/CHR_001/model",
+      "expected_directory": "assets/gameplay/characters/CHR_001/model",
       "placeholder_state": "PLACEHOLDER_ONLY",
       "runtime_loadable": false,
       "visual_asset_delivered": false,
@@ -42,7 +42,7 @@
     {
       "asset_id": "CHR_001_PREVIEW",
       "category": "character_preview",
-      "expected_directory": "assets/resources/characters/CHR_001/preview",
+      "expected_directory": "assets/gameplay/characters/CHR_001/preview",
       "placeholder_state": "PLACEHOLDER_ONLY",
       "runtime_loadable": false,
       "visual_asset_delivered": false,
@@ -56,7 +56,7 @@
     {
       "asset_id": "CHR_001_ANIMATION_SET",
       "category": "character_animation",
-      "expected_directory": "assets/resources/characters/CHR_001/animation",
+      "expected_directory": "assets/gameplay/characters/CHR_001/animation",
       "placeholder_state": "PLACEHOLDER_ONLY",
       "runtime_loadable": false,
       "visual_asset_delivered": false,
@@ -91,7 +91,7 @@
     {
       "asset_id": "MAP_MAIN_001_SCENE",
       "category": "main_map",
-      "expected_directory": "assets/resources/maps/MAP_MAIN_001/scene",
+      "expected_directory": "assets/gameplay/maps/MAP_MAIN_001/scene",
       "placeholder_state": "PLACEHOLDER_ONLY",
       "runtime_loadable": false,
       "visual_asset_delivered": false,
@@ -105,7 +105,7 @@
     {
       "asset_id": "MAP_MAIN_001_GROUND",
       "category": "main_map",
-      "expected_directory": "assets/resources/maps/MAP_MAIN_001/ground",
+      "expected_directory": "assets/gameplay/maps/MAP_MAIN_001/ground",
       "placeholder_state": "PLACEHOLDER_ONLY",
       "runtime_loadable": false,
       "visual_asset_delivered": false,
@@ -119,7 +119,7 @@
     {
       "asset_id": "MAP_MAIN_001_PROPS",
       "category": "main_map",
-      "expected_directory": "assets/resources/maps/MAP_MAIN_001/props",
+      "expected_directory": "assets/gameplay/maps/MAP_MAIN_001/props",
       "placeholder_state": "PLACEHOLDER_ONLY",
       "runtime_loadable": false,
       "visual_asset_delivered": false,
@@ -133,7 +133,7 @@
     {
       "asset_id": "MAP_MAIN_001_COLLISION",
       "category": "main_map",
-      "expected_directory": "assets/resources/maps/MAP_MAIN_001/collision",
+      "expected_directory": "assets/gameplay/maps/MAP_MAIN_001/collision",
       "placeholder_state": "PLACEHOLDER_ONLY",
       "runtime_loadable": false,
       "visual_asset_delivered": false,
@@ -147,7 +147,7 @@
     {
       "asset_id": "MAP_MAIN_001_WALKABLE",
       "category": "main_map",
-      "expected_directory": "assets/resources/maps/MAP_MAIN_001/walkable",
+      "expected_directory": "assets/gameplay/maps/MAP_MAIN_001/walkable",
       "placeholder_state": "PLACEHOLDER_ONLY",
       "runtime_loadable": false,
       "visual_asset_delivered": false,
@@ -161,7 +161,7 @@
     {
       "asset_id": "MAP_MAIN_001_SPAWN",
       "category": "main_map",
-      "expected_directory": "assets/resources/maps/MAP_MAIN_001/spawn",
+      "expected_directory": "assets/gameplay/maps/MAP_MAIN_001/spawn",
       "placeholder_state": "PLACEHOLDER_ONLY",
       "runtime_loadable": false,
       "visual_asset_delivered": false,
@@ -175,7 +175,7 @@
     {
       "asset_id": "MAP_MAIN_001_ENTRANCES",
       "category": "main_map",
-      "expected_directory": "assets/resources/maps/MAP_MAIN_001/entrances",
+      "expected_directory": "assets/gameplay/maps/MAP_MAIN_001/entrances",
       "placeholder_state": "PLACEHOLDER_ONLY",
       "runtime_loadable": false,
       "visual_asset_delivered": false,
@@ -189,7 +189,7 @@
     {
       "asset_id": "MAP_MAIN_001_CAMERA",
       "category": "main_map",
-      "expected_directory": "assets/resources/maps/MAP_MAIN_001/camera",
+      "expected_directory": "assets/gameplay/maps/MAP_MAIN_001/camera",
       "placeholder_state": "PLACEHOLDER_ONLY",
       "runtime_loadable": false,
       "visual_asset_delivered": false,
@@ -203,7 +203,7 @@
     {
       "asset_id": "MAP_MAIN_001_CONFIG",
       "category": "main_map",
-      "expected_directory": "assets/resources/maps/MAP_MAIN_001/config",
+      "expected_directory": "assets/gameplay/maps/MAP_MAIN_001/config",
       "placeholder_state": "PLACEHOLDER_ONLY",
       "runtime_loadable": false,
       "visual_asset_delivered": false,
@@ -217,7 +217,7 @@
     {
       "asset_id": "M01-EXIT-01",
       "category": "mechanism",
-      "expected_directory": "assets/resources/mechanisms/M01-EXIT-01",
+      "expected_directory": "assets/gameplay/mechanisms/M01-EXIT-01",
       "placeholder_state": "PLACEHOLDER_ONLY",
       "runtime_loadable": false,
       "visual_asset_delivered": false,
@@ -235,7 +235,7 @@
     {
       "asset_id": "M01-HIDEABLE-01",
       "category": "mechanism",
-      "expected_directory": "assets/resources/mechanisms/M01-HIDEABLE-01",
+      "expected_directory": "assets/gameplay/mechanisms/M01-HIDEABLE-01",
       "placeholder_state": "PLACEHOLDER_ONLY",
       "runtime_loadable": false,
       "visual_asset_delivered": false,
@@ -253,7 +253,7 @@
     {
       "asset_id": "M01-LIGHT-01",
       "category": "mechanism",
-      "expected_directory": "assets/resources/mechanisms/M01-LIGHT-01",
+      "expected_directory": "assets/gameplay/mechanisms/M01-LIGHT-01",
       "placeholder_state": "PLACEHOLDER_ONLY",
       "runtime_loadable": false,
       "visual_asset_delivered": false,
@@ -270,7 +270,7 @@
     {
       "asset_id": "FX_ECHO_PULSE_01",
       "category": "effect",
-      "expected_directory": "assets/resources/effects",
+      "expected_directory": "assets/gameplay/effects",
       "placeholder_state": "PLACEHOLDER_ONLY",
       "runtime_loadable": false,
       "visual_asset_delivered": false,
@@ -289,7 +289,7 @@
     {
       "asset_id": "FX_GAZE_BEAM_01",
       "category": "effect",
-      "expected_directory": "assets/resources/effects",
+      "expected_directory": "assets/gameplay/effects",
       "placeholder_state": "PLACEHOLDER_ONLY",
       "runtime_loadable": false,
       "visual_asset_delivered": false,
@@ -307,7 +307,7 @@
     {
       "asset_id": "FX_REVERSE_FLOW_01",
       "category": "effect",
-      "expected_directory": "assets/resources/effects",
+      "expected_directory": "assets/gameplay/effects",
       "placeholder_state": "PLACEHOLDER_ONLY",
       "runtime_loadable": false,
       "visual_asset_delivered": false,

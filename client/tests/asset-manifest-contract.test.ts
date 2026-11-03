@@ -34,9 +34,9 @@ describe("asset manifest contract", () => {
   it("rejects an asset directory that does not match its canonical asset ID", () => {
     const invalid = structuredClone(manifest);
     invalid.entries.find((entry: { asset_id: string; expected_directory: string }) => entry.asset_id === "M01-HIDEABLE-01").expected_directory =
-      "assets/resources/mechanisms/MEC_HIDEABLE";
+      "assets/gameplay/mechanisms/MEC_HIDEABLE";
     expect(validateAssetManifestStructure(invalid, levels).errors.join("\n")).toContain(
-      "M01-HIDEABLE-01: expected_directory must be assets/resources/mechanisms/M01-HIDEABLE-01"
+      "M01-HIDEABLE-01: expected_directory must be assets/gameplay/mechanisms/M01-HIDEABLE-01"
     );
   });
 
@@ -81,8 +81,8 @@ describe("asset manifest contract", () => {
   it("rejects reusing one file for multiple assets", () => {
     const invalid = structuredClone(manifest);
     invalid.entries[0].files = [
-      "assets/resources/characters/CHR_001/portrait/portrait.png",
-      "assets/resources/characters/CHR_001/portrait/portrait.png"
+      "assets/gameplay/characters/CHR_001/portrait/portrait.png",
+      "assets/gameplay/characters/CHR_001/portrait/portrait.png"
     ];
     invalid.entries[0].status = "IN_PROGRESS";
     expect(validateAssetManifestStructure(invalid, levels).errors.join("\n")).toContain(
@@ -131,7 +131,7 @@ describe("asset manifest contract", () => {
     const invalid = structuredClone(manifest);
     const entry = invalid.entries.find((item: { asset_id: string }) => item.asset_id === "CHR_001_PORTRAIT");
     entry.status = "READY";
-    entry.files = ["assets/resources/characters/CHR_001/portrait/portrait.png"];
+    entry.files = ["assets/gameplay/characters/CHR_001/portrait/portrait.png"];
     delete (entry as { provenance?: unknown }).provenance;
     const errors = validateAssetManifestStructure(invalid, levels).errors.join("\n");
     expect(errors).toContain("CHR_001_PORTRAIT: READY requires provenance.source_type from the approved source types");
@@ -145,7 +145,7 @@ describe("asset manifest contract", () => {
     const valid = structuredClone(manifest);
     const entry = valid.entries.find((item: { asset_id: string }) => item.asset_id === "CHR_001_PORTRAIT");
     entry.status = "READY";
-    entry.files = ["assets/resources/characters/CHR_001/portrait/portrait.png"];
+    entry.files = ["assets/gameplay/characters/CHR_001/portrait/portrait.png"];
     entry.provenance = {
       source_type: "ORIGINAL_INTERNAL",
       source_reference: "art-source/CHR_001/portrait-v1",
@@ -160,7 +160,7 @@ describe("asset manifest contract", () => {
     const invalid = structuredClone(manifest);
     const entry = invalid.entries.find((item: { asset_id: string }) => item.asset_id === "CHR_001_PORTRAIT");
     entry.status = "READY";
-    entry.files = ["assets/resources/characters/CHR_001/portrait/portrait.png"];
+    entry.files = ["assets/gameplay/characters/CHR_001/portrait/portrait.png"];
     entry.provenance = {
       source_type: "ORIGINAL_INTERNAL",
       source_reference: "art-source/CHR_001/portrait-v1",

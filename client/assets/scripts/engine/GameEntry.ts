@@ -50,6 +50,7 @@ import {
   sortIsometricDepth,
   type PrototypeLayoutConfig
 } from "../world/prototype-layout";
+import { paintEnvironment } from "../world/environment";
 import {
   getPrototypeMechanismShape,
   getPrototypeMechanismVisualState,
@@ -61,7 +62,9 @@ import { formatProgressSummary } from "../ui/progress-summary";
 import {
   applyRoomBackground,
   applySprite,
+  ART_PATHS,
   fitWithin,
+  GAMEPLAY_BUNDLE,
   loadArtSet,
   playEchoPulse,
   type ArtSet
@@ -109,6 +112,10 @@ export class BeyondTheUnknownGameEntry extends Component {
   private statusLabel?: Label;
   private rulesLabel?: Label;
   private progressLabel?: Label;
+  // On-device readout; see installDiagnostics.
+  private diagLabel?: Label;
+  private diagTapText = "—";
+  private diagHitText = "—";
   private art?: ArtSet;
   private artReady = false;
   private mapSession?: MapSession;
@@ -164,13 +171,13 @@ export class BeyondTheUnknownGameEntry extends Component {
   private readonly prototypeRuleCooldownUntil = new Map<string, number>();
   private prototypeActionInFlight = false;
   private levelRoomScale = 40;
-  private readonly worldPixelsPerUnit = 40;
+  private worldPixelsPerUnit = 40;
   private readonly moveSpeedPixelsPerSecond = 160;
   private readonly moveSyncIntervalSeconds = 0.12;
 
-  // Art is a subpackage: loaded on first use, memoised, and retried after a
-  // failure instead of leaving the shell permanently undecorated.
-  private artPromise?: Promise<void>;
+  // Art is a WeChat subpackage: loaded on first use, memoised, and retried after
+  // a failure instead of leaving the shell permanently undecorated.
+  private artPromise?: Promise<boolean>;
   private artStatus: "idle" | "loading" | "ready" | "failed" = "idle";
 
   onLoad(): void {
@@ -196,22 +203,33 @@ export class BeyondTheUnknownGameEntry extends Component {
    *
    * `ensureBundle` already de-duplicates in-flight downloads; this keeps the
    * whole art pass (bundle + sprite frames + decoration) from running twice when
-   * the world and a room both ask for it.
+   * the world and a room both ask for it. Callers that cannot work without the
+   * art must check the result - the world tolerates placeholders, a room does
+   * not.
    */
-  private ensureArt(): Promise<void> {
-    if (!this.artPromise) {
-      this.artStatus = "loading";
-      this.artPromise = this.prepareArt();
+  private ensureArt(): Promise<boolean> {
+    if (this.artPromise) {
+      // Second caller while loading, or after a success. Logging the reuse is
+      // how "entered the room twice, downloaded once" becomes visible on a
+      // device, where nobody can open a console mid-session.
+      if (this.artStatus === "ready") {
+        console.info(`[art] ${GAMEPLAY_BUNDLE} reused from memory`);
+      }
+      return this.artPromise;
     }
+    this.artStatus = "loading";
+    this.artPromise = this.prepareArt().catch(() => false);
     return this.artPromise;
   }
 
   /** Load the delivered P0 art, then dress whatever the prototype has drawn. */
-  private async prepareArt(): Promise<void> {
+  private async prepareArt(): Promise<boolean> {
+    const startedAt = Date.now();
     try {
       // The bundle must be in memory before any frame is requested; the
-      // service handles timeout, retry and de-duplication.
-      await assetService.ensureBundle("resources", {
+      // service handles timeout, retry and de-duplication. On WeChat this call
+      // is what triggers the native subpackage download.
+      await assetService.ensureBundle(GAMEPLAY_BUNDLE, {
         onProgress: (percent, note) =>
           this.setStatus(`${note} ${Math.round(percent * 100)}%`)
       });
@@ -220,21 +238,35 @@ export class BeyondTheUnknownGameEntry extends Component {
       // A retry is worth offering: the common cause is a flaky network, and the
       // service already backs off internally.
       this.artPromise = undefined;
-      this.setStatus(`资源加载失败：${error instanceof Error ? error.message : "未知错误"}`);
-      return;
+      const reason = error instanceof Error ? error.message : "未知错误";
+      console.error(`[art] ${GAMEPLAY_BUNDLE} failed after ${Date.now() - startedAt}ms: ${reason}`);
+      this.setStatus(`资源加载失败：${reason}`);
+      return false;
     }
+    const bundleMs = Date.now() - startedAt;
     this.art = await loadArtSet((loaded, total) =>
       this.setStatus(`美术资源 ${loaded}/${total}`)
     );
     this.artReady = true;
     this.artStatus = "ready";
     this.decorateScene();
+    const total = Object.keys(ART_PATHS).length;
     const missing = this.art.missing;
+    // One line per load: bundle name, how long the bundle itself took, how many
+    // sprite frames came out, and which bundles are resident. Enough for a
+    // remote-debug session to answer "did the subpackage load" without a
+    // profiler, short enough to leave on in release.
+    console.info(
+      `[art] ${GAMEPLAY_BUNDLE} ready: bundle ${bundleMs}ms, sprites ${this.art.loaded.length}/${total}, ` +
+        `total ${Date.now() - startedAt}ms, resident [${assetService.stats().loaded.join(", ")}]`
+    );
+    this.setStatus(`美术资源 ${this.art.loaded.length}/${total} · 场景包 ${bundleMs}ms`);
     if (missing.length) {
       // Visible on purpose: a placeholder is not delivery, and the status line
       // is where a tester sees which sprite never arrived.
       console.warn(`[art] missing sprite frames: ${missing.join(", ")}`);
     }
+    return true;
   }
 
   /**
@@ -489,7 +521,11 @@ export class BeyondTheUnknownGameEntry extends Component {
     // label and the progress line were touching the art and read as overlap.
     const gap = compact ? 8 : 14;
     const available = Math.max(120, topLimit - bottomLimit);
-    const worldHeight = Math.min(available - gap * 2, compact ? 300 : 420);
+    // Let the world viewport fill the full band between the title and the action
+    // rows. The old caps (900 x 420) shrank it to a centred rectangle and left a
+    // large flat-colour border; the world now spans the screen and the room is
+    // cover-scaled to reach the edges.
+    const worldHeight = Math.max(120, available - gap * 2);
     const worldY = bottomLimit + available / 2;
 
     return {
@@ -515,7 +551,8 @@ export class BeyondTheUnknownGameEntry extends Component {
       hintY,
       showHint,
       worldY,
-      worldWidth: Math.min(size.width - pad * 2, 900),
+      // Full screen width minus safe padding - the room cover-scales to fill it.
+      worldWidth: Math.max(160, size.width - pad * 2),
       worldHeight,
       joystickY: worldY - worldHeight / 2 + (compact ? 62 : 84),
       joystickRadius: compact ? 44 : 56,
@@ -524,20 +561,27 @@ export class BeyondTheUnknownGameEntry extends Component {
   }
 
   /**
-   * Make the design resolution the screen's own size.
+   * Screen-fill strategy for the landscape requirement.
    *
-   * The project used to ship a fixed 960x640 design resolution. With a fixed
-   * design resolution the engine picks one scale factor and the visible area
-   * only lines up with the screen at one aspect ratio; everything else is
-   * cropped or padded. Deriving the design resolution from the viewport and
-   * letting the policy stretch to the frame means the visible size IS the
-   * screen, on a 16:9 phone, a 20:9 phone and a desktop window alike.
+   * Two layers matter, and only one of them is the Canvas resolution policy:
    *
-   * EXACT_FIT rather than SHOW_ALL on purpose: SHOW_ALL keeps the whole design
-   * rectangle visible, which is the definition of a letterbox whenever the
-   * canvas and the design rectangle disagree for even one frame - and they do
-   * disagree for one frame while the canvas catches up to a resize. EXACT_FIT
-   * always covers the frame.
+   * 1. DESIGN RESOLUTION = real viewport (1 unit = 1 CSS px). Because the design
+   *    size already equals the screen, EXACT_FIT, SHOW_ALL, NO_BORDER and
+   *    FIXED_HEIGHT all map 1:1 here and none of them distorts art - there is no
+   *    second aspect to stretch against. We keep EXACT_FIT (not SHOW_ALL) purely
+   *    for the one-frame resize window: while the canvas catches up to a resize,
+   *    SHOW_ALL would letterbox for a frame, EXACT_FIT covers. This is NOT what
+   *    fills the screen with game content.
+   *
+   * 2. THE ACTUAL FILL comes from the world/room, and uses the NO_BORDER idea
+   *    directly: the room is zoomed with a COVER scale (calculatePrototypeRoomScale
+   *    now returns max(...) so the floor reaches every screen edge and the longer
+   *    axis is cropped) and the full-screen backdrop is a real fantasy environment
+   *    (gradient + glow + grid + vignette), not a flat colour. Character,
+   *    mechanism and UI are drawn at fixed pixel sizes, so they keep their
+   *    proportions while only the world is zoomed/cropped. If the project ever
+   *    moves to a FIXED reference design resolution (independent of the viewport),
+   *    this policy must become NO_BORDER so the canvas itself stops letterboxing.
    */
   private applyScreenFit(): { width: number; height: number } | undefined {
     const metrics = readViewport(globalThis as any);
@@ -692,29 +736,30 @@ export class BeyondTheUnknownGameEntry extends Component {
   private paintBackground(size: { width: number; height: number }): void {
     const node = this.root?.getChildByName("Background");
     if (!node) return;
+    // Slightly larger than the screen so a notch / safe-area inset or a resize
+    // never exposes a bare edge. The backdrop must reach the screen edges.
+    const w = size.width * 1.1;
+    const h = size.height * 1.1;
     const transform = node.getComponent(UITransform);
-    if (transform) transform.setContentSize(size.width, size.height);
+    if (transform) transform.setContentSize(w, h);
     const graphics = node.getComponent(Graphics);
     if (!graphics) return;
-    graphics.clear();
-    graphics.fillColor = new Color(10, 18, 32, 255);
-    graphics.rect(-size.width / 2, -size.height / 2, size.width, size.height);
-    graphics.fill();
+    // Full-screen fantasy environment: gradient + glow + grid + motes + vignette.
+    // This is scene content, not a flat colour - the map/background must extend
+    // to the screen edges, so a void is never shown even outside the room floor.
+    paintEnvironment(graphics, w, h);
   }
 
   private placeWorldViewport(width: number, height: number): void {
     if (!this.worldRoot) return;
     const transform = this.worldRoot.getComponent(UITransform);
     if (transform) transform.setContentSize(width, height);
+    // Transparent container: the full-screen environment backdrop shows through
+    // it and the room is drawn on top. No flat fill here - that was the
+    // "centred rectangle on flat void" look the landscape requirement rejects.
     const graphics = this.worldRoot.getComponent(Graphics);
     if (!graphics) return;
     graphics.clear();
-    graphics.lineWidth = 3;
-    graphics.strokeColor = new Color(72, 112, 144, 255);
-    graphics.fillColor = new Color(17, 34, 50, 255);
-    graphics.rect(-width / 2, -height / 2, width, height);
-    graphics.fill();
-    graphics.stroke();
   }
 
   private placeLabel(
@@ -847,18 +892,9 @@ export class BeyondTheUnknownGameEntry extends Component {
     this.worldRoot.setPosition(0, layout.worldY, 0);
     const worldTransform = this.worldRoot.addComponent(UITransform);
     worldTransform.setContentSize(layout.worldWidth, layout.worldHeight);
-    const worldGraphics = this.worldRoot.addComponent(Graphics);
-    worldGraphics.lineWidth = 3;
-    worldGraphics.strokeColor = new Color(72, 112, 144, 255);
-    worldGraphics.fillColor = new Color(17, 34, 50, 255);
-    worldGraphics.rect(
-      -worldTransform.width / 2,
-      -worldTransform.height / 2,
-      worldTransform.width,
-      worldTransform.height
-    );
-    worldGraphics.fill();
-    worldGraphics.stroke();
+    // Transparent container - the environment backdrop shows through and the
+    // room is drawn on top (see drawPersonalRoom). No flat fill.
+    this.worldRoot.addComponent(Graphics);
     this.worldRoot.on(Node.EventType.TOUCH_END, this.onWorldTouch, this);
 
     this.createButton(
@@ -943,6 +979,65 @@ export class BeyondTheUnknownGameEntry extends Component {
       );
     }
     this.createVirtualJoystick(size, layout);
+    this.installDiagnostics(size, layout);
+  }
+
+  /**
+   * On-device readout.
+   *
+   * A phone has no console, and "I tapped and nothing happened" cannot be
+   * settled from a screenshot. These numbers do settle it: the window the shell
+   * was laid out for, the canvas the renderer was actually given, the scale
+   * between them, and where each tap landed and what it hit. A canvas that is
+   * devicePixelRatio times the design size means every press lands at a quarter
+   * of the coordinate the player aimed at; a tap with no hit node means the
+   * press never entered the scene at all. Both look identical on screen.
+   */
+  private installDiagnostics(
+    size: { width: number; height: number },
+    layout: { statusY: number; statusSize: number; pad: number }
+  ): void {
+    const transform = this.root!.getComponent(UITransform) ?? this.root!.addComponent(UITransform);
+    transform.setContentSize(size.width, size.height);
+    // Root-level listener: taps on a button bubble up to here and taps on empty
+    // space land here directly, so no press goes unrecorded.
+    this.root!.on(Node.EventType.TOUCH_END, this.onAnyTouch, this);
+    this.diagLabel = this.createLabel(
+      "Diagnostics",
+      "",
+      0,
+      layout.statusY - layout.statusSize - 18,
+      Math.max(11, layout.statusSize - 4),
+      size.width - layout.pad * 2
+    );
+    this.diagLabel.color = new Color(150, 205, 225, 240);
+    this.refreshDiagnostics();
+  }
+
+  private onAnyTouch(event: any): void {
+    const point = event?.getUILocation?.();
+    if (point) this.diagTapText = `${Math.round(point.x)},${Math.round(point.y)}`;
+    const name = event?.target?.name;
+    if (name && name !== "BeyondTheUnknownRuntime") this.diagHitText = name;
+    this.refreshDiagnostics();
+  }
+
+  private refreshDiagnostics(): void {
+    if (!this.diagLabel) return;
+    const host = globalThis as any;
+    const metrics = readViewport(host);
+    const canvas = host.canvas;
+    const frame = view.getFrameSize();
+    const visible = view.getVisibleSize();
+    const dpr = typeof host.devicePixelRatio === "number" ? host.devicePixelRatio : undefined;
+    this.diagLabel.string =
+      `win ${metrics?.width ?? "?"}×${metrics?.height ?? "?"} dpr ${dpr ?? "?"}`
+      + ` canvas ${canvas?.width ?? "?"}×${canvas?.height ?? "?"}\n`
+      + `frame ${Math.round(frame.width)}×${Math.round(frame.height)}`
+      + ` design ${Math.round(visible.width)}×${Math.round(visible.height)}`
+      + ` scale ${view.getScaleX().toFixed(2)}\n`
+      + `${this.apiBaseUrl}\n`
+      + `tap ${this.diagTapText} · hit ${this.diagHitText}`;
   }
 
   private createLabel(
@@ -999,6 +1094,10 @@ export class BeyondTheUnknownGameEntry extends Component {
     label.horizontalAlign = Label.HorizontalAlign.CENTER;
     label.verticalAlign = Label.VerticalAlign.CENTER;
     node.on(NodeEventType.TOUCH_END, () => {
+      // Proves the press reached this node rather than merely the scene, which
+      // is the difference between a coordinate problem and a missing handler.
+      this.diagHitText = `${name} ✓`;
+      this.refreshDiagnostics();
       void action();
     }, this);
     return node;
@@ -1201,6 +1300,10 @@ export class BeyondTheUnknownGameEntry extends Component {
 
   private async loginAndEnterWorld(): Promise<void> {
     this.stopJoystickMovement();
+    // Back in the shared world: the room cover-scale no longer applies, so reset
+    // the avatar/movement scale to the world's base unit (the room scene sets it
+    // again on enterPersonalLevel).
+    this.worldPixelsPerUnit = 40;
     try {
       this.clearRoomControls();
       this.worldRoot?.removeAllChildren();
@@ -1687,7 +1790,16 @@ export class BeyondTheUnknownGameEntry extends Component {
         }
         if (this.artStatus !== "ready") {
           this.setStatus("正在加载场景资源…");
-          await this.ensureArt();
+          const ready = await this.ensureArt();
+          if (!ready) {
+            // A room without its art bundle is not a playable room: the floor,
+            // the mechanism symbols and the player are all sprites from
+            // `gameplay`. Refuse instead of entering a placeholder room and
+            // reporting a success that never happened.
+            const reason = assetService.errorOf(GAMEPLAY_BUNDLE) ?? "未知原因";
+            this.setStatus(`场景资源加载失败，无法进入房间：${reason}`);
+            return;
+          }
         }
         try {
           this.setStatus("正在读取房间目录与个人进度…");
@@ -1977,7 +2089,34 @@ export class BeyondTheUnknownGameEntry extends Component {
 
 
   private updatePrototypeRoomScale(size: { width: number; height: number }): void {
-    this.levelRoomScale = calculatePrototypeRoomScale(this.prototypeLayout.bounds, size);
+    // Cover-scale alone can push the spawn or a mechanism past the screen edge
+    // (ROOM-01 spawns at x=1, which projects to (-5,-5) * scale). Collect every
+    // point that must stay visible and pass the real visible half-extents so the
+    // scale is clamped to keep them on screen. The floor then fills most of the
+    // band and the full-screen environment covers the rest.
+    const mustSee: { x: number; y: number }[] = [{ ...this.prototypeLayout.spawn }];
+    for (const descriptor of this.roomMechanismCatalog.values()) {
+      if (descriptor.position_x !== null && descriptor.position_y !== null) {
+        mustSee.push({ x: descriptor.position_x, y: descriptor.position_y });
+      }
+    }
+    const windowWidth = this.designSize.width || size.width;
+    const windowHeight = this.designSize.height || size.height;
+    const worldY = this.worldRoot ? this.worldRoot.position.y : 0;
+    this.levelRoomScale = calculatePrototypeRoomScale(this.prototypeLayout.bounds, size, {
+      mustSee,
+      // The room is centred in worldRoot, which is centred horizontally, so the
+      // visible half-width is the window half-width. Vertically worldRoot sits
+      // at worldY, so the tighter half-extent is windowHeight/2 - |worldY|.
+      safeHalfWidth: windowWidth / 2,
+      safeHalfHeight: windowHeight / 2 - Math.abs(worldY),
+      contentMargin: 24
+    });
+    // Keep the avatar/movement scale in lock-step with the room: the room is now
+    // cover-scaled to fill the screen, and the local player's avatar position is
+    // expressed in the same world units, so it must use the same scale or it
+    // drifts off the floor. Reset to 40 in the shared world (loginAndEnterWorld).
+    this.worldPixelsPerUnit = this.levelRoomScale;
   }
 
   private sendLevelPosition(position: { x: number; y: number }): void {
@@ -2018,12 +2157,14 @@ export class BeyondTheUnknownGameEntry extends Component {
     // Fit the room to the band that is left after the title and the action rows,
     // not to the whole viewport: the bottom of the diamond is where the avatar
     // often stands, and it used to end up underneath the buttons.
-    this.updatePrototypeRoomScale({ width: size.width, height: roomLayout.playfieldHeight });
+    // Cover-scale against the whole world viewport so the room reaches the
+    // screen edges; roomCenterY is ignored because the (huge) room is centred.
+    this.updatePrototypeRoomScale({ width: size.width, height: size.height });
     const roomSize = this.prototypeRoomDimensions();
     if (this.pendingLevelId !== "LV-ROOM-01") {
       const room = this.uiNode(`RoomPrototype-${this.pendingLevelId}`);
       this.worldRoot.addChild(room);
-      room.setPosition(0, roomLayout.playfieldCenterY, 0);
+      room.setPosition(0, 0, 0);
       room.addComponent(UITransform).setContentSize(roomSize.width, roomSize.height);
       const background = room.addComponent(Graphics);
       background.lineWidth = 3;
@@ -2186,7 +2327,7 @@ export class BeyondTheUnknownGameEntry extends Component {
 
     const room = this.uiNode("Room01Prototype");
     this.worldRoot.addChild(room);
-    room.setPosition(0, roomLayout.playfieldCenterY, 0);
+    room.setPosition(0, 0, 0);
     room.addComponent(UITransform).setContentSize(roomSize.width, roomSize.height);
     const graphics = room.addComponent(Graphics);
     graphics.lineWidth = 3;
