@@ -95,6 +95,10 @@ const chrome = spawn(CHROME, [
   "--hide-scrollbars",
   "--use-angle=swiftshader",
   "--enable-unsafe-swiftshader",
+  // This machine sets HTTP_PROXY for the whole session; without this the page
+  // request goes to that proxy and every measurement reads a proxy error page
+  // (no canvas, no nodes), which looks exactly like a broken build.
+  "--no-proxy-server",
   "--no-first-run",
   "about:blank"
 ], { stdio: "ignore" });

@@ -1,7 +1,9 @@
 # 微信开发者工具编译与运行时验收
 
-> 日期：2026-11-03 ｜ 分支：`fix/client-screen-fill` ｜ 提交：`a0a855f`
-> 一句话结论：**微信编译器真实接受了这个分包产物（编译通过，分包被单独计量）；微信模拟器的运行时通道没有打通，`wx.loadSubpackage` 未被观测到。**
+> 日期：2026-11-03 ｜ 分支：`fix/client-screen-fill` ｜ 被测提交：`746ea89`
+> 结论：**微信编译器真实接受了这个分包产物（两次编译，分包独立计量且数字一致）；微信模拟器运行时仍未打通，`wx.loadSubpackage` 未被观测到；真机未跑。**
+
+本文档记录的是"到了哪一步"，不是"完成了什么"。所有未验证项都明确标了未验证。
 
 ---
 
@@ -9,213 +11,235 @@
 
 | 项 | 值 | 来源 |
 |---|---|---|
-| 开发者工具版本 | `2.02.2610302` | `cli agent tool` / `Tool.getInfo` 返回 |
+| 开发者工具版本 | `2.02.2610302` | `Tool.getInfo` 返回 |
 | SDKVersion | `3.17.5` | 同上 |
-| CLI 入口 | `C:\Program Files (x86)\Tencent\微信web开发者工具\cli.bat` | 实际读取文件确认 |
-| AppID | `wx79cbf35bf4aa11f3` | `cli preview` 输出「使用 AppID」 |
-| 项目路径（正式） | `C:\Users\SYANG\WorkBuddy\无界之外\client\build\wechatgame-slim` | 构建产物 |
-| 项目路径（对照） | `C:\Users\SYANG\btu-wx-build` | 排除中文路径因素 |
+| CLI 入口 | `C:\Program Files (x86)\Tencent\微信web开发者工具\cli.bat` | 读文件确认 |
+| AppID | `wx79cbf35bf4aa11f3` | `cli preview` 输出 |
+| 构建产物 | `client/build/wechatgame-slim` | `node scripts/build-wechat.mjs` |
+| 预览码 | `client/build/wxverify/preview-qr.jpg` | `cli preview --qr-output` |
 
-`cli.bat` 的实现值得记一笔：它挑安装目录里最大的 `.exe`（202 MB 的 `微信开发者工具.exe`）作为 Electron，设 `ELECTRON_RUN_AS_NODE=1`，再执行 `resources/app.asar.unpacked/js/common/cli/index.js`。所以 CLI 命令清单是 `open / preview / auto / agent / close / quit / cache / engine ...`，**没有单独的 `build` 命令** —— 编译由 `open` 或 `preview` 触发。
+`cli.bat` 的实现：挑安装目录里最大的 `.exe`（202 MB 的 `微信开发者工具.exe`）当 Electron，设 `ELECTRON_RUN_AS_NODE=1`，执行 `resources/app.asar.unpacked/js/common/cli/index.js`。命令清单是 `open / preview / auto / agent / close / quit / cache / engine`，**没有独立的 `build`** —— 编译由 `open` 或 `preview` 触发。
+
+> 微信 CLI 的 `--qr-output` 不管扩展名写什么，落盘的都是 JPEG 字节流。第一次生成的 `preview-qr.png` 其实是 JPEG（`ff d8 ff e0`），已按真实格式改名。
 
 ---
 
 ## 2. 微信真实编译：通过
 
-### 2.1 命令与退出码
-
 ```bash
-cli.bat auto --project "C:\Users\SYANG\btu-wx-build" --auto-port 9424 --trust-project --port 9420
-# → {"autoPort":9424,"requestedAutoPort":9424}  exit 0
-
-cli.bat preview --project "C:\Users\SYANG\btu-wx-build" --port 9420 \
-  --qr-format image --qr-output "...\build\wxverify\preview-qr.png"
-# → exit 0
+cli.bat open    --project "…\client\build\wechatgame-slim" --port 9420
+cli.bat preview --project "…\client\build\wechatgame-slim" --port 9420 \
+  --qr-format image --qr-output "…\preview-qr.jpg"
 ```
 
-`preview` 执行了**两次**（一次在中文路径，一次在 ASCII 路径），两次都成功，体积完全一致。
+两次独立执行（13:40 与 14:00），退出码均为 0，编译器自报的分包计量**完全一致**：
 
-### 2.2 编译器自己给出的分包计量
+| 包 | 字节 |
+|---|---|
+| TOTAL | 2,986,928 |
+| main | 2,217,553 |
+| `/subpackages/gameplay/` | 769,375 |
 
 ```
-√ 使用 AppID: wx79cbf35bf4aa11f3
-√ preview
-
 ┌────────────────────────┬────────────┬─────────────┐
-│ (index)                │ size       │ size (Byte) │
-├────────────────────────┼────────────┼─────────────┤
-│ TOTAL                  │ '2.8 MB'   │ 2986441     │
-│ main                   │ '2.1 MB'   │ 2217066     │
+│ TOTAL                  │ '2.8 MB'   │ 2986928     │
+│ main                   │ '2.1 MB'   │ 2217553     │
 │ /subpackages/gameplay/ │ '751.3 KB' │ 769375      │
 └────────────────────────┴────────────┴─────────────┘
 ```
 
-**这是本轮最重要的一条证据**：分包体积不是我们的脚本算的，是微信编译器自己列的。它把 `/subpackages/gameplay/` 当作一个独立分包处理 —— 说明 `game.json` 的声明、目录结构、`game.js` 入口都被平台接受了。
+**这条是平台侧的认可**：`/subpackages/gameplay/` 是微信自己列的，不是我们的脚本算的。主包 2.11 MB < 4 MB，总计 2.85 MB < 20 MB。
 
-`preview-info.json` 同样记录了这份数据：
-
-```json
-{"size":{"total":2986441,"packages":[
-  {"name":"TOTAL","size":2986441},
-  {"name":"main","size":2217066},
-  {"name":"/subpackages/gameplay/","size":769375}]}}
-```
-
-### 2.3 编译输入清单里包含分包文件
-
-`CompileBackendManager` 在编译时列出了它读取的文件，其中包含分包整目录：
+`CompileBackendManager` 的编译输入清单里包含：
 
 ```
 'subpackages/gameplay/config.77291.json',
 'subpackages/gameplay/game.js',
 'subpackages/gameplay/import/0e/0e96bb807.443ed.json',
-'subpackages/gameplay/import/20/20de2096-e99a-4174-b4c1-51d24b764e47.a2533.json',
 'subpackages/gameplay/native/a7', ...
 ```
 
-编译器没有报「分包路径不存在」「入口脚本缺失」「settings 引用错误」中的任何一种。若 `game.json` 里的 `root` 与磁盘不一致，微信会在这一步直接失败。
+`game.json` 的 `root` 与磁盘不一致、或缺 `game.js` 入口，微信会在这一步就失败。
 
-### 2.4 主包体积
-
-主包 2,217,066 字节 = 2.11 MB，低于 4 MB 上限；总计 2.85 MB，低于 20 MB 上限。
+> 口径差异：`tools/package_gate.py` 统计磁盘文件（total 2,999,338 / 分包 769,746），微信统计编译后的包（2,986,928 / 769,375）。差 10 KB 左右，属正常，不要拿两个数字互相校验。
 
 ---
 
-## 3. 微信模拟器运行时：未打通
+## 3. 设备侧诊断（本轮新增）
 
-### 3.1 现象
+真机上没有控制台，验收人不可能打开 devtools，所以把判据放到屏幕和日志两处：
 
-自动化端口能连，WebSocket 握手 `101 Switching Protocols`，IDE 层命令正常：
+**状态行**（横屏屏幕上看得到）：
+
+```
+美术资源 6/6 · 场景包 412ms
+```
+
+前半是精灵数量（6 = 六个都从 `gameplay` 取到），后半是分包本身耗时。
+
+**控制台**（真机调试时可见）：
+
+```
+[art] gameplay ready: bundle 412ms, sprites 6/6, total 690ms, resident [internal, resources, main, gameplay]
+[art] gameplay reused from memory          ← 第二次进入
+[art] gameplay failed after 12000ms: …     ← 失败时带原因
+```
+
+三条日志分别对应成功、复用、失败。`resident` 列表里没有 `gameplay` 就说明分包没进内存。
+
+改动没有触碰加载逻辑：同一处 `ensureBundle`、同样的重试语义、同样的"没资源就不进房间"硬拦截。日志里不含 token、id、玩家数据。
+
+---
+
+## 4. 微信模拟器运行时：未打通
+
+### 4.1 现象
+
+自动化端口能连，WebSocket 握手 `101`，IDE 层命令正常：
 
 ```
 {"method":"Tool.getInfo","result":{"version":"2.02.2610302","SDKVersion":"3.17.5"}}
 ```
 
-但所有转发到小游戏 runtime 的命令一律超时：
+转发到小游戏 runtime 的命令一律超时（**服务端返回的 error**，不是本地超时）：
 
 ```
-{"method":"App.getCurrentPage","error":{"message":"timeout waiting for automator response"}}
-{"method":"App.getPageStack","error":{"message":"timeout waiting for automator response"}}
-{"method":"App.captureScreenshot","error":{"message":"timeout waiting for automator response"}}
-{"method":"App.CDPEnable","error":{"message":"timeout waiting for automator response"}}
-{"method":"App.CDPListProtocol","error":{"message":"timeout waiting for automator response"}}
+App.getCurrentPage / getPageStack / captureScreenshot / CDPEnable / CDPListProtocol
+→ timeout waiting for automator response
 ```
 
-注意这是**服务端返回的 error**，不是我这边超时 —— IDE 收到了命令，等不到 runtime 回应。
-
-### 3.2 逐项排除（每项都做了，不是推测）
+### 4.2 已排除（逐项都做过）
 
 | 假设 | 做法 | 结果 |
 |---|---|---|
-| 端口被旧实例占用 | 9423 → 9424 换端口 | 同样超时 |
-| 中文路径干扰 | 产物复制到 `C:\Users\SYANG\btu-wx-build` | 同样超时 |
-| IDE 未以自动化模式启动 | 让 `cli auto` 作为启动者（12 个进程完整启动） | 同样超时 |
-| 项目窗口被关掉 | 日志确认曾有 `close-requested {winId:'s0'}` → 改常驻后窗口在 | 同样超时 |
-| 编译没完成所以没 runtime | `cli preview` 两次成功，编译器已列分包文件 | 同样超时 |
-| automator 库太老（`ws@6`） | 手写协议客户端，用平台 WebSocket | `Tool.*` 通，`App.*` 仍超时 |
-| 工具入口选错 | 试 `cli agent tool --name simulator_screenshot` | 它是小程序工具，报 `ENOENT: app.json` |
+| 端口被旧实例占用 | 9423 → 9424 | 一样 |
+| 中文路径干扰 | 产物复制到 `C:\Users\SYANG\btu-wx-build` | 一样 |
+| IDE 未以自动化模式启动 | 让 `cli auto` 当启动者（12 进程完整起） | 一样 |
+| 项目窗口被关 | 日志确认曾有 `close-requested {winId:'s0'}`，改常驻后窗口在 | 一样 |
+| 编译没完成 | `preview` 两次成功，编译器已列分包文件 | 一样 |
+| automator 库太老（`ws@6`） | 手写协议客户端直连平台 WebSocket | `Tool.*` 通，`App.*` 仍超时 |
+| 工具入口选错 | `cli agent tool --name simulator_screenshot` | 小程序专用，报 `ENOENT: app.json` |
 
-**结论**：自动化服务没有绑定到任何运行中的小游戏实例。`App.*` 是面向小程序的转发层，小游戏场景下拿不到 runtime。这一步没有绕过，也没有用 Web 结果顶替。
+**结论**：`Tool.*`（IDE 层）有响应，`App.*`（转发到小游戏 runtime）全部无人应答 —— 自动化服务没有绑定到任何运行中的小游戏实例。这一点没有绕过。
 
-### 3.3 因此无法验证的项
+### 4.3 因此未验证
 
-- `wx.loadSubpackage` 是否被调用（未观测到，**不声称调用过**）。
-- 首屏在微信环境下的 bundle 状态。
-- 进入 ROOM-01 后角色 / 底图 / 机关 / 特效是否正常。
-- 失败路径（分包加载失败时的拦截与提示）。
-- 重复进入是否命中缓存。
-- 横屏在微信模拟器中的实际布局。
-
-### 3.4 唯一需要人工完成的动作
-
-`build/wxverify/preview-qr.png` 是这次编译生成的真机预览码。扫码即可在真机上看到同一份产物。这一步需要手机与微信登录态，无法代劳。
+`wx.loadSubpackage` 是否被调用、首屏 bundle 状态、ROOM-01 资源表现、失败路径、缓存行为、微信模拟器内的横屏 —— **全部未验证**。
 
 ---
 
-## 4. Web 目标的运行时数据（已做，不与微信混淆）
+## 5. Web 目标的运行时数据（与微信无关，不可混用）
 
 `tools/verify-bundle-loading.mjs` 驱动真实 Web 构建，被动轮询 `assetManager.bundles`：
 
 ```
-boot        appeared=["internal","resources","main"]   timeline=[internal@846ms, resources@883ms, main@883ms]
-world       appeared=["gameplay"]                       timeline=[..., gameplay@8078ms]
-roomFirst   appeared=[]                                 （缓存命中）
-afterLeave  appeared=[]                                 （不释放）
-roomSecond  appeared=[]                                 （不重复下载）
-
-firstInputAt = 7076 ms
+boot        [internal, resources, main]        internal@846ms, resources@883ms, main@883ms
+world       +gameplay                          gameplay@8078ms（首帧后 1.0s）
+roomFirst   无新增                              缓存命中
+afterLeave  无新增
+roomSecond  无新增                              不重复下载
 gameplayLoadedAtBoot = false
 ```
 
-游戏自己的状态行：
+状态行：`美术资源 6/6` → `已进入个人关卡 探索房间 1`。
 
-| 阶段 | 状态行 |
-|---|---|
-| boot | 测试原型：点击「登录并进入世界」… |
-| world | **美术资源 6/6** |
-| roomFirst | **已进入个人关卡 探索房间 1 · 法则可用配置 3/3** |
-| roomSecond | 已进入个人关卡 探索房间 1 |
-
-这条链证明的是**加载逻辑与资源引用正确**，不是微信运行时行为。传输层是 `http://127.0.0.1:8081`，没有 `wx.loadSubpackage` 参与。
+这证明加载逻辑与资源引用正确，**不证明微信运行时行为**。
 
 ---
 
-## 5. 分包产物结构（构建脚本断言 + 微信编译双重确认）
+## 6. 横屏布局回归
 
-```
-game.json  → subpackages: [{name:"gameplay", root:"subpackages/gameplay/"}]
-settings   → assets.subpackages: ["gameplay"]
-           → assets.preloadBundles: [{resources},{main}]   （不含 gameplay）
-assets/    → internal, main, resources       （gameplay 已移出）
-subpackages/gameplay/ → config.77291.json, game.js, index.77291.js, import/, native/   （18 文件 / 752 KB）
-```
+用 `tools/verify-landscape.mjs` 在五个视口驱动真实 Web 构建，六个维度分别判定：溢出、重叠、触摸冲突、被遮挡目标、最小触控尺寸、安全区。
 
-构建脚本 `client/scripts/build-wechat.mjs` 在每次构建后逐项断言；`tools/package_gate.py` 复核体积与重复打包：
+### 6.1 当前基线（已提交代码）
 
-```
-主包：2.13 MB / 预算 3.50 MB / 上限 4.00 MB；总计 2.86 MB
-分包 gameplay：752 KB
-PASS: 包体门禁通过
-```
+| 比例 | overflow | overlaps | blocking | 被遮挡目标 | 安全区 | 最小触控 |
+|---|---|---|---|---|---|---|
+| 16:9 | 2 | 3 | 2 | 1 | 1 | 28 px |
+| 18:9 | 2 | 3 | 2 | 1 | 1 | 28 px |
+| 19.5:9 | 2 | 3 | 2 | 1 | 1 | 28 px |
+| 20:9 | 2 | 3 | 2 | 1 | 1 | 28 px |
+| 844×390 | 2 | 2 | 1 | 0 | 1 | 28 px |
+
+`overflow` 的 2 项是 `WorldViewport` 和 `Room01Prototype`：前者是刻意大于视口的背景容器（铺满用），后者是房间菱形本身，两者都不是"控件跑出屏幕"，但仍被脚本计入。
+
+**真实缺陷**：`HiddenObject × RoomEchoButton` 重叠 504 px²，遮住隐藏物体 64%，16:9 及以上都存在。隐藏物体是 ROOM-01 里必须点击的目标，被"回声 · 显形"按钮压住。同时它只有 28×28，低于 44 px 的触控推荐值。
+
+### 6.2 两次修复尝试（均回退）
+
+**尝试 A —— 把房间画到 playfield 带内**（`room.setPosition(0, playfieldCenterY, 0)`）：
+
+| 比例 | overlaps | blocking | 被遮挡 |
+|---|---|---|---|
+| 16:9~20:9 | 3 → 1 | 2 → 1 | 1 → 0 |
+| 844×390 | 2 → 6 | 1 → 4 | 0 → 1 |
+
+大屏改善，小屏恶化。
+
+**尝试 B —— 再把缩放按 playfield 高度钳制**（`safeHalfHeight = playfieldHeight/2`）：
+
+| 比例 | overflow | overlaps | blocking | 被遮挡 | 安全区 |
+|---|---|---|---|---|---|
+| 16:9~20:9 | 2 → **0** | 1 | 1 | **0** | **0** |
+| 844×390 | 2 → 0 | 2 → **10** | 1 → **10** | 0 | 0 |
+
+大屏几乎完美，844×390 崩掉。
+
+**结论：两次都回退。** 844×390 是 iPhone 横屏最常见的逻辑尺寸，用它的 10 处重叠换大屏的整洁不划算。当前提交仍是 6.1 的基线。
+
+**根因判断**（下一轮用）：`roomControlLayout` 的紧凑阈值是 `size.height < 320`，844×390 的高度 390 不触发紧凑档，按钮用 42 px 高、间距 10 px，把 playfield 压到 244 px；房间再按整屏 COVER，自然压到按钮上。先按视口高度分级（844×390 走紧凑档），再谈房间上移，代价小得多。
+
+### 6.3 未做的部分
+
+真机横屏（刘海、圆角、底部手势条、20:9 实机）未验证 —— 依赖真机，见 §7。
 
 ---
 
-## 6. CI
+## 7. 真机验收：未完成
 
-远端 Actions 在 `a0a855f` 与 `17969b1` 上都跑完了，四个 workflow 全部通过：
+已准备：`client/build/wxverify/preview-qr.jpg`（14:00 生成，与 §2 的产物同源）+ `docs/engineering/reports/2026-11-03-device-acceptance-checklist.md`（面向非开发人员，逐项打勾）。
 
-| workflow | a0a855f | 17969b1 |
-|---|---|---|
-| client-ci | ✅ success | ✅ success |
-| server-ci | ✅ success | ✅ success |
-| package-budget | ✅ success | ✅ success |
-| art-tools-ci | ✅ success | ✅ success |
+未做：扫码、启动、观察分包下载、进入 ROOM-01、缓存、真机横屏。
 
-> 记录一次自己的误判：第一次查 CI 时用了 `?head_sha=a0a855f`，返回 `total_count: 0`，差点写成"CI 未运行"。实际上 workflow 已经跑过，是查询方式/时机的问题。上面这份是不带 `head_sha` 过滤、按仓库最近 runs 取的结果。
-
-本地等价检查同样全绿：`vitest` 26 文件 / **180 用例**；`tsc --noEmit` 通过；`validate:project` 通过；`validate:assets` 通过（112 条目，0 READY，与既有状态一致）。
-
-**CI 通过不等于微信运行时验收通过** —— 这一点在本文档里始终成立。
+**这一步只能由持手机的人完成。**
 
 ---
 
-## 7. 遗留安全问题（只核对，未擅自处置）
+## 8. CI
+
+| workflow | a0a855f | 17969b1 | 746ea89 |
+|---|---|---|---|
+| client-ci | ✅ | ✅ | ✅ |
+| server-ci | ✅ | ✅ | ✅ |
+| package-budget | ✅ | ✅ | ✅ |
+| art-tools-ci | ✅ | ✅ | ✅ |
+
+> 记录一次自己的误判：第一次查 CI 时用了 `?head_sha=` 过滤，返回 `total_count: 0`，差点写成"CI 未运行"。实际 workflow 已跑完，是查询方式的问题。上面这份不带 `head_sha` 过滤。
+
+本地等价检查：`vitest` 26 文件 / 180 用例；`tsc --noEmit`；`validate:project`；`validate:assets`（112 条目，0 READY，与既有状态一致）。
+
+**CI 通过不等于微信运行时验收通过。**
+
+---
+
+## 9. 安全事项
 
 | 项 | 现状 | 需要谁处理 |
 |---|---|---|
-| 历史提交中的 MCP Token | 按 `ghp_` / `github_pat_` / `WECHATIDE_TOKEN=<值>` / `Bearer <长串>` 四种模式扫描全部提交，**未命中**；当前代码只从环境变量读取。扫描不能证明"从未泄露"，只能说明现在查不到。 | 若曾外泄，需你本人在开发者工具「设置 → 安全设置」重置 CLI token。我做不了轮换。 |
-| `C:\Users\SYANG\package.json` | 存在，5,966 字节，修改时间 2026-11-02 18:09，内容为 `Cocos Creator 3.8.8` 的 package.json。**无 `.bak` 或其它备份文件**。 | 原内容已不可从磁盘恢复。若那份文件重要，需要你从其它备份/版本库找回。 |
+| MCP Token | 历史按 `ghp_` / `github_pat_` / `WECHATIDE_TOKEN=<值>` / `Bearer <长串>` 四种模式扫描，未命中；当前代码只从环境变量读。扫描不能证明"从未泄露"。 | 若曾外泄，需本人在开发者工具安全设置里重置。 |
+| CLI 访问令牌 | 未设置。只在需要 CLI HTTP 自动化时才需要，本轮 `open` / `preview` / `auto` 都不需要它。 | 不需要处理。 |
+| `C:\Users\SYANG\package.json` | 5,966 字节，2026-11-02 18:09，内容为 Cocos Creator 3.8.8 的 package.json。复查了 Temp 目录（11-01~11-03 无同名文件）与家目录（无 `.bak`），**无恢复线索**。 | 原内容无法从磁盘恢复，需从其它备份找回。 |
 
-本轮没有把任何 token、AppSecret 写进仓库或日志。
+本轮没有把 token、AppSecret 写进仓库或日志。
 
 ---
 
-## 8. 未完成事项
+## 10. 未完成
 
-1. 微信模拟器内的分包加载与 ROOM-01 运行表现（自动化通道不可用）。
-2. `wx.loadSubpackage` 调用观测。
-3. 真机运行（二维码已生成，需人工扫码）。
-4. 微信模拟器内的横屏适配回归。
+1. 微信模拟器内的分包加载与 ROOM-01 表现（自动化通道不可用）。
+2. `wx.loadSubpackage` 观测。
+3. 真机运行（二维码已生成）。
+4. 真机横屏。
+5. 布局遗留：`HiddenObject` 被按钮遮挡 64%、触控 28 px。已给出根因与下一轮方向（§6.2），本轮未修。
 
 **在这些项真实通过之前，PR #149 不应以"微信运行时验收通过"为由合并。**
-四个 CI workflow 通过（§6）不改变这个结论。
