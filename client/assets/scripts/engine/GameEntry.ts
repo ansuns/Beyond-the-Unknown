@@ -62,6 +62,7 @@ import { formatProgressSummary } from "../ui/progress-summary";
 import {
   applyRoomBackground,
   applySprite,
+  ART_PATHS,
   fitWithin,
   GAMEPLAY_BUNDLE,
   loadArtSet,
@@ -203,15 +204,23 @@ export class BeyondTheUnknownGameEntry extends Component {
    * not.
    */
   private ensureArt(): Promise<boolean> {
-    if (!this.artPromise) {
-      this.artStatus = "loading";
-      this.artPromise = this.prepareArt().catch(() => false);
+    if (this.artPromise) {
+      // Second caller while loading, or after a success. Logging the reuse is
+      // how "entered the room twice, downloaded once" becomes visible on a
+      // device, where nobody can open a console mid-session.
+      if (this.artStatus === "ready") {
+        console.info(`[art] ${GAMEPLAY_BUNDLE} reused from memory`);
+      }
+      return this.artPromise;
     }
+    this.artStatus = "loading";
+    this.artPromise = this.prepareArt().catch(() => false);
     return this.artPromise;
   }
 
   /** Load the delivered P0 art, then dress whatever the prototype has drawn. */
   private async prepareArt(): Promise<boolean> {
+    const startedAt = Date.now();
     try {
       // The bundle must be in memory before any frame is requested; the
       // service handles timeout, retry and de-duplication. On WeChat this call
@@ -226,16 +235,28 @@ export class BeyondTheUnknownGameEntry extends Component {
       // service already backs off internally.
       this.artPromise = undefined;
       const reason = error instanceof Error ? error.message : "未知错误";
+      console.error(`[art] ${GAMEPLAY_BUNDLE} failed after ${Date.now() - startedAt}ms: ${reason}`);
       this.setStatus(`资源加载失败：${reason}`);
       return false;
     }
+    const bundleMs = Date.now() - startedAt;
     this.art = await loadArtSet((loaded, total) =>
       this.setStatus(`美术资源 ${loaded}/${total}`)
     );
     this.artReady = true;
     this.artStatus = "ready";
     this.decorateScene();
+    const total = Object.keys(ART_PATHS).length;
     const missing = this.art.missing;
+    // One line per load: bundle name, how long the bundle itself took, how many
+    // sprite frames came out, and which bundles are resident. Enough for a
+    // remote-debug session to answer "did the subpackage load" without a
+    // profiler, short enough to leave on in release.
+    console.info(
+      `[art] ${GAMEPLAY_BUNDLE} ready: bundle ${bundleMs}ms, sprites ${this.art.loaded.length}/${total}, ` +
+        `total ${Date.now() - startedAt}ms, resident [${assetService.stats().loaded.join(", ")}]`
+    );
+    this.setStatus(`美术资源 ${this.art.loaded.length}/${total} · 场景包 ${bundleMs}ms`);
     if (missing.length) {
       // Visible on purpose: a placeholder is not delivery, and the status line
       // is where a tester sees which sprite never arrived.
