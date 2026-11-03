@@ -10,6 +10,8 @@
     "bundleConfigID": "default",
     "bundleName": "resources",
     "priority": 8,
-    "isSubpackage": true
+    "isSubpackage": true,
+    "compressionType": "subpackage",
+    "isRemote": false
   }
 }

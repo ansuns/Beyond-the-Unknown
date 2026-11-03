@@ -37,7 +37,7 @@
       "root": "db://assets/resources",
       "isSubpackage": true,
       "isRemote": false,
-      "compressionType": "merge_dep",
+      "compressionType": "subpackage",
       "priority": 8,
       "output": true
     }
