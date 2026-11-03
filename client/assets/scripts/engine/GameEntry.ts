@@ -112,6 +112,10 @@ export class BeyondTheUnknownGameEntry extends Component {
   private statusLabel?: Label;
   private rulesLabel?: Label;
   private progressLabel?: Label;
+  // On-device readout; see installDiagnostics.
+  private diagLabel?: Label;
+  private diagTapText = "—";
+  private diagHitText = "—";
   private art?: ArtSet;
   private artReady = false;
   private mapSession?: MapSession;
@@ -975,6 +979,65 @@ export class BeyondTheUnknownGameEntry extends Component {
       );
     }
     this.createVirtualJoystick(size, layout);
+    this.installDiagnostics(size, layout);
+  }
+
+  /**
+   * On-device readout.
+   *
+   * A phone has no console, and "I tapped and nothing happened" cannot be
+   * settled from a screenshot. These numbers do settle it: the window the shell
+   * was laid out for, the canvas the renderer was actually given, the scale
+   * between them, and where each tap landed and what it hit. A canvas that is
+   * devicePixelRatio times the design size means every press lands at a quarter
+   * of the coordinate the player aimed at; a tap with no hit node means the
+   * press never entered the scene at all. Both look identical on screen.
+   */
+  private installDiagnostics(
+    size: { width: number; height: number },
+    layout: { statusY: number; statusSize: number; pad: number }
+  ): void {
+    const transform = this.root!.getComponent(UITransform) ?? this.root!.addComponent(UITransform);
+    transform.setContentSize(size.width, size.height);
+    // Root-level listener: taps on a button bubble up to here and taps on empty
+    // space land here directly, so no press goes unrecorded.
+    this.root!.on(Node.EventType.TOUCH_END, this.onAnyTouch, this);
+    this.diagLabel = this.createLabel(
+      "Diagnostics",
+      "",
+      0,
+      layout.statusY - layout.statusSize - 18,
+      Math.max(11, layout.statusSize - 4),
+      size.width - layout.pad * 2
+    );
+    this.diagLabel.color = new Color(150, 205, 225, 240);
+    this.refreshDiagnostics();
+  }
+
+  private onAnyTouch(event: any): void {
+    const point = event?.getUILocation?.();
+    if (point) this.diagTapText = `${Math.round(point.x)},${Math.round(point.y)}`;
+    const name = event?.target?.name;
+    if (name && name !== "BeyondTheUnknownRuntime") this.diagHitText = name;
+    this.refreshDiagnostics();
+  }
+
+  private refreshDiagnostics(): void {
+    if (!this.diagLabel) return;
+    const host = globalThis as any;
+    const metrics = readViewport(host);
+    const canvas = host.canvas;
+    const frame = view.getFrameSize();
+    const visible = view.getVisibleSize();
+    const dpr = typeof host.devicePixelRatio === "number" ? host.devicePixelRatio : undefined;
+    this.diagLabel.string =
+      `win ${metrics?.width ?? "?"}×${metrics?.height ?? "?"} dpr ${dpr ?? "?"}`
+      + ` canvas ${canvas?.width ?? "?"}×${canvas?.height ?? "?"}\n`
+      + `frame ${Math.round(frame.width)}×${Math.round(frame.height)}`
+      + ` design ${Math.round(visible.width)}×${Math.round(visible.height)}`
+      + ` scale ${view.getScaleX().toFixed(2)}\n`
+      + `${this.apiBaseUrl}\n`
+      + `tap ${this.diagTapText} · hit ${this.diagHitText}`;
   }
 
   private createLabel(
@@ -1031,6 +1094,10 @@ export class BeyondTheUnknownGameEntry extends Component {
     label.horizontalAlign = Label.HorizontalAlign.CENTER;
     label.verticalAlign = Label.VerticalAlign.CENTER;
     node.on(NodeEventType.TOUCH_END, () => {
+      // Proves the press reached this node rather than merely the scene, which
+      // is the difference between a coordinate problem and a missing handler.
+      this.diagHitText = `${name} ✓`;
+      this.refreshDiagnostics();
       void action();
     }, this);
     return node;

@@ -283,9 +283,59 @@ function verifySubpackage(dir, { name, root }) {
   }
 }
 
+/**
+ * Point the artifact at a server the phone can actually reach.
+ *
+ * The runtime default is `127.0.0.1:8000`, which on a phone means the phone
+ * itself - every login fails with a network error that looks like a dead
+ * button. A mini game has no env file and no console, so the only place to put
+ * the real origin is the bundle, and the substitution is asserted: an
+ * unreachable origin shipped silently is worse than a build failure.
+ *
+ * Opt-in, because the default has to stay correct for the browser and for
+ * anyone running a server on the same machine.
+ */
+function applyApiOrigin(dir) {
+  const origin = process.env.BTU_API_ORIGIN;
+  if (!origin) return;
+
+  const http = origin.replace(/^ws/, "http").replace(/\/+$/, "");
+  const ws = http.replace(/^http/, "ws");
+  const bundleDir = path.join(dir, "assets", "main");
+  if (!fs.existsSync(bundleDir)) {
+    console.error("[build:wechat] BTU_API_ORIGIN set but assets/main is missing");
+    process.exit(1);
+  }
+
+  let replaced = 0;
+  const touched = [];
+  for (const file of fs.readdirSync(bundleDir).filter((item) => item.endsWith(".js"))) {
+    const full = path.join(bundleDir, file);
+    const before = fs.readFileSync(full, "utf8");
+    let after = before;
+    for (const [from, to] of [["http://127.0.0.1:8000", http], ["ws://127.0.0.1:8000", ws]]) {
+      const count = after.split(from).length - 1;
+      replaced += count;
+      if (count) after = after.split(from).join(to);
+    }
+    if (after !== before) {
+      fs.writeFileSync(full, after);
+      touched.push(file);
+    }
+  }
+
+  if (replaced < 2) {
+    console.error(`[build:wechat] BTU_API_ORIGIN=${origin} but only ${replaced} endpoint(s) found`);
+    process.exit(1);
+  }
+  console.log(`[build:wechat] api origin -> ${http} (${ws}) in ${touched.join(", ")}`);
+}
+
 const declarations = config.packages?.wechatgame?.subpackages ?? [];
 const built = declarations.map((declaration) => makeSubpackage(outDir, declaration));
 for (const subpackage of built) verifySubpackage(outDir, subpackage);
+
+applyApiOrigin(outDir);
 
 const gameJson = readJson(gameJsonPath);
 if (!isLandscape(gameJson)) {
