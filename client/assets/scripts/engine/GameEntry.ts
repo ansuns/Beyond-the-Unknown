@@ -63,6 +63,7 @@ import {
   applyRoomBackground,
   applySprite,
   fitWithin,
+  GAMEPLAY_BUNDLE,
   loadArtSet,
   playEchoPulse,
   type ArtSet
@@ -169,9 +170,9 @@ export class BeyondTheUnknownGameEntry extends Component {
   private readonly moveSpeedPixelsPerSecond = 160;
   private readonly moveSyncIntervalSeconds = 0.12;
 
-  // Art is a subpackage: loaded on first use, memoised, and retried after a
-  // failure instead of leaving the shell permanently undecorated.
-  private artPromise?: Promise<void>;
+  // Art is a WeChat subpackage: loaded on first use, memoised, and retried after
+  // a failure instead of leaving the shell permanently undecorated.
+  private artPromise?: Promise<boolean>;
   private artStatus: "idle" | "loading" | "ready" | "failed" = "idle";
 
   onLoad(): void {
@@ -197,22 +198,25 @@ export class BeyondTheUnknownGameEntry extends Component {
    *
    * `ensureBundle` already de-duplicates in-flight downloads; this keeps the
    * whole art pass (bundle + sprite frames + decoration) from running twice when
-   * the world and a room both ask for it.
+   * the world and a room both ask for it. Callers that cannot work without the
+   * art must check the result - the world tolerates placeholders, a room does
+   * not.
    */
-  private ensureArt(): Promise<void> {
+  private ensureArt(): Promise<boolean> {
     if (!this.artPromise) {
       this.artStatus = "loading";
-      this.artPromise = this.prepareArt();
+      this.artPromise = this.prepareArt().catch(() => false);
     }
     return this.artPromise;
   }
 
   /** Load the delivered P0 art, then dress whatever the prototype has drawn. */
-  private async prepareArt(): Promise<void> {
+  private async prepareArt(): Promise<boolean> {
     try {
       // The bundle must be in memory before any frame is requested; the
-      // service handles timeout, retry and de-duplication.
-      await assetService.ensureBundle("resources", {
+      // service handles timeout, retry and de-duplication. On WeChat this call
+      // is what triggers the native subpackage download.
+      await assetService.ensureBundle(GAMEPLAY_BUNDLE, {
         onProgress: (percent, note) =>
           this.setStatus(`${note} ${Math.round(percent * 100)}%`)
       });
@@ -221,8 +225,9 @@ export class BeyondTheUnknownGameEntry extends Component {
       // A retry is worth offering: the common cause is a flaky network, and the
       // service already backs off internally.
       this.artPromise = undefined;
-      this.setStatus(`资源加载失败：${error instanceof Error ? error.message : "未知错误"}`);
-      return;
+      const reason = error instanceof Error ? error.message : "未知错误";
+      this.setStatus(`资源加载失败：${reason}`);
+      return false;
     }
     this.art = await loadArtSet((loaded, total) =>
       this.setStatus(`美术资源 ${loaded}/${total}`)
@@ -236,6 +241,7 @@ export class BeyondTheUnknownGameEntry extends Component {
       // is where a tester sees which sprite never arrived.
       console.warn(`[art] missing sprite frames: ${missing.join(", ")}`);
     }
+    return true;
   }
 
   /**
@@ -1696,7 +1702,16 @@ export class BeyondTheUnknownGameEntry extends Component {
         }
         if (this.artStatus !== "ready") {
           this.setStatus("正在加载场景资源…");
-          await this.ensureArt();
+          const ready = await this.ensureArt();
+          if (!ready) {
+            // A room without its art bundle is not a playable room: the floor,
+            // the mechanism symbols and the player are all sprites from
+            // `gameplay`. Refuse instead of entering a placeholder room and
+            // reporting a success that never happened.
+            const reason = assetService.errorOf(GAMEPLAY_BUNDLE) ?? "未知原因";
+            this.setStatus(`场景资源加载失败，无法进入房间：${reason}`);
+            return;
+          }
         }
         try {
           this.setStatus("正在读取房间目录与个人进度…");

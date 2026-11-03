@@ -5,6 +5,33 @@ const CHARACTER_CATEGORIES = [
   ["ANIMATION_SET", "character_animation"]
 ];
 
+// Where each category of art is delivered.
+//
+// `gameplay` is a real Cocos Asset Bundle with compressionType "subpackage", so
+// on WeChat it ships as a native subpackage and is downloaded on demand. Every
+// category a room needs at runtime lives there. UI and audio stay in the built-in
+// `resources` bundle, which is part of the main package, because the first screen
+// must never wait for a subpackage download.
+//
+// Keep in step with `client/assets/scripts/engine/asset-config.ts`.
+const ART_BUNDLE_BY_CATEGORY = {
+  character_portrait: "gameplay",
+  character_model: "gameplay",
+  character_preview: "gameplay",
+  character_animation: "gameplay",
+  main_map: "gameplay",
+  level_geometry: "gameplay",
+  mechanism: "gameplay",
+  effect: "gameplay",
+  ui: "resources",
+  audio: "resources"
+};
+
+const artRoot = (category) => `assets/${ART_BUNDLE_BY_CATEGORY[category] ?? "resources"}`;
+
+// Both roots are legitimate; the manifest only has to stay inside one of them.
+const SAFE_ART_ROOTS = ["assets/resources/", "assets/gameplay/"];
+
 const MAIN_MAP_ASSETS = [
   ["SCENE", "main_map"],
   ["GROUND", "main_map"],
@@ -214,34 +241,34 @@ export function validateAssetManifestStructure(manifest, levelConfig, strict = f
       const folder = suffix === "PORTRAIT" ? "portrait"
         : suffix === "MODEL" ? "model"
         : suffix === "PREVIEW" ? "preview" : "animation";
-      expectedDirectories.set(id, `assets/resources/characters/${characterId}/${folder}`);
+      expectedDirectories.set(id, `${artRoot(category)}/characters/${characterId}/${folder}`);
     }
   }
   for (const [suffix, category] of MAIN_MAP_ASSETS) {
     const id = `MAP_MAIN_001_${suffix}`;
     addExpected(expected, id, category);
-    expectedDirectories.set(id, `assets/resources/maps/MAP_MAIN_001/${suffix.toLowerCase()}`);
+    expectedDirectories.set(id, `${artRoot(category)}/maps/MAP_MAIN_001/${suffix.toLowerCase()}`);
   }
   for (const levelId of expectedLevels) {
     const id = `${levelId}_GEOMETRY`;
     addExpected(expected, id, "level_geometry");
-    expectedDirectories.set(id, `assets/resources/levels/${levelId}`);
+    expectedDirectories.set(id, `${artRoot("level_geometry")}/levels/${levelId}`);
   }
   for (const mechanismId of expectedMechanisms) {
     addExpected(expected, mechanismId, "mechanism");
-    expectedDirectories.set(mechanismId, `assets/resources/mechanisms/${mechanismId}`);
+    expectedDirectories.set(mechanismId, `${artRoot("mechanism")}/mechanisms/${mechanismId}`);
   }
   for (const id of EFFECT_IDS) {
     addExpected(expected, id, "effect");
-    expectedDirectories.set(id, "assets/resources/effects");
+    expectedDirectories.set(id, `${artRoot("effect")}/effects`);
   }
   for (const id of UI_IDS) {
     addExpected(expected, id, "ui");
-    expectedDirectories.set(id, "assets/resources/ui");
+    expectedDirectories.set(id, `${artRoot("ui")}/ui`);
   }
   for (const id of AUDIO_IDS) {
     addExpected(expected, id, "audio");
-    expectedDirectories.set(id, "assets/resources/audio");
+    expectedDirectories.set(id, `${artRoot("audio")}/audio`);
   }
 
   const ids = new Set();
@@ -278,7 +305,7 @@ export function validateAssetManifestStructure(manifest, levelConfig, strict = f
     }
     if (entry.required !== true) add(`${id}: MVP manifest entry must be required`);
     if (!entry.expected_directory ||
-        !entry.expected_directory.startsWith("assets/resources/") ||
+        !SAFE_ART_ROOTS.some((root) => entry.expected_directory.startsWith(root)) ||
         entry.expected_directory.startsWith("/") ||
         entry.expected_directory.split("/").includes("..")) {
       add(`${id}: expected_directory must be a safe client-relative resources path`);

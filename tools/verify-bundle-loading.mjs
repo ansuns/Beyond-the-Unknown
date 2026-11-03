@@ -62,6 +62,12 @@ const chrome = spawn(CHROME, [
   "--hide-scrollbars",
   "--use-angle=swiftshader",
   "--enable-unsafe-swiftshader",
+  // This machine sets HTTP_PROXY for the whole session. Without this flag the
+  // browser sends http://127.0.0.1:8081/index.html to that proxy and renders a
+  // proxy error page - every probe then reports "no canvas, no bundle", which
+  // looks exactly like a broken build. Both the page and the game's API calls
+  // must go direct.
+  "--no-proxy-server",
   "--no-first-run",
   "about:blank"
 ], { stdio: "ignore" });
@@ -231,22 +237,33 @@ await clickNode("EnterLevelButton");
 await delay(6000);
 phases.roomSecond = await safeSnapshot();
 
+// `loads` stays empty: the interception that would fill it is not installed
+// (replacing `loadBundle` broke boot - the engine holds a direct reference).
+// The timeline is the trustworthy source: it polls `assetManager.bundles` and
+// stamps the first moment each name appears, so a bundle that shows up only
+// after a click is provably not fetched at boot.
+let seenBundles = new Set();
 const summary = Object.fromEntries(
-  Object.entries(phases).map(([phase, data]) => [
-    phase,
-    {
-      status: data.status ?? "",
-      loadsSoFar: (data.loads ?? []).length,
-      newLoads: (data.loads ?? [])
-        .filter((item) => item.name.includes("resources"))
-        .map((item) => `${item.name} ${item.durationMs} ms`),
-      releases: (data.releases ?? []).length,
-      timeline: (data.timeline ?? []).map((item) => `${item.name}@${Math.round(item.atMs)}ms`),
-      bundles: data.bundlesInMemory
-    }
-  ])
+  Object.entries(phases).map(([phase, data]) => {
+    const timeline = data.timeline ?? [];
+    const appeared = timeline
+      .map((item) => item.name)
+      .filter((name) => !seenBundles.has(name));
+    for (const name of appeared) seenBundles.add(name);
+    return [
+      phase,
+      {
+        status: data.status ?? "",
+        appeared,
+        releases: (data.releases ?? []).length,
+        timeline: timeline.map((item) => `${item.name}@${Math.round(item.atMs)}ms`),
+        bundles: data.bundlesInMemory
+      }
+    ];
+  })
 );
 
+const bootBundles = phases.boot.bundlesInMemory ?? [];
 const report = {
   viewport: VIEWPORT,
   hooked: phases.boot.hooked,
@@ -259,6 +276,10 @@ const report = {
       (item) => phases.roomSecond.firstInputAt !== null && item.atMs < phases.roomSecond.firstInputAt
     )
     .map((item) => item.name),
+  // The question this run exists to answer: is the gameplay bundle in memory
+  // before the player does anything?
+  gameplayLoadedAtBoot: bootBundles.includes("gameplay"),
+  bootBundles,
   phases,
   summary
 };
@@ -266,11 +287,11 @@ writeFileSync(`${outDir}/bundle-loading.json`, JSON.stringify(report, null, 2));
 
 for (const [phase, data] of Object.entries(summary)) {
   console.log(
-    `${phase.padEnd(11)} api=${data.loadsSoFar} resources=${JSON.stringify(data.newLoads)} ` +
-      `releases=${data.releases} bundles=${JSON.stringify(data.bundles)} ` +
-      `timeline=${JSON.stringify(data.timeline)}`
+    `${phase.padEnd(11)} appeared=${JSON.stringify(data.appeared)} ` +
+      `bundles=${JSON.stringify(data.bundles)} timeline=${JSON.stringify(data.timeline)}`
   );
 }
-console.log("\nwritten:", `${outDir}/bundle-loading.json`);
+console.log(`\ngameplay loaded at boot: ${report.gameplayLoadedAtBoot}`);
+console.log("written:", `${outDir}/bundle-loading.json`);
 chrome.kill();
 process.exit(0);
