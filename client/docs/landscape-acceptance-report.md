@@ -102,7 +102,14 @@ Tests       172 passed (172)
 - `simulator_screenshot` 返回真实模拟器画面：`client/docs/screenshots/wechat-devtools-landscape.png`（314×677），可清楚看到登录页 UI：标题“无界之外 · Beyond the Unknown”、“我的进度 / 切换角色 / 招呼”、“登录并进入世界 / 放弃并返回世界”、“法则：尚未读取”。**这证明游戏在微信开发者工具模拟器中真实运行**。
 - **横屏根因（已修）**：`build/wechatgame/game.json` 的 `deviceOrientation` 是 `portrait`（`project.config.json` 写 landscape 不够，运行以 `game.json` 为准）。改为 `"deviceOrientation":"landscape"` 后，模拟器截图从 314×677 变为 **487×225 / 308×143（2.16:1 横屏）**，并看到真实登录页 UI（截图 `wechat-landscape-login.png`）。
 - 源侧：`client/build-configs/wechat-slim.json` 已声明 `orientation: landscape`；但无头 CLI 用 `--build "configPath=project://build-configs/wechat-slim.json"` 时在 `checkOptionsBeforeCommand` 校验失败（日志 `build/build-wechat-slim.log`），故本轮直接修正产物的 `game.json`。
-- **仍阻塞（未验证）**：`automation_game_action` 一直返回 `cant find runtimeid by projectpath`（CJK 路径与 ASCII 路径 `C:\Users\SYANG\btu-wx` 都试过），且调用后项目窗口丢失（`project window not found`）。已尝试：`wechatide auth -c WorkBuddy`（authorized:true）、`open_project_window`（success, winId s0）、`cli.bat auto --auto-port 9420/9421`（返回 autoPort）、把构建复制到纯 ASCII 路径。仍无法在模拟器内点击登录/进入 ROOM-01/摇杆/机关。
+- **仍阻塞（未验证）**：`automation_game_action` 始终返回 `cant find runtimeid by projectpath`，且调用后项目窗口丢失（`project window not found`）。逐项排查过：
+  1. `wechatide auth -c WorkBuddy` → `authorized:true, port:43982`；
+  2. `open_project_window` → `success, winId:s0`；
+  3. `project_import` → `success, alreadyImported:false`，但 `project_list`（miniprogram/other/all）始终 `count:0`；
+  4. CJK 路径与纯 ASCII 路径 `C:\Users\SYANG\btu-wx` 都试过，同样报错；
+  5. `cli.bat auto --auto-port 9420/9421/9422/9423` 均返回 `autoPort`，但 **netstat 显示 9420–9423 全部没有监听**（自动化服务未真正启动）；
+  6. 安装官方 `miniprogram-automator@0.13.0`：`connect({wsEndpoint})` → `check if target project window is opened with automation enabled`；`automator.launch()` → `Failed to launch wechat web devTools`（无法 spawn `.bat`）。三条官方自动化通道均被本机环境/沙箱限制卡住（同批 `reg.exe`、`Add-Type` 亦被安全策略拦截）。
+- 因此模拟器内“登录→ROOM-01→摇杆移动→机关交互”**未完成，不声称通过**。
 - **最小人工步骤**：在开发者工具模拟器里点“登录并进入世界”→点“进入探索房间”，即可看到 ROOM-01；或在该机器上为 `wechatide` 开启自动化运行时（runtimeid）后再跑 `automation_game_action`。
 - 5 视口横屏 ROOM-01 截图来自 web-mobile 真实引擎（§9），**不冒充**微信模拟器截图。
 
